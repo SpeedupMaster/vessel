@@ -1,0 +1,8 @@
+{
+  "scannedAt": "2026-10-04T21:13:00.000Z",
+  "fontStack": "Space Grotesk + JetBrains Mono",
+  "palette": "Cobalt OKLCH custom properties (web/src/styles/tokens.css)",
+  "motion": "gsap 3 + @gsap/react",
+  "spacingScale": "Tailwind 4-pt scale",
+  "framework": "React 19 + Vite + Node.js Express Server"
+}

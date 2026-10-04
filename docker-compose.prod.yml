@@ -1,0 +1,24 @@
+services:
+  vessel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vessel-hub
+    restart: unless-stopped
+    ports:
+      - "3900:3900"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+    networks:
+      - vessel-net
+    environment:
+      - NODE_ENV=production
+      - PORT=3900
+
+networks:
+  vessel-net:
+    name: vessel-net
+    driver: bridge

@@ -1,0 +1,123 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hallmark Non-Negotiables: Mobile overflow clip & Roman Headings */
+html, body {
+  overflow-x: clip;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-style: normal !important; /* Hallmark discipline: Roman headers strictly enforced */
+  letter-spacing: -0.025em;
+}
+
+/* Custom Engineered Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-paper);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-paper-3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-paper-4);
+}
+
+/* 8-State Button Utilities */
+.btn-vessel-primary {
+  background-color: var(--color-accent);
+  color: var(--color-paper);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-vessel-primary:hover, .btn-vessel-primary.is-hover {
+  background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-vessel-primary:focus-visible, .btn-vessel-primary.is-focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.btn-vessel-primary:active, .btn-vessel-primary.is-active {
+  transform: translateY(1px);
+}
+
+.btn-vessel-primary:disabled, .btn-vessel-primary[data-state="disabled"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-vessel-primary[data-state="loading"] {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.btn-vessel-ghost {
+  background-color: transparent;
+  color: var(--color-ink-muted);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-vessel-ghost:hover, .btn-vessel-ghost.is-hover {
+  background-color: var(--color-paper-3);
+  color: var(--color-ink);
+  border-color: var(--color-paper-4);
+}
+
+.btn-vessel-ghost:focus-visible, .btn-vessel-ghost.is-focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.btn-vessel-ghost:active, .btn-vessel-ghost.is-active {
+  background-color: var(--color-paper-4);
+}
+
+.btn-vessel-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Glass & Border Utilities */
+.card-vessel {
+  background-color: var(--color-paper-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-vessel:hover {
+  border-color: var(--color-paper-4);
+}

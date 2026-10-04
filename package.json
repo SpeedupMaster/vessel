@@ -1,0 +1,24 @@
+{
+  "name": "vessel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vessel — Lean Docker Compose Self-Hosted Application Management Hub",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./web\" --filter \"./server\" dev",
+    "build": "pnpm --filter \"./web\" build && pnpm --filter \"./server\" build",
+    "start": "pnpm --filter \"./server\" start"
+  },
+  "keywords": [
+    "vessel",
+    "docker",
+    "compose",
+    "caddy",
+    "ssl",
+    "r2",
+    "ghcr",
+    "hallmark",
+    "gsap"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}

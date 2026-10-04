@@ -1,0 +1,49 @@
+/* Hallmark · theme: Cobalt · genre: modern-minimal
+ * paper band: dark (< 30% L) · display style: grotesk-sans (Space Grotesk) · accent hue: cool (230-250°)
+ * states: default · hover · focus-visible · active · disabled · loading · error · success
+ * contrast: pass (WCAG AAA for body text, AA for large headers)
+ */
+
+:root {
+  /* Surface hierarchy (OKLCH) */
+  --color-paper: oklch(0.13 0.012 250);     /* Deep graphite void */
+  --color-paper-2: oklch(0.17 0.016 250);   /* Elevated card / sidebar */
+  --color-paper-3: oklch(0.22 0.02 250);    /* Interactive surface / hover */
+  --color-paper-4: oklch(0.28 0.024 250);   /* Active state / borders highlight */
+
+  /* Ink / Typography */
+  --color-ink: oklch(0.96 0.005 250);       /* Crisp high-contrast white */
+  --color-ink-muted: oklch(0.72 0.015 250); /* Secondary technical label */
+  --color-ink-faint: oklch(0.48 0.018 250); /* Tertiary metadata / placeholders */
+
+  /* Hairlines & Structural Dividers */
+  --color-line: oklch(0.24 0.018 250);
+  --color-line-subtle: oklch(0.19 0.014 250);
+  --color-focus: oklch(0.72 0.16 230);
+
+  /* Primary Accent: Electric Cobalt / Cyan */
+  --color-accent: oklch(0.72 0.16 230);
+  --color-accent-hover: oklch(0.78 0.17 230);
+  --color-accent-muted: oklch(0.32 0.08 230);
+  --color-accent-glow: rgba(56, 189, 248, 0.28);
+
+  /* Semantic Telemetry States */
+  --color-emerald: oklch(0.72 0.17 152);     /* Online / Running / SSL Valid */
+  --color-emerald-bg: oklch(0.2 0.05 152);
+  --color-amber: oklch(0.78 0.16 75);        /* Warning / Update Available */
+  --color-amber-bg: oklch(0.22 0.05 75);
+  --color-crimson: oklch(0.66 0.22 25);      /* Stopped / Error / Alert */
+  --color-crimson-bg: oklch(0.2 0.07 25);
+  --color-blue: oklch(0.7 0.15 240);         /* Deploying / Backing up */
+
+  /* Typography Stacks */
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', Fira Code, Consolas, monospace;
+
+  /* Spacing & Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 9999px;
+}
