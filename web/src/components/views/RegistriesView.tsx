@@ -4,8 +4,6 @@ import {
   Package,
   CheckCircle,
   WarningCircle,
-  Key,
-  ShieldCheck,
   ArrowSquareOut,
   Info,
 } from '@phosphor-icons/react';
@@ -66,16 +64,18 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Intro Banner */}
-      <div className="card-vessel p-5 bg-gradient-to-r from-paper-2 to-paper-3/40">
-        <div className="flex items-start gap-3.5">
-          <div className="p-2.5 rounded bg-sky-950/80 border border-sky-600/40 text-accent">
-            <GithubLogo className="w-6 h-6" />
+      <div className="card-vessel p-7 sm:p-8 shadow-subtle">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-paper-3 flex items-center justify-center text-accent flex-shrink-0 shadow-subtle">
+            <GithubLogo className="w-5 h-5" weight="bold" />
           </div>
           <div>
-            <h3 className="font-semibold text-base text-ink">私有镜像凭证中心 (GHCR & Docker Hub)</h3>
-            <p className="text-xs text-ink-muted mt-1 max-w-2xl leading-relaxed">
+            <h3 className="font-semibold text-base text-ink tracking-tight font-sans">
+              私有镜像凭证中心 (GHCR & Docker Hub)
+            </h3>
+            <p className="text-xs text-ink-muted mt-1.5 max-w-2xl leading-relaxed">
               绑定 GitHub 个人访问令牌（PAT）或 Docker Hub 凭据，Vessel 将自动注入 Docker
               运行时的登录鉴权状态，使得受管的 Compose 应用能够免密无缝拉取私有 Registry 镜像。
             </p>
@@ -84,7 +84,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
       </div>
 
       {/* Registries Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {registries.map((reg) => {
           const isGHCR = reg.id === 'ghcr';
           const currentUsername = formData[reg.id]?.username ?? reg.username;
@@ -93,15 +93,17 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
           const isLoading = loadingMap[reg.id];
 
           return (
-            <div key={reg.id} className="card-vessel p-5 flex flex-col justify-between space-y-4">
+            <div key={reg.id} className="card-vessel p-6 sm:p-7 flex flex-col justify-between space-y-5 shadow-subtle">
               <div>
-                <div className="flex items-center justify-between pb-3 border-b border-line">
-                  <div className="flex items-center gap-2.5">
-                    {isGHCR ? (
-                      <GithubLogo className="w-5 h-5 text-ink" />
-                    ) : (
-                      <Package className="w-5 h-5 text-sky-400" />
-                    )}
+                <div className="flex items-center justify-between pb-4 border-b border-line">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-paper-3 flex items-center justify-center text-ink shadow-subtle">
+                      {isGHCR ? (
+                        <GithubLogo className="w-4 h-4" weight="bold" />
+                      ) : (
+                        <Package className="w-4 h-4 text-accent" weight="bold" />
+                      )}
+                    </div>
                     <div>
                       <h4 className="font-semibold text-sm text-ink">{reg.name}</h4>
                       <p className="text-[11px] font-mono text-ink-faint">{reg.server}</p>
@@ -112,29 +114,29 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                   </Badge>
                 </div>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-5 space-y-3.5">
                   <div>
-                    <label className="block text-xs font-mono uppercase text-ink-muted mb-1">
-                      {isGHCR ? 'GitHub 用户名 (Username)' : '账号 / 用户名'}
+                    <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+                      {isGHCR ? 'GitHub 用户名' : '账号 / 用户名'}
                     </label>
                     <input
                       type="text"
                       value={currentUsername}
                       onChange={(e) => handleInputChange(reg.id, 'username', e.target.value)}
                       placeholder={isGHCR ? '例如: your-github-id' : 'username'}
-                      className="w-full bg-paper-3 border border-line rounded px-3 py-1.5 text-xs text-ink font-mono focus:border-accent focus:outline-none"
+                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono uppercase text-ink-muted mb-1 flex items-center justify-between">
-                      <span>{isGHCR ? 'GitHub PAT 令牌 (read:packages 权限)' : '密码 / Access Token'}</span>
+                    <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5 flex items-center justify-between">
+                      <span>{isGHCR ? 'GitHub PAT 令牌 (需包含 read:packages 权限)' : '密码 / 访问令牌'}</span>
                       {isGHCR && (
                         <a
                           href="https://github.com/settings/tokens"
                           target="_blank"
                           rel="noreferrer"
-                          className="text-accent hover:underline flex items-center gap-0.5 normal-case"
+                          className="text-accent hover:underline flex items-center gap-1 normal-case text-xs"
                         >
                           <span>创建 PAT</span>
                           <ArrowSquareOut className="w-3 h-3" />
@@ -146,7 +148,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                       value={currentToken}
                       onChange={(e) => handleInputChange(reg.id, 'token', e.target.value)}
                       placeholder={reg.token ? '•••••••••••••••• (已保存，留空保持不变)' : 'ghp_xxxxxxxxxxxx'}
-                      className="w-full bg-paper-3 border border-line rounded px-3 py-1.5 text-xs text-ink font-mono focus:border-accent focus:outline-none"
+                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -154,23 +156,23 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                 {/* Feedback banner */}
                 {feedback && (
                   <div
-                    className={`mt-3 p-2.5 rounded text-xs flex items-center gap-2 ${
+                    className={`mt-4 p-3 rounded-lg text-xs flex items-center gap-2.5 ${
                       feedback.success
-                        ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300'
-                        : 'bg-rose-950/60 border border-rose-800 text-rose-300'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                        : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
                     }`}
                   >
                     {feedback.success ? (
-                      <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" weight="fill" />
                     ) : (
-                      <WarningCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                      <WarningCircle className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
                     )}
                     <span>{feedback.message}</span>
                   </div>
                 )}
               </div>
 
-              <div className="pt-3 border-t border-line flex justify-end">
+              <div className="pt-4 border-t border-line flex justify-end">
                 <Button8State
                   variant="primary"
                   size="sm"
@@ -186,15 +188,15 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
       </div>
 
       {/* Usage Guide */}
-      <div className="card-vessel p-5 bg-paper-2/60">
-        <h4 className="text-xs font-mono uppercase text-ink-muted font-bold tracking-wider mb-2 flex items-center gap-1.5">
-          <Info className="w-4 h-4 text-sky-400" />
+      <div className="card-vessel p-7 sm:p-8 shadow-subtle">
+        <h4 className="text-xs font-mono uppercase text-ink-muted font-bold tracking-wider mb-2 flex items-center gap-2">
+          <Info className="w-4 h-4 text-accent" weight="bold" />
           私有镜像使用指南
         </h4>
         <p className="text-xs text-ink-muted leading-relaxed">
-          绑定成功后，在任何应用的 <code className="text-sky-300 font-mono">docker-compose.yml</code> 中直接填写私有镜像路径即可拉取，无需在 compose 中声明认证：
+          绑定成功后，在任何应用的 <code className="text-accent font-mono">docker-compose.yml</code> 中直接填写私有镜像路径即可拉取，无需在 compose 中声明认证：
         </p>
-        <pre className="mt-2 p-3 bg-paper border border-line rounded text-xs font-mono text-emerald-400 leading-relaxed overflow-x-auto">
+        <pre className="mt-3 p-4 bg-paper dark:bg-zinc-950 border border-line rounded-xl text-xs font-mono text-emerald-700 dark:text-emerald-400 leading-relaxed overflow-x-auto shadow-subtle">
 {`services:
   my-private-service:
     image: ghcr.io/<your-username>/<your-repo>:latest

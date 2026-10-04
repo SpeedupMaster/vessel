@@ -4,45 +4,46 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hallmark Non-Negotiables: Mobile overflow clip & Roman Headings */
+/* Base Minimalist Discipline */
 html, body {
   overflow-x: clip;
   background-color: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-style: normal !important; /* Hallmark discipline: Roman headers strictly enforced */
-  letter-spacing: -0.025em;
+  font-style: normal !important;
+  letter-spacing: -0.02em;
 }
 
-/* Custom Engineered Scrollbar */
+/* Minimalist Engineered Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-paper);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-paper-3);
-  border-radius: 3px;
+  background: var(--color-paper-4);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-paper-4);
+  background: var(--color-ink-muted);
 }
 
-/* 8-State Button Utilities */
+/* Vessel Button Utilities */
 .btn-vessel-primary {
   background-color: var(--color-accent);
-  color: var(--color-paper);
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: 500;
   border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   display: inline-flex;
@@ -50,11 +51,11 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   gap: 0.5rem;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .btn-vessel-primary:hover, .btn-vessel-primary.is-hover {
   background-color: var(--color-accent-hover);
-  transform: translateY(-1px);
 }
 
 .btn-vessel-primary:focus-visible, .btn-vessel-primary.is-focus {
@@ -110,12 +111,12 @@ h1, h2, h3, h4, h5, h6 {
   cursor: not-allowed;
 }
 
-/* Glass & Border Utilities */
+/* Card & Surface Utilities */
 .card-vessel {
   background-color: var(--color-paper-2);
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s ease, background-color 0.2s ease, box-shadow 0.15s ease;
 }
 
 .card-vessel:hover {

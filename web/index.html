@@ -3,11 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Vessel — Lean Docker Compose Control Hub</title>
+    <title>Vessel — 容器编排控制中心</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><rect width='256' height='256' fill='%230b0e14'/><path d='M32 176l48-80h96l48 80H32z' fill='none' stroke='%2338bdf8' stroke-width='16' stroke-linejoin='round'/><path d='M72 96V64h112v32' fill='none' stroke='%2338bdf8' stroke-width='16' stroke-linecap='round'/><line x1='128' y1='40' x2='128' y2='64' stroke='%2338bdf8' stroke-width='16' stroke-linecap='round'/></svg>" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><rect width='256' height='256' fill='%2309090b'/><path d='M32 176l48-80h96l48 80H32z' fill='none' stroke='%233b82f6' stroke-width='16' stroke-linejoin='round'/><path d='M72 96V64h112v32' fill='none' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/><line x1='128' y1='40' x2='128' y2='64' stroke='%233b82f6' stroke-width='16' stroke-linecap='round'/></svg>" />
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('vessel-theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (stored === 'dark' || ((!stored || stored === 'system') && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-paper text-ink font-sans antialiased selection:bg-accent/30 selection:text-ink">
     <div id="root"></div>

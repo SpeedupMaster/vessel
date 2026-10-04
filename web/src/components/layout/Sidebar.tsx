@@ -22,26 +22,26 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metrics }) => {
   const navItems: { id: NavTab; label: string; icon: React.ReactNode; count?: number }[] = [
-    { id: 'overview', label: '控制台概览', icon: <SquaresFour className="w-5 h-5" /> },
-    { id: 'apps', label: '应用与编排', icon: <HardDrives className="w-5 h-5" />, count: metrics.totalApps },
-    { id: 'domains', label: '域名与证书', icon: <Globe className="w-5 h-5" />, count: metrics.activeDomains },
-    { id: 'backups', label: 'Cloudflare R2 备份', icon: <CloudArrowUp className="w-5 h-5" />, count: metrics.totalBackups },
-    { id: 'registries', label: '私有镜像仓 (GHCR)', icon: <Package className="w-5 h-5" /> },
-    { id: 'maintenance', label: '巡检与安全瘦身', icon: <Broom className="w-5 h-5" /> },
+    { id: 'overview', label: '控制台概览', icon: <SquaresFour className="w-4 h-4" /> },
+    { id: 'apps', label: '应用与编排', icon: <HardDrives className="w-4 h-4" />, count: metrics.totalApps },
+    { id: 'domains', label: '域名与证书', icon: <Globe className="w-4 h-4" />, count: metrics.activeDomains },
+    { id: 'backups', label: 'Cloudflare R2 备份', icon: <CloudArrowUp className="w-4 h-4" />, count: metrics.totalBackups },
+    { id: 'registries', label: '私有镜像仓 (GHCR)', icon: <Package className="w-4 h-4" /> },
+    { id: 'maintenance', label: '巡检与安全瘦身', icon: <Broom className="w-4 h-4" /> },
   ];
 
   const isDockerOnline = metrics.dockerStatus === 'running';
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-paper-2 border-r border-line flex flex-col h-screen select-none">
+    <aside className="w-64 flex-shrink-0 bg-paper-2 border-r border-line flex flex-col h-screen select-none transition-colors">
       {/* Brand Header */}
-      <div className="h-16 flex items-center gap-3 px-5 border-b border-line">
-        <div className="w-9 h-9 rounded bg-sky-950/80 border border-sky-500/40 flex items-center justify-center text-accent shadow-glow-accent">
-          <Anchor className="w-5 h-5" weight="bold" />
+      <div className="h-16 flex items-center gap-3 px-6 border-b border-line">
+        <div className="w-8 h-8 rounded-lg bg-paper-3 border border-line flex items-center justify-center text-accent shadow-subtle">
+          <Anchor className="w-4 h-4" weight="bold" />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-base tracking-tight text-ink font-sans">VESSEL</span>
+            <span className="font-semibold text-sm tracking-tight text-ink font-sans">VESSEL</span>
             <span className="text-[10px] font-mono px-1.5 py-0.2 bg-paper-3 text-ink-muted border border-line rounded">
               v1.0
             </span>
@@ -50,8 +50,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
         </div>
       </div>
 
-      {/* Navigation List */}
-      <nav className="flex-1 py-4 px-3 space-y-1">
+      {/* Navigation List - Spacious & Relaxed */}
+      <nav className="flex-1 py-6 px-3.5 space-y-1.5">
         {navItems.map((item) => {
           const active = currentTab === item.id;
           return (
@@ -59,10 +59,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
               key={item.id}
               onClick={() => onSelectTab(item.id)}
               className={clsx(
-                'w-full flex items-center justify-between px-3 py-2.5 rounded text-sm font-medium transition-all duration-150',
+                'w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm transition-all duration-150',
                 active
-                  ? 'bg-sky-950/70 text-sky-300 border border-sky-700/60 shadow-glow-accent'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-3/70'
+                  ? 'bg-paper text-ink font-medium border border-line shadow-subtle'
+                  : 'text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
               )}
             >
               <div className="flex items-center gap-3">
@@ -72,8 +72,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
               {item.count !== undefined && item.count > 0 && (
                 <span
                   className={clsx(
-                    'text-[11px] font-mono px-1.5 py-0.5 rounded',
-                    active ? 'bg-sky-900/80 text-sky-200' : 'bg-paper-3 text-ink-muted'
+                    'text-[11px] font-mono px-2 py-0.5 rounded-full transition-colors',
+                    active ? 'bg-accent/10 text-accent font-medium' : 'bg-paper-3 text-ink-muted'
                   )}
                 >
                   {item.count}
@@ -85,22 +85,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
       </nav>
 
       {/* Daemon Status Footer */}
-      <div className="p-4 border-t border-line bg-paper/40">
+      <div className="p-5 border-t border-line bg-paper/40">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-ink-muted font-mono">DOCKER ENGINE</span>
+          <span className="text-ink-muted text-[11px]">Docker 引擎</span>
           <div className="flex items-center gap-1.5">
             <Circle
               weight="fill"
-              className={clsx('w-2 h-2', isDockerOnline ? 'text-emerald-400 animate-pulse' : 'text-rose-500')}
+              className={clsx('w-2 h-2', isDockerOnline ? 'text-emerald-500 animate-pulse' : 'text-rose-500')}
             />
-            <span className={clsx('font-mono font-medium', isDockerOnline ? 'text-emerald-400' : 'text-rose-400')}>
-              {isDockerOnline ? 'CONNECTED' : 'OFFLINE'}
+            <span
+              className={clsx(
+                'text-[11px] font-medium',
+                isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+              )}
+            >
+              {isDockerOnline ? '已连接' : '离线'}
             </span>
           </div>
         </div>
-        <div className="mt-2 text-[11px] font-mono text-ink-faint flex justify-between">
-          <span>Active Containers:</span>
-          <span className="text-ink font-semibold">{metrics.runningContainers}</span>
+        <div className="mt-2.5 text-[11px] text-ink-faint flex justify-between">
+          <span>运行中容器:</span>
+          <span className="text-ink font-medium font-mono">{metrics.runningContainers}</span>
         </div>
       </div>
     </aside>

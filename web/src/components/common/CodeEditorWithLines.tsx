@@ -71,7 +71,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
   return (
     <div
       className={clsx(
-        'relative flex rounded border border-line bg-paper text-ink font-mono text-xs overflow-hidden focus-within:border-accent transition-colors',
+        'relative flex rounded-lg border border-line bg-paper text-ink font-mono text-xs overflow-hidden focus-within:border-accent transition-colors',
         className
       )}
       style={{ minHeight, maxHeight }}
@@ -80,7 +80,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
       <div
         ref={gutterRef}
         aria-hidden="true"
-        className="select-none py-3 px-3 bg-paper-2/70 border-r border-line text-ink-faint text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem]"
+        className="select-none py-3 px-3 bg-paper-2 border-r border-line text-ink-faint text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem]"
       >
         {Array.from({ length: lineCount }).map((_, idx) => (
           <div key={idx} className="tabular-nums">
@@ -99,7 +99,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
         readOnly={readOnly}
         placeholder={placeholder}
         spellCheck={false}
-        className="flex-1 w-full p-3 bg-transparent text-ink font-mono text-xs leading-[1.625rem] resize-y outline-none overflow-auto whitespace-pre font-normal selection:bg-sky-900 selection:text-white"
+        className="flex-1 w-full p-3 bg-transparent text-ink font-mono text-xs leading-[1.625rem] resize-y outline-none overflow-auto whitespace-pre font-normal selection:bg-accent/25 selection:text-ink"
         style={{ minHeight }}
       />
     </div>

@@ -25,24 +25,24 @@ export const Button8State: React.FC<Button8StateProps> = ({
   const getSizeClasses = () => {
     switch (size) {
       case 'sm':
-        return 'px-2.5 py-1 text-xs gap-1.5';
+        return 'px-2.5 py-1.5 text-xs gap-1.5';
       case 'lg':
         return 'px-5 py-2.5 text-base gap-2.5';
       default:
-        return 'px-3.5 py-1.5 text-sm gap-2';
+        return 'px-3.5 py-2 text-sm gap-2';
     }
   };
 
   const getVariantClasses = () => {
     switch (variant) {
       case 'secondary':
-        return 'bg-paper-3 text-ink border border-line hover:border-paper-4 hover:bg-paper-4 focus-visible:outline-accent active:bg-paper-2';
+        return 'bg-paper-2 text-ink border border-line hover:border-paper-4 hover:bg-paper-3 focus-visible:ring-accent active:bg-paper-4 shadow-subtle';
       case 'danger':
-        return 'bg-rose-950/80 text-rose-200 border border-rose-800/80 hover:bg-rose-900 active:bg-rose-950 focus-visible:outline-rose-500';
+        return 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60 dark:hover:bg-rose-900/50 focus-visible:ring-rose-500 shadow-subtle';
       case 'ghost':
-        return 'bg-transparent text-ink-muted hover:text-ink hover:bg-paper-3 focus-visible:outline-accent active:bg-paper-4';
+        return 'bg-transparent text-ink-muted hover:text-ink hover:bg-paper-3 focus-visible:ring-accent active:bg-paper-4';
       default:
-        return 'bg-accent text-paper font-semibold hover:bg-accent-hover active:translate-y-px focus-visible:outline-focus shadow-glow-accent';
+        return 'bg-accent text-white font-medium hover:bg-accent-hover active:translate-y-px focus-visible:ring-accent shadow-subtle';
     }
   };
 
@@ -51,7 +51,7 @@ export const Button8State: React.FC<Button8StateProps> = ({
       disabled={isDisabled}
       data-state={state}
       className={clsx(
-        'relative inline-flex items-center justify-center font-medium rounded transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-paper',
+        'relative inline-flex items-center justify-center rounded-lg transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-paper',
         getSizeClasses(),
         getVariantClasses(),
         isDisabled && 'opacity-50 cursor-not-allowed hover:bg-auto active:translate-y-0',
@@ -61,8 +61,8 @@ export const Button8State: React.FC<Button8StateProps> = ({
       {...props}
     >
       {state === 'loading' && <CircleNotch className="animate-spin w-4 h-4" />}
-      {state === 'success' && <Check className="w-4 h-4 text-emerald-400" />}
-      {state === 'error' && <Warning className="w-4 h-4 text-rose-400" />}
+      {state === 'success' && <Check className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />}
+      {state === 'error' && <Warning className="w-4 h-4 text-rose-500 dark:text-rose-400" />}
       {state === 'default' && icon}
       <span>{children}</span>
     </button>

@@ -53,13 +53,13 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={backdropRef}
         onClick={onClose}
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/40 dark:bg-black/75 backdrop-blur-sm transition-opacity"
       />
 
       {/* Modal Panel */}
       <div
         ref={panelRef}
-        className={`relative w-full ${maxWidth} bg-paper-2 border border-line rounded-lg shadow-panel p-6 z-10 flex flex-col max-h-[90vh] overflow-hidden`}
+        className={`relative w-full ${maxWidth} bg-paper border border-line rounded-xl shadow-floating p-6 sm:p-7 z-10 flex flex-col max-h-[90vh] overflow-hidden`}
       >
         <div className="flex items-start justify-between pb-4 border-b border-line">
           <div>

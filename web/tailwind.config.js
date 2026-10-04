@@ -35,13 +35,32 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Space Grotesk', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'monospace'],
+        sans: [
+          'Geist',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'PingFang SC',
+          'Hiragino Sans GB',
+          'Microsoft YaHei',
+          'Noto Sans SC',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
+        mono: [
+          'Geist Mono',
+          'JetBrains Mono',
+          'Fira Code',
+          'Cascadia Code',
+          'Consolas',
+          'monospace',
+        ],
       },
       boxShadow: {
-        'glow-accent': '0 0 24px -4px var(--color-accent-glow)',
-        'glow-emerald': '0 0 20px -4px rgba(16, 185, 129, 0.25)',
-        'panel': '0 8px 32px 0 rgba(0, 0, 0, 0.36)',
+        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
+        'elevated': '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+        'floating': '0 12px 32px -4px rgba(0, 0, 0, 0.12)',
       },
       keyframes: {
         pulseGlow: {

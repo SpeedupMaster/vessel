@@ -1,49 +1,98 @@
-/* Hallmark · theme: Cobalt · genre: modern-minimal
- * paper band: dark (< 30% L) · display style: grotesk-sans (Space Grotesk) · accent hue: cool (230-250°)
- * states: default · hover · focus-visible · active · disabled · loading · error · success
- * contrast: pass (WCAG AAA for body text, AA for large headers)
+/* Vessel Design Tokens · Linear / Vercel Minimalist Standard
+ * Dual-theme: Light (#ffffff) & Dark (#09090b)
+ * Typography: Geist (Sans) + Geist Mono / JetBrains Mono (Code) + PingFang / YaHei (Chinese)
+ * Accent: Electric Precision Blue (#2563eb / #3b82f6)
  */
 
 :root {
-  /* Surface hierarchy (OKLCH) */
-  --color-paper: oklch(0.13 0.012 250);     /* Deep graphite void */
-  --color-paper-2: oklch(0.17 0.016 250);   /* Elevated card / sidebar */
-  --color-paper-3: oklch(0.22 0.02 250);    /* Interactive surface / hover */
-  --color-paper-4: oklch(0.28 0.024 250);   /* Active state / borders highlight */
+  /* Surface hierarchy - Clean Light */
+  --color-paper: #ffffff;
+  --color-paper-2: #f8fafc;
+  --color-paper-3: #f1f5f9;
+  --color-paper-4: #e2e8f0;
 
   /* Ink / Typography */
-  --color-ink: oklch(0.96 0.005 250);       /* Crisp high-contrast white */
-  --color-ink-muted: oklch(0.72 0.015 250); /* Secondary technical label */
-  --color-ink-faint: oklch(0.48 0.018 250); /* Tertiary metadata / placeholders */
+  --color-ink: #09090b;
+  --color-ink-muted: #64748b;
+  --color-ink-faint: #94a3b8;
 
   /* Hairlines & Structural Dividers */
-  --color-line: oklch(0.24 0.018 250);
-  --color-line-subtle: oklch(0.19 0.014 250);
-  --color-focus: oklch(0.72 0.16 230);
+  --color-line: #e2e8f0;
+  --color-line-subtle: #f1f5f9;
+  --color-focus: #2563eb;
 
-  /* Primary Accent: Electric Cobalt / Cyan */
-  --color-accent: oklch(0.72 0.16 230);
-  --color-accent-hover: oklch(0.78 0.17 230);
-  --color-accent-muted: oklch(0.32 0.08 230);
-  --color-accent-glow: rgba(56, 189, 248, 0.28);
+  /* Primary Accent: Crisp Electric Blue */
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-muted: #eff6ff;
+  --color-accent-glow: rgba(37, 99, 235, 0.12);
 
-  /* Semantic Telemetry States */
-  --color-emerald: oklch(0.72 0.17 152);     /* Online / Running / SSL Valid */
-  --color-emerald-bg: oklch(0.2 0.05 152);
-  --color-amber: oklch(0.78 0.16 75);        /* Warning / Update Available */
-  --color-amber-bg: oklch(0.22 0.05 75);
-  --color-crimson: oklch(0.66 0.22 25);      /* Stopped / Error / Alert */
-  --color-crimson-bg: oklch(0.2 0.07 25);
-  --color-blue: oklch(0.7 0.15 240);         /* Deploying / Backing up */
+  /* Semantic Telemetry States (Light Mode) */
+  --color-emerald: #059669;
+  --color-emerald-bg: #ecfdf5;
+  --color-emerald-border: #a7f3d0;
+
+  --color-amber: #d97706;
+  --color-amber-bg: #fffbeb;
+  --color-amber-border: #fde68a;
+
+  --color-crimson: #dc2626;
+  --color-crimson-bg: #fef2f2;
+  --color-crimson-border: #fecaca;
+
+  --color-blue: #2563eb;
+  --color-blue-bg: #eff6ff;
+  --color-blue-border: #bfdbfe;
 
   /* Typography Stacks */
-  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', Fira Code, Consolas, monospace;
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-body: 'Geist', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', Fira Code, Consolas, monospace;
 
   /* Spacing & Radii */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
   --radius-pill: 9999px;
+}
+
+html.dark {
+  /* Surface hierarchy - Deep Charcoal Dark */
+  --color-paper: #09090b;
+  --color-paper-2: #121215;
+  --color-paper-3: #18181b;
+  --color-paper-4: #27272a;
+
+  /* Ink / Typography */
+  --color-ink: #f4f4f5;
+  --color-ink-muted: #a1a1aa;
+  --color-ink-faint: #52525b;
+
+  /* Hairlines & Structural Dividers */
+  --color-line: #27272a;
+  --color-line-subtle: #1f1f23;
+  --color-focus: #3b82f6;
+
+  /* Primary Accent: Electric Linear Blue */
+  --color-accent: #3b82f6;
+  --color-accent-hover: #60a5fa;
+  --color-accent-muted: rgba(59, 130, 246, 0.12);
+  --color-accent-glow: rgba(59, 130, 246, 0.2);
+
+  /* Semantic Telemetry States (Dark Mode) */
+  --color-emerald: #10b981;
+  --color-emerald-bg: rgba(16, 185, 129, 0.12);
+  --color-emerald-border: rgba(16, 185, 129, 0.25);
+
+  --color-amber: #f59e0b;
+  --color-amber-bg: rgba(245, 158, 11, 0.12);
+  --color-amber-border: rgba(245, 158, 11, 0.25);
+
+  --color-crimson: #ef4444;
+  --color-crimson-bg: rgba(239, 68, 68, 0.12);
+  --color-crimson-border: rgba(239, 68, 68, 0.25);
+
+  --color-blue: #60a5fa;
+  --color-blue-bg: rgba(59, 130, 246, 0.12);
+  --color-blue-border: rgba(59, 130, 246, 0.25);
 }

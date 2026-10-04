@@ -9,11 +9,10 @@ import {
   CaretDown,
   ArrowsClockwise,
   Check,
-  Warning,
   Sparkle,
   X,
 } from '@phosphor-icons/react';
-import { AppItem, ContainerInfo } from '../../types/index.js';
+import { AppItem } from '../../types/index.js';
 
 interface LogsPanelProps {
   app: AppItem;
@@ -87,7 +86,6 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
     let timestamp: string | undefined;
     let level: 'info' | 'debug' | 'warn' | 'error' | 'none' = 'none';
 
-    // Regex check for ISO timestamps (e.g. 2026-10-04T10:49:38.123456789Z or 2026-10-04T10:49:38+08:00)
     const isoMatch = clean.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)\s+(.*)$/);
     if (isoMatch) {
       try {
@@ -124,21 +122,18 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
     };
   };
 
-  // Filtered log lines
   const parsedLogs = useMemo(() => {
     return logs.map(parseLogLine);
   }, [logs]);
 
   const filteredLogs = useMemo(() => {
     return parsedLogs.filter((item) => {
-      // Filter by log type
       if (logType !== 'all') {
         if (logType === 'error' && item.level !== 'error') return false;
         if (logType === 'warn' && item.level !== 'warn') return false;
         if (logType === 'debug' && item.level !== 'debug') return false;
         if (logType === 'info' && item.level !== 'info') return false;
       }
-      // Filter by search keyword
       if (search.trim()) {
         const q = search.toLowerCase();
         if (!item.raw.toLowerCase().includes(q)) return false;
@@ -147,7 +142,6 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
     });
   }, [parsedLogs, logType, search]);
 
-  // Copy logs handler
   const handleCopy = () => {
     const text = filteredLogs.map((l) => l.raw).join('\n');
     navigator.clipboard.writeText(text);
@@ -155,7 +149,6 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Download logs handler
   const handleDownload = () => {
     const text = filteredLogs.map((l) => l.raw).join('\n');
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -167,33 +160,32 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
     URL.revokeObjectURL(url);
   };
 
-  // AI Diagnostic Analysis
   const errorLines = useMemo(() => {
     return parsedLogs.filter((l) => l.level === 'error' || l.level === 'warn').slice(-15);
   }, [parsedLogs]);
 
   return (
-    <div className="space-y-4">
-      {/* ================= HEADER ================= */}
-      <div className="bg-paper-2 border border-line rounded-lg p-5">
+    <div className="space-y-6">
+      {/* HEADER CARD */}
+      <div className="card-vessel p-6 sm:p-7 shadow-subtle">
         <div>
-          <h3 className="font-semibold text-lg text-ink tracking-tight font-sans">Logs</h3>
-          <p className="text-xs text-ink-muted mt-0.5">Watch the logs of the application in real time</p>
+          <h3 className="font-semibold text-base text-ink tracking-tight font-sans">容器运行时日志</h3>
+          <p className="text-xs text-ink-muted mt-0.5">实时流式观察该应用栈下所有容器的标准输出与错误日志</p>
         </div>
 
-        {/* ================= CONTAINER SELECTOR ================= */}
-        <div className="mt-4">
+        {/* CONTAINER SELECTOR */}
+        <div className="mt-5">
           <label className="block text-xs font-semibold text-ink-muted mb-1.5 select-none">
-            Select a container to view logs
+            选择日志目标容器
           </label>
           <div className="relative">
             <select
               value={selectedService}
               onChange={(e) => setSelectedService(e.target.value)}
-              className="w-full appearance-none bg-paper border border-line rounded-md px-3.5 py-2.5 text-xs text-ink font-medium focus:border-accent focus:outline-none cursor-pointer pr-10 hover:border-paper-4 transition-colors"
+              className="w-full appearance-none bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-medium focus:border-accent focus:outline-none cursor-pointer pr-10 hover:border-paper-4 transition-colors"
             >
               <option value="all">
-                全部容器日志 (All Stack Containers)
+                全部容器聚合日志
               </option>
               {containerList.map((c) => (
                 <option key={c.id} value={c.name}>
@@ -207,60 +199,60 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
           </div>
         </div>
 
-        {/* ================= CONTROLS TOOLBAR ================= */}
-        <div className="mt-4 pt-3 border-t border-line/60 flex flex-wrap items-center justify-between gap-3">
+        {/* CONTROLS TOOLBAR */}
+        <div className="mt-5 pt-4 border-t border-line/60 flex flex-wrap items-center justify-between gap-3">
           {/* Left Filter Pills */}
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
             {/* Limit to Pill */}
-            <div className="flex items-center gap-1.5 bg-paper-3/60 px-2.5 py-1 rounded border border-line">
-              <span className="text-ink-muted text-[11px]">Limit to</span>
+            <div className="flex items-center gap-1.5 bg-paper-3/70 px-3 py-1.5 rounded-lg border border-line">
+              <span className="text-ink-muted text-[11px]">行数限制</span>
               <select
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
-                className="bg-transparent text-ink font-semibold focus:outline-none cursor-pointer text-xs"
+                className="bg-transparent text-ink font-medium focus:outline-none cursor-pointer text-xs"
               >
-                <option value={50} className="bg-paper text-ink">50 lines</option>
-                <option value={100} className="bg-paper text-ink">100 lines</option>
-                <option value={200} className="bg-paper text-ink">200 lines</option>
-                <option value={500} className="bg-paper text-ink">500 lines</option>
-                <option value={1000} className="bg-paper text-ink">1000 lines</option>
+                <option value={50} className="bg-paper text-ink">50 行</option>
+                <option value={100} className="bg-paper text-ink">100 行</option>
+                <option value={200} className="bg-paper text-ink">200 行</option>
+                <option value={500} className="bg-paper text-ink">500 行</option>
+                <option value={1000} className="bg-paper text-ink">1000 行</option>
               </select>
             </div>
 
             {/* Time range Pill */}
-            <div className="flex items-center gap-1.5 bg-paper-3/60 px-2.5 py-1 rounded border border-line">
-              <span className="text-ink-muted text-[11px]">Time range</span>
+            <div className="flex items-center gap-1.5 bg-paper-3/70 px-3 py-1.5 rounded-lg border border-line">
+              <span className="text-ink-muted text-[11px]">时间范围</span>
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value as any)}
-                className="bg-transparent text-ink font-semibold focus:outline-none cursor-pointer text-xs"
+                className="bg-transparent text-ink font-medium focus:outline-none cursor-pointer text-xs"
               >
-                <option value="all" className="bg-paper text-ink">All time</option>
-                <option value="15m" className="bg-paper text-ink">Last 15m</option>
-                <option value="1h" className="bg-paper text-ink">Last 1h</option>
-                <option value="24h" className="bg-paper text-ink">Last 24h</option>
+                <option value="all" className="bg-paper text-ink">全部时间</option>
+                <option value="15m" className="bg-paper text-ink">最近 15 分钟</option>
+                <option value="1h" className="bg-paper text-ink">最近 1 小时</option>
+                <option value="24h" className="bg-paper text-ink">最近 24 小时</option>
               </select>
             </div>
 
             {/* Log type Pill */}
-            <div className="flex items-center gap-1.5 bg-paper-3/60 px-2.5 py-1 rounded border border-line">
-              <span className="text-ink-muted text-[11px]">Log type</span>
+            <div className="flex items-center gap-1.5 bg-paper-3/70 px-3 py-1.5 rounded-lg border border-line">
+              <span className="text-ink-muted text-[11px]">日志等级</span>
               <select
                 value={logType}
                 onChange={(e) => setLogType(e.target.value as any)}
-                className="bg-transparent text-ink font-semibold focus:outline-none cursor-pointer text-xs"
+                className="bg-transparent text-ink font-medium focus:outline-none cursor-pointer text-xs"
               >
-                <option value="all" className="bg-paper text-ink">All</option>
-                <option value="info" className="bg-paper text-ink">Info</option>
-                <option value="debug" className="bg-paper text-ink">Debug</option>
-                <option value="warn" className="bg-paper text-ink">Warning</option>
-                <option value="error" className="bg-paper text-ink">Error</option>
+                <option value="all" className="bg-paper text-ink">全部</option>
+                <option value="info" className="bg-paper text-ink">正常 (Info)</option>
+                <option value="debug" className="bg-paper text-ink">调试 (Debug)</option>
+                <option value="warn" className="bg-paper text-ink">警告 (Warning)</option>
+                <option value="error" className="bg-paper text-ink">异常 (Error)</option>
               </select>
             </div>
 
             {loading && (
-              <span className="text-[11px] text-accent animate-pulse font-mono flex items-center gap-1">
-                <ArrowsClockwise className="w-3 h-3 animate-spin" />
+              <span className="text-[11px] text-accent font-mono flex items-center gap-1.5 ml-1">
+                <ArrowsClockwise className="w-3.5 h-3.5 animate-spin" />
                 <span>实时同步中...</span>
               </span>
             )}
@@ -268,67 +260,63 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2">
-            {/* Pause / Resume */}
             <button
               type="button"
               onClick={() => setIsPaused(!isPaused)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
                 isPaused
-                  ? 'bg-amber-950/60 border-amber-800 text-amber-300'
-                  : 'bg-paper-3 hover:bg-paper-4 border-line text-ink-muted hover:text-ink'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300'
+                  : 'bg-paper-2 hover:bg-paper-3 border-line text-ink'
               }`}
             >
               {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-              <span>{isPaused ? 'Resume' : 'Pause'}</span>
+              <span>{isPaused ? '继续滚屏' : '暂停'}</span>
             </button>
 
-            {/* Copy */}
             <button
               type="button"
               onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-3 hover:bg-paper-4 border border-line text-ink-muted hover:text-ink text-xs font-medium rounded transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-2 hover:bg-paper-3 border border-line text-ink text-xs font-medium rounded-lg transition-colors shadow-subtle"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? '已复制' : '复制日志'}</span>
             </button>
 
-            {/* Download */}
             <button
               type="button"
               onClick={handleDownload}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-3 hover:bg-paper-4 border border-line text-ink-muted hover:text-ink text-xs font-medium rounded transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-2 hover:bg-paper-3 border border-line text-ink text-xs font-medium rounded-lg transition-colors shadow-subtle"
             >
               <DownloadSimple className="w-3.5 h-3.5" />
-              <span>Download logs</span>
+              <span>下载日志</span>
             </button>
 
-            {/* AI Diagnose */}
             <button
               type="button"
               onClick={() => setIsAiOpen(!isAiOpen)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold border transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                 isAiOpen
-                  ? 'bg-accent text-paper border-accent shadow-glow-accent'
-                  : 'bg-sky-950/50 hover:bg-sky-900/60 border-sky-700/60 text-sky-300'
+                  ? 'bg-accent text-white border-accent shadow-subtle'
+                  : 'bg-paper-2 hover:bg-paper-3 border-line text-ink'
               }`}
             >
-              <Robot className="w-3.5 h-3.5" />
-              <span>AI</span>
+              <Robot className="w-3.5 h-3.5 text-accent" />
+              <span>AI 诊断</span>
             </button>
           </div>
         </div>
 
-        {/* ================= SEARCH INPUT ================= */}
-        <div className="mt-3.5 relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-faint">
+        {/* SEARCH INPUT */}
+        <div className="mt-4 relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink-faint">
             <MagnifyingGlass className="w-3.5 h-3.5" />
           </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search logs..."
-            className="w-full bg-paper border border-line rounded-md pl-9 pr-8 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono"
+            placeholder="在日志中搜索关键词..."
+            className="w-full bg-paper border border-line rounded-lg pl-9 pr-8 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono transition-colors"
           />
           {search && (
             <button
@@ -342,64 +330,64 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
         </div>
       </div>
 
-      {/* ================= AI DIAGNOSIS DRAWER (IF OPEN) ================= */}
+      {/* AI DIAGNOSIS DRAWER */}
       {isAiOpen && (
-        <div className="bg-sky-950/40 border border-sky-800/80 rounded-lg p-4 space-y-3 animate-fade-in text-xs">
-          <div className="flex items-center justify-between pb-2 border-b border-sky-800/50">
+        <div className="bg-blue-50/90 border border-blue-200 text-blue-900 dark:bg-blue-950/30 dark:border-blue-900/40 dark:text-blue-200 rounded-xl p-5 space-y-3 text-xs shadow-subtle">
+          <div className="flex items-center justify-between pb-2 border-b border-blue-200/60 dark:border-blue-800/40">
             <div className="flex items-center gap-2">
-              <Sparkle className="w-4 h-4 text-sky-400" />
-              <span className="font-semibold text-sky-200">Antigravity AI 智能日志诊断分析</span>
+              <Sparkle className="w-4 h-4 text-accent" weight="bold" />
+              <span className="font-semibold text-ink">Antigravity AI 智能日志诊断分析</span>
             </div>
             <button
               onClick={() => setIsAiOpen(false)}
-              className="text-sky-400 hover:text-sky-200"
+              className="text-ink-muted hover:text-ink p-1 rounded"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {errorLines.length === 0 ? (
-            <p className="text-emerald-300">
+            <p className="text-emerald-700 dark:text-emerald-300 font-medium">
               ✓ 当前日志流运行状态良好，未检测到致命崩溃（Fatal/Panic）或异常错误堆栈。
             </p>
           ) : (
             <div className="space-y-2">
-              <p className="text-amber-200 font-medium">
+              <p className="text-amber-800 dark:text-amber-300 font-medium">
                 检测到 {errorLines.length} 条警告或错误信号：
               </p>
-              <div className="bg-black/60 rounded p-2.5 font-mono text-[11px] text-rose-300 space-y-1 max-h-36 overflow-y-auto">
+              <div className="bg-paper rounded-lg border border-line p-3 font-mono text-[11px] text-rose-600 dark:text-rose-300 space-y-1 max-h-36 overflow-y-auto">
                 {errorLines.map((el, i) => (
                   <div key={i} className="truncate">
                     {el.raw}
                   </div>
                 ))}
               </div>
-              <div className="p-2.5 bg-sky-900/40 rounded border border-sky-700/50 text-sky-200 leading-relaxed text-[11px]">
-                <span className="font-semibold text-white block mb-0.5">💡 AI 排错建议：</span>
+              <div className="p-3 bg-paper rounded-lg border border-line text-ink leading-relaxed text-[11.5px]">
+                <span className="font-semibold text-accent block mb-1">💡 AI 排错建议：</span>
                 1. 检查环境变量配置（如数据库连接密码、端口冲突）是否与对应容器需求相匹配。
                 <br />
-                2. 若属于初始化首次启动报错，通常可在配置正确后自动恢复，或点击上方的「Rebuild」拉取更新重建。
+                2. 若属于初始化首次启动报错，通常可在配置正确后自动恢复，或点击上方的「重建服务」拉取更新重建。
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ================= REAL-TIME LOG VIEWER ================= */}
-      <div className="bg-paper-2 border border-line rounded-lg overflow-hidden shadow-inner">
-        <div className="bg-paper-3/40 px-4 py-2 border-b border-line flex items-center justify-between text-xs font-mono text-ink-faint select-none">
+      {/* REAL-TIME LOG VIEWER - HIGH CONTRAST TERMINAL VIEWPORT */}
+      <div className="bg-paper border border-line rounded-xl overflow-hidden shadow-subtle dark:bg-zinc-950">
+        <div className="bg-paper-2/80 px-4 py-2.5 border-b border-line flex items-center justify-between text-xs font-mono text-ink-muted select-none dark:bg-zinc-900/80 dark:border-zinc-800 dark:text-zinc-400">
           <span>
-            Showing {filteredLogs.length} of {parsedLogs.length} lines
-            {isPaused && <span className="text-amber-400 ml-2">(Streaming Paused)</span>}
+            显示 {filteredLogs.length} / {parsedLogs.length} 行
+            {isPaused && <span className="text-amber-600 dark:text-amber-400 ml-2">(滚屏已暂停)</span>}
           </span>
           <span className="text-[11px]">
-            {selectedService === 'all' ? 'All Services' : `Service: ${selectedService}`}
+            {selectedService === 'all' ? '所有服务' : `服务: ${selectedService}`}
           </span>
         </div>
 
-        <div className="p-3 font-mono text-xs overflow-x-auto min-h-[380px] max-h-[560px] overflow-y-auto space-y-1 bg-black/85 select-text">
+        <div className="p-3.5 font-mono text-xs overflow-x-auto min-h-[380px] max-h-[560px] overflow-y-auto space-y-1 bg-paper text-ink dark:bg-zinc-950 dark:text-zinc-200 select-text">
           {filteredLogs.length === 0 ? (
-            <div className="py-24 text-center text-ink-muted text-xs font-mono">
+            <div className="py-24 text-center text-ink-faint dark:text-zinc-500 text-xs font-mono">
               {search
                 ? `未找到包含 "${search}" 的日志条目`
                 : '暂无容器输出日志。若容器刚启动，正在等待首批标准输出...'}
@@ -408,7 +396,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
             filteredLogs.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-2.5 hover:bg-paper-3/20 px-2 py-0.5 rounded transition-colors text-[11.5px] leading-relaxed group"
+                className="flex items-start gap-2.5 hover:bg-paper-2/70 dark:hover:bg-zinc-900/60 px-2 py-0.5 rounded transition-colors text-[11.5px] leading-relaxed group"
               >
                 {/* Left Level Indicator Bar */}
                 <div
@@ -416,18 +404,18 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                     item.level === 'error'
                       ? 'bg-rose-500'
                       : item.level === 'warn'
-                      ? 'bg-amber-400'
+                      ? 'bg-amber-500 dark:bg-amber-400'
                       : item.level === 'debug'
-                      ? 'bg-purple-400'
+                      ? 'bg-purple-500 dark:bg-purple-400'
                       : item.level === 'info'
-                      ? 'bg-sky-400'
-                      : 'bg-neutral-600'
+                      ? 'bg-blue-500 dark:bg-blue-400'
+                      : 'bg-paper-4 dark:bg-zinc-700'
                   }`}
                 />
 
                 {/* Timestamp Column */}
                 {item.timestamp && (
-                  <span className="text-ink-faint flex-shrink-0 select-none tabular-nums text-[11px] whitespace-nowrap">
+                  <span className="text-ink-faint dark:text-zinc-500 flex-shrink-0 select-none tabular-nums text-[11px] whitespace-nowrap">
                     {item.timestamp}
                   </span>
                 )}
@@ -435,17 +423,17 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 {/* Level Badge */}
                 {item.level !== 'none' && (
                   <span
-                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-semibold uppercase flex-shrink-0 select-none ${
+                    className={`text-[10px] font-sans px-1.5 py-0.2 rounded font-medium flex-shrink-0 select-none ${
                       item.level === 'error'
-                        ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800'
                         : item.level === 'warn'
-                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
                         : item.level === 'debug'
-                        ? 'bg-purple-950 text-purple-300 border border-purple-800'
-                        : 'bg-sky-950 text-sky-300 border border-sky-800'
+                        ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800'
                     }`}
                   >
-                    {item.level}
+                    {item.level === 'error' ? '错误' : item.level === 'warn' ? '警告' : item.level === 'debug' ? '调试' : '正常'}
                   </span>
                 )}
 
@@ -453,12 +441,12 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 <span
                   className={`flex-1 whitespace-pre-wrap break-all ${
                     item.level === 'error'
-                      ? 'text-rose-200'
+                      ? 'text-rose-600 dark:text-rose-300'
                       : item.level === 'warn'
-                      ? 'text-amber-200'
+                      ? 'text-amber-700 dark:text-amber-300'
                       : item.level === 'debug'
-                      ? 'text-purple-200'
-                      : 'text-neutral-300'
+                      ? 'text-purple-700 dark:text-purple-300'
+                      : 'text-ink-secondary dark:text-zinc-300'
                   }`}
                 >
                   {item.content}

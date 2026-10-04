@@ -48,15 +48,12 @@ export const AppsView: React.FC<AppsViewProps> = ({
   onBackup,
   onSubscribeLogs,
 }) => {
-  // Navigation mode within Apps: 'list' | 'create' | 'detail'
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'detail'>('list');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  // Selected App Object
   const selectedApp = apps.find((a) => a.id === selectedAppId) || null;
 
-  // GSAP animation container
   const containerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +73,6 @@ export const AppsView: React.FC<AppsViewProps> = ({
       a.id.toLowerCase().includes(search.toLowerCase())
   );
 
-  // If in CREATE mode -> Render Dokploy Compose Create Page
   if (viewMode === 'create') {
     return (
       <ComposeAppView
@@ -99,7 +95,6 @@ export const AppsView: React.FC<AppsViewProps> = ({
     );
   }
 
-  // If in DETAIL mode -> Render Dokploy Compose Manage Page
   if (viewMode === 'detail' && selectedApp) {
     return (
       <ComposeAppView
@@ -131,9 +126,8 @@ export const AppsView: React.FC<AppsViewProps> = ({
     );
   }
 
-  // DEFAULT: Application List Mode
   return (
-    <div ref={containerRef} className="space-y-6">
+    <div ref={containerRef} className="space-y-8">
       {/* Top Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
@@ -142,11 +136,10 @@ export const AppsView: React.FC<AppsViewProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索受管应用 (名称 / ID)..."
-            className="w-full bg-paper-2 border border-line rounded px-3.5 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent font-sans"
+            className="w-full bg-paper border border-line rounded-lg px-4 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent font-sans transition-colors"
           />
         </div>
 
-        {/* Create App Button: Switches to Dokploy Full Create Page */}
         <Button8State
           variant="primary"
           icon={<Plus className="w-4 h-4" weight="bold" />}
@@ -158,33 +151,35 @@ export const AppsView: React.FC<AppsViewProps> = ({
 
       {/* Applications Grid */}
       {filteredApps.length === 0 ? (
-        <div className="card-vessel p-12 text-center space-y-4">
-          <div className="w-12 h-12 rounded-full bg-paper-3 flex items-center justify-center mx-auto text-ink-muted">
+        <div className="card-vessel p-16 text-center space-y-4 shadow-subtle">
+          <div className="w-12 h-12 rounded-xl bg-paper-3 flex items-center justify-center mx-auto text-ink-muted">
             <Code className="w-6 h-6" />
           </div>
           <div>
             <h4 className="text-base font-semibold text-ink">未找到任何应用</h4>
-            <p className="text-xs text-ink-muted mt-1">
+            <p className="text-xs text-ink-muted mt-1.5">
               {search ? '请尝试更换搜索关键字' : '当前暂无托管应用，点击下方按钮创建第一个 Docker Compose 应用'}
             </p>
           </div>
           {!search && (
-            <Button8State
-              variant="primary"
-              size="sm"
-              icon={<Plus className="w-4 h-4" weight="bold" />}
-              onClick={() => setViewMode('create')}
-            >
-              新建应用 (Dokploy 模式)
-            </Button8State>
+            <div className="pt-2">
+              <Button8State
+                variant="primary"
+                size="sm"
+                icon={<Plus className="w-4 h-4" weight="bold" />}
+                onClick={() => setViewMode('create')}
+              >
+                新建应用
+              </Button8State>
+            </div>
           )}
         </div>
       ) : (
-        <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredApps.map((app) => (
             <div
               key={app.id}
-              className="card-vessel p-5 flex flex-col justify-between hover:border-paper-4 transition-all"
+              className="card-vessel p-6 sm:p-7 flex flex-col justify-between hover:border-paper-4 transition-all shadow-subtle hover:shadow-card"
             >
               <div>
                 {/* Header */}
@@ -206,17 +201,19 @@ export const AppsView: React.FC<AppsViewProps> = ({
 
                 {/* Description */}
                 {app.description && (
-                  <p className="text-xs text-ink-muted mt-2 line-clamp-2">{app.description}</p>
+                  <p className="text-xs text-ink-muted mt-3 line-clamp-2 leading-relaxed">
+                    {app.description}
+                  </p>
                 )}
 
                 {/* Image & Update Badge */}
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-xs">
+                <div className="mt-5 pt-3.5 border-t border-line/60 flex items-center justify-between text-xs">
                   <span className="font-mono text-ink-faint truncate max-w-[180px]">
-                    {app.currentImageTag || 'compose managed'}
+                    {app.currentImageTag || 'Compose 编排托管'}
                   </span>
                   {app.updateAvailable && (
-                    <span className="inline-flex items-center gap-1 font-mono text-[11px] px-2 py-0.5 bg-amber-950/80 text-amber-300 border border-amber-800 rounded">
-                      <Sparkle className="w-3 h-3 text-amber-400" />
+                    <span className="inline-flex items-center gap-1 font-mono text-[11px] px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-full">
+                      <Sparkle className="w-3 h-3 text-amber-500" weight="bold" />
                       可升级
                     </span>
                   )}
@@ -224,7 +221,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
               </div>
 
               {/* Quick Actions Footer */}
-              <div className="mt-5 pt-3 border-t border-line flex items-center justify-between gap-2">
+              <div className="mt-6 pt-3.5 border-t border-line flex items-center justify-between gap-2">
                 <button
                   onClick={() => {
                     setSelectedAppId(app.id);
@@ -242,14 +239,14 @@ export const AppsView: React.FC<AppsViewProps> = ({
                       <button
                         onClick={() => onRestart(app.id)}
                         title="重启应用"
-                        className="p-1.5 rounded text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors"
+                        className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors"
                       >
                         <ArrowsClockwise className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onStop(app.id)}
                         title="停止容器"
-                        className="p-1.5 rounded text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition-colors"
+                        className="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                       >
                         <Stop className="w-4 h-4" />
                       </button>

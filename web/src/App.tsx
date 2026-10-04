@@ -79,10 +79,10 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-paper flex items-center justify-center font-mono text-accent text-sm">
+      <div className="min-h-screen bg-paper flex items-center justify-center font-mono text-xs">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
-          <span>VESSEL CONTROL PLANE INITIALIZING...</span>
+          <span className="tracking-wider text-ink-muted">VESSEL 控制中心正在初始化...</span>
         </div>
       </div>
     );
@@ -90,7 +90,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-paper text-ink flex overflow-hidden font-sans">
-      {/* Hallmark Side-Rail Navigation */}
+      {/* Side-Rail Navigation */}
       <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} metrics={metrics} />
 
       {/* Main Workspace Area */}
@@ -103,9 +103,9 @@ export function App() {
           onQuickBackup={triggerSystemBackup}
         />
 
-        {/* Dynamic View Container */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div ref={mainContentRef} className="max-w-7xl mx-auto pb-12">
+        {/* Dynamic View Container - Spacious & Relaxed */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-10 lg:p-12">
+          <div ref={mainContentRef} className="max-w-7xl mx-auto pb-16">
             {currentTab === 'overview' && (
               <OverviewView
                 metrics={metrics}
