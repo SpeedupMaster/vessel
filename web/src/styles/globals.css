@@ -25,6 +25,41 @@ code, pre, kbd, samp {
   font-family: var(--font-mono);
 }
 
+/* Universal High-Contrast Selection Highlighting */
+::selection {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+::-moz-selection {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+input::selection, textarea::selection {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+input::-moz-selection, textarea::-moz-selection {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.dark ::selection,
+.dark input::selection,
+.dark textarea::selection {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.dark ::-moz-selection,
+.dark input::-moz-selection,
+.dark textarea::-moz-selection {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
 /* Minimalist Engineered Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;

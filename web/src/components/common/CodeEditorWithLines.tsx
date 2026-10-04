@@ -68,6 +68,21 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
     }
   };
 
+  const handleLineClick = (lineIndex: number) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const linesArr = value.split('\n');
+    let start = 0;
+    for (let i = 0; i < lineIndex; i++) {
+      start += linesArr[i].length + 1;
+    }
+    const end = start + (linesArr[lineIndex]?.length || 0);
+
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+  };
+
   return (
     <div
       className={clsx(
@@ -83,7 +98,12 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
         className="select-none py-3 px-3 bg-paper-2 border-r border-line text-ink-faint text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem]"
       >
         {Array.from({ length: lineCount }).map((_, idx) => (
-          <div key={idx} className="tabular-nums">
+          <div
+            key={idx}
+            onClick={() => handleLineClick(idx)}
+            className="tabular-nums cursor-pointer hover:text-ink transition-colors select-none"
+            title={`点击选中第 ${idx + 1} 行`}
+          >
             {idx + 1}
           </div>
         ))}
@@ -99,7 +119,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
         readOnly={readOnly}
         placeholder={placeholder}
         spellCheck={false}
-        className="flex-1 w-full p-3 bg-transparent text-ink font-mono text-xs leading-[1.625rem] resize-y outline-none overflow-auto whitespace-pre font-normal selection:bg-accent/25 selection:text-ink"
+        className="flex-1 w-full p-3 bg-transparent text-ink font-mono text-xs leading-[1.625rem] resize-y outline-none overflow-auto whitespace-pre font-normal cursor-text select-text"
         style={{ minHeight }}
       />
     </div>
