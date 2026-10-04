@@ -10,6 +10,7 @@ import { DomainItem, AppItem } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { Modal } from '../common/Modal.js';
+import { useNotification } from '../../context/NotificationContext.js';
 
 interface DomainsViewProps {
   domains: DomainItem[];
@@ -26,6 +27,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   onDeleteDomain,
   onRenewDomain,
 }) => {
+  const { toast, confirm } = useNotification();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [domainInput, setDomainInput] = useState('');
   const [appIdInput, setAppIdInput] = useState(apps[0]?.id || '');
@@ -48,8 +50,9 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
       });
       setIsAddOpen(false);
       setDomainInput('');
+      toast.success(`域名 ${domainInput} 绑定成功！Caddy 正在自动化签发 SSL 证书`);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -144,9 +147,21 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                       检测/续订
                     </Button8State>
                     <button
-                      onClick={() => {
-                        if (confirm(`确定要解绑域名 ${d.domain} 吗？`)) {
-                          onDeleteDomain(d.id);
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: '解绑域名路由',
+                          message: `确定要解绑并移除域名 "${d.domain}" 吗？此操作将立即清除反向代理路由规则。`,
+                          confirmText: '确认解绑',
+                          cancelText: '取消',
+                          variant: 'danger',
+                        });
+                        if (ok) {
+                          try {
+                            await onDeleteDomain(d.id);
+                            toast.success(`域名 ${d.domain} 已成功解绑`);
+                          } catch (err: any) {
+                            toast.error(`解绑失败: ${err.message}`);
+                          }
                         }
                       }}
                       className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors border border-line"

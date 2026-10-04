@@ -30,6 +30,7 @@ import { Button8State } from '../common/Button8State.js';
 import { CodeEditorWithLines } from '../common/CodeEditorWithLines.js';
 import { Modal } from '../common/Modal.js';
 import { LogsPanel } from './LogsPanel.js';
+import { useNotification } from '../../context/NotificationContext.js';
 
 interface ComposeAppViewProps {
   mode: 'create' | 'edit';
@@ -70,6 +71,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   onBackup,
   onSubscribeLogs,
 }) => {
+  const { toast, confirm } = useNotification();
+
   // Tabs: Dokploy tabs layout
   type TabKey =
     | 'general'
@@ -157,14 +160,36 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     setActiveTab('general');
   };
 
+  // Delete App confirmation handler
+  const handleDeleteAppClick = async () => {
+    if (!app) return;
+    const ok = await confirm({
+      title: '彻底删除应用',
+      message: `确定要彻底删除应用 "${app.name}" 吗？此操作将立即停止容器并清理本地编排配置文件，操作不可恢复。`,
+      confirmText: '彻底删除',
+      cancelText: '取消',
+      variant: 'danger',
+    });
+    if (ok) {
+      toast.info(`正在删除应用 ${app.name}...`);
+      try {
+        await onDeleteApp(app.id);
+        toast.success(`应用 ${app.name} 已成功删除`);
+        onBack();
+      } catch (err: any) {
+        toast.error(`删除应用失败: ${err.message}`);
+      }
+    }
+  };
+
   // Create App
   const handleCreate = async (shouldDeploy: boolean = false) => {
     if (!name.trim()) {
-      alert('请填写应用名称');
+      toast.error('请填写应用名称');
       return;
     }
     if (!yamlValidation.valid) {
-      alert(`Docker Compose 语法错误: ${yamlValidation.error}`);
+      toast.error(`Docker Compose 语法错误: ${yamlValidation.error}`);
       return;
     }
 
@@ -178,12 +203,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         autoUpdate,
       });
 
+      toast.success('应用创建成功！');
       if (shouldDeploy && created?.id) {
         await onDeploy(created.id);
       }
       onBack();
     } catch (err: any) {
-      alert(`创建应用失败: ${err.message}`);
+      toast.error(`创建应用失败: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -193,7 +219,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const handleSaveApp = async () => {
     if (!app) return;
     if (!yamlValidation.valid) {
-      alert(`Docker Compose 语法错误: ${yamlValidation.error}`);
+      toast.error(`Docker Compose 语法错误: ${yamlValidation.error}`);
       return;
     }
 
@@ -207,9 +233,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         autoUpdate,
       });
       setSaveSuccess(true);
+      toast.success('配置已成功保存！');
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err: any) {
-      alert(`保存更新失败: ${err.message}`);
+      toast.error(`保存更新失败: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -218,6 +245,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const handleCopyYaml = () => {
     navigator.clipboard.writeText(composeYaml);
     setCopiedYaml(true);
+    toast.success('Compose 配置已复制到剪贴板');
     setTimeout(() => setCopiedYaml(false), 1800);
   };
 
@@ -227,8 +255,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       await onUpdateApp(app.id, { name: tempName.trim() });
       setName(tempName.trim());
       setIsRenaming(false);
+      toast.success('应用名称已修改');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -243,7 +272,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         await onRebuild(app.id);
       }
     } catch (err: any) {
-      alert(`Fresh Volumes 执行失败: ${err.message}`);
+      toast.error(`Fresh Volumes 执行失败: ${err.message}`);
     }
   };
 
@@ -371,12 +400,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           <div className="flex items-center gap-2">
             {mode === 'edit' && app && (
               <button
-                onClick={() => {
-                  if (confirm(`确定要彻底删除应用 ${app.name} 吗？`)) {
-                    onDeleteApp(app.id);
-                    onBack();
-                  }
-                }}
+                onClick={handleDeleteAppClick}
                 title="删除此应用"
                 className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-line transition-colors"
               >
@@ -1069,12 +1093,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               </p>
               <div className="mt-3.5">
                 <button
-                  onClick={() => {
-                    if (confirm(`警告：确定彻底删除应用 ${app.name} 吗？`)) {
-                      onDeleteApp(app.id);
-                      onBack();
-                    }
-                  }}
+                  onClick={handleDeleteAppClick}
                   className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-300 dark:border dark:border-rose-800 text-xs font-medium rounded-lg flex items-center gap-1.5 shadow-subtle transition-colors"
                 >
                   <Trash className="w-4 h-4" />

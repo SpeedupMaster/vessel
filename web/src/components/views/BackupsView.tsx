@@ -8,6 +8,7 @@ import {
 import { R2Config, BackupRecord } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
 import { Badge } from '../common/Badge.js';
+import { useNotification } from '../../context/NotificationContext.js';
 
 interface BackupsViewProps {
   r2Config: R2Config | null;
@@ -24,6 +25,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   onTestConnection,
   onTriggerBackupNow,
 }) => {
+  const { toast } = useNotification();
   const [enabled, setEnabled] = useState(r2Config?.enabled ?? false);
   const [endpoint, setEndpoint] = useState(r2Config?.endpoint || '');
   const [bucketName, setBucketName] = useState(r2Config?.bucketName || '');
@@ -48,8 +50,14 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         secretAccessKey,
       });
       setTestResult(res);
+      if (res.success) {
+        toast.success('Cloudflare R2 连接测试成功！');
+      } else {
+        toast.error(`R2 连接测试失败: ${res.message}`);
+      }
     } catch (e: any) {
       setTestResult({ success: false, message: e.message });
+      toast.error(`R2 连接异常: ${e.message}`);
     } finally {
       setIsTesting(false);
     }
@@ -68,9 +76,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         cronSchedule,
         retentionCount,
       });
-      alert('Cloudflare R2 备份策略保存成功！');
+      toast.success('Cloudflare R2 备份策略保存成功！');
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setIsSaving(false);
     }
@@ -78,11 +86,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
   const handleManualBackup = async () => {
     setIsBackingUp(true);
+    toast.info('正在创建系统快照并同步上传 R2...');
     try {
       await onTriggerBackupNow();
-      alert('已成功生成并上传快照至 Cloudflare R2！');
+      toast.success('已成功生成并上传快照至 Cloudflare R2！');
     } catch (e: any) {
-      alert(`备份失败: ${e.message}`);
+      toast.error(`备份失败: ${e.message}`);
     } finally {
       setIsBackingUp(false);
     }

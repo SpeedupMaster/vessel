@@ -10,6 +10,7 @@ import { MaintenanceConfig, AppItem } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
 import { RollingCounter } from '../common/RollingCounter.js';
 import { Badge } from '../common/Badge.js';
+import { useNotification } from '../../context/NotificationContext.js';
 
 interface MaintenanceViewProps {
   maintenance: MaintenanceConfig | null;
@@ -26,6 +27,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   onTriggerPrune,
   onTriggerCheckUpdates,
 }) => {
+  const { toast } = useNotification();
   const [autoPrune, setAutoPrune] = useState(maintenance?.autoPrune ?? true);
   const [pruneSchedule, setPruneSchedule] = useState(maintenance?.pruneSchedule || '0 4 * * 0');
   const [pruneDangling, setPruneDangling] = useState(maintenance?.pruneDangling ?? true);
@@ -50,9 +52,11 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
       if (res.freedBytes) {
         setFreedMb(res.freedBytes / (1024 * 1024));
       }
-      setPruneFeedback(res.summary || '安全清理已执行完成！');
+      const msg = res.summary || '安全清理已执行完成！';
+      setPruneFeedback(msg);
+      toast.success(msg);
     } catch (e: any) {
-      alert(`清理失败: ${e.message}`);
+      toast.error(`清理失败: ${e.message}`);
     } finally {
       setIsPruning(false);
     }
@@ -62,9 +66,9 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
     setIsCheckingUpdates(true);
     try {
       const res = await onTriggerCheckUpdates();
-      alert(res.message || '镜像巡检完成！');
+      toast.success(res.message || '镜像巡检完成！');
     } catch (e: any) {
-      alert(`巡检失败: ${e.message}`);
+      toast.error(`巡检失败: ${e.message}`);
     } finally {
       setIsCheckingUpdates(false);
     }
@@ -81,9 +85,9 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
         autoCheckUpdates,
         checkSchedule,
       });
-      alert('运维与巡检策略保存成功！');
+      toast.success('运维与巡检策略保存成功！');
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     }
   };
 
