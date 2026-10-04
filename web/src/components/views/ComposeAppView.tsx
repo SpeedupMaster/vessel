@@ -164,10 +164,17 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const handleDeleteAppClick = async () => {
     if (!app) return;
     const ok = await confirm({
-      title: '彻底删除应用',
-      message: `确定要彻底删除应用 "${app.name}" 吗？此操作将立即停止容器并清理本地编排配置文件，操作不可恢复。`,
-      confirmText: '彻底删除',
-      cancelText: '取消',
+      title: '⚠️ 危险操作：彻底删除应用',
+      subtitle: `受管服务: ${app.name} (${app.id})`,
+      dangerTitle: '删除操作不可撤回！',
+      message: `确定要彻底删除应用 "${app.name}" 吗？此操作将立即停止容器并清理本地编排配置文件与关联网络。`,
+      details: [
+        '容器服务将立即执行停止并销毁 Compose 实例',
+        '本地存储的 docker-compose.yml 编排文件将被彻底删除',
+        '关联的域名反向代理路由规则需要按需手动解绑',
+      ],
+      confirmText: '确认彻底删除',
+      cancelText: '取消并返回',
       variant: 'danger',
     });
     if (ok) {

@@ -149,10 +149,17 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                     <button
                       onClick={async () => {
                         const ok = await confirm({
-                          title: '解绑域名路由',
-                          message: `确定要解绑并移除域名 "${d.domain}" 吗？此操作将立即清除反向代理路由规则。`,
-                          confirmText: '确认解绑',
-                          cancelText: '取消',
+                          title: '⚠️ 危险操作：解绑域名路由',
+                          subtitle: `域名绑定: ${d.domain} -> ${d.serviceName}:${d.targetPort}`,
+                          dangerTitle: '解绑操作不可撤回！',
+                          message: `确定要解绑并移除域名 "${d.domain}" 吗？此操作将立即清除 Caddy 反向代理路由规则并重新加载服务配置。`,
+                          details: [
+                            'Caddy 配置文件中该域名的规则块将被完全移除',
+                            '外部流量将无法再通过此域名访问目标容器服务',
+                            'Caddy 服务将自动重新加载配置以使路由变更生效',
+                          ],
+                          confirmText: '确认解绑域名',
+                          cancelText: '取消并返回',
                           variant: 'danger',
                         });
                         if (ok) {

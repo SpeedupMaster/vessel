@@ -1,11 +1,14 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
 import {
   CheckCircle,
   WarningCircle,
   Warning,
   Info,
   X,
+  Trash,
+  Check,
 } from '@phosphor-icons/react';
+import { Modal } from '../components/common/Modal';
 
 export interface ToastItem {
   id: string;
@@ -15,7 +18,10 @@ export interface ToastItem {
 
 export interface ConfirmOptions {
   title?: string;
+  subtitle?: string;
   message: string;
+  details?: string[];
+  dangerTitle?: string;
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'primary';
@@ -51,7 +57,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => {
       removeToast(id);
-    }, 3800);
+    }, 4000);
   }, [removeToast]);
 
   const toast = useRef({
@@ -79,52 +85,55 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  // Keyboard shortcut for confirm modal (Escape to cancel)
-  useEffect(() => {
-    if (!confirmState?.isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleConfirmClose(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [confirmState]);
-
   return (
     <NotificationContext.Provider value={{ toast, confirm }}>
       {children}
 
       {/* TOAST NOTIFICATION CONTAINER */}
-      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+      <div className="fixed top-5 right-5 z-[99999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
         {toasts.map((t) => {
-          let icon = <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" weight="bold" />;
+          let icon = <Info className="w-4 h-4 text-accent flex-shrink-0" weight="fill" />;
+          let bgIcon = 'bg-accent/10 text-accent';
           let borderAccent = 'border-line';
+          let label = '系统提示';
 
           if (t.type === 'success') {
-            icon = <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" weight="fill" />;
+            icon = <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" weight="fill" />;
+            bgIcon = 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400';
             borderAccent = 'border-emerald-200 dark:border-emerald-800/60';
+            label = '操作成功';
           } else if (t.type === 'error') {
-            icon = <WarningCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" weight="fill" />;
+            icon = <WarningCircle className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />;
+            bgIcon = 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400';
             borderAccent = 'border-rose-200 dark:border-rose-900/60';
+            label = '执行失败';
           } else if (t.type === 'warning') {
-            icon = <Warning className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" weight="bold" />;
+            icon = <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />;
+            bgIcon = 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400';
             borderAccent = 'border-amber-200 dark:border-amber-800/60';
+            label = '系统警告';
           }
 
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto bg-paper border ${borderAccent} rounded-xl shadow-floating p-4 flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-2 duration-200`}
+              className={`pointer-events-auto bg-paper/95 backdrop-blur-md border ${borderAccent} rounded-xl shadow-floating p-3.5 flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-3 duration-200`}
             >
-              {icon}
-              <div className="flex-1 text-xs text-ink leading-relaxed font-sans pr-1">
-                {t.message}
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${bgIcon}`}>
+                {icon}
+              </div>
+              <div className="flex-1 min-w-0 pr-1">
+                <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">
+                  {label}
+                </div>
+                <div className="text-xs text-ink leading-relaxed font-sans select-text">
+                  {t.message}
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => removeToast(t.id)}
-                className="text-ink-muted hover:text-ink transition-colors p-0.5 rounded"
+                className="text-ink-muted hover:text-ink hover:bg-paper-2 transition-colors p-1 rounded-lg flex-shrink-0 -mr-1 -mt-1"
                 title="关闭"
               >
                 <X className="w-3.5 h-3.5" />
@@ -135,74 +144,85 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       </div>
 
       {/* CONFIRMATION MODAL */}
-      {confirmState?.isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-          {/* Backdrop */}
-          <div
-            onClick={() => handleConfirmClose(false)}
-            className="fixed inset-0 bg-black/40 dark:bg-black/75 backdrop-blur-sm transition-opacity"
-          />
-
-          {/* Panel */}
-          <div className="relative w-full max-w-md bg-paper border border-line rounded-xl shadow-floating p-6 sm:p-7 z-10 flex flex-col space-y-4 font-sans animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start gap-3.5">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  confirmState.options.variant === 'danger'
-                    ? 'bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60'
-                    : 'bg-accent/10 text-accent border border-accent/20'
-                }`}
-              >
-                {confirmState.options.variant === 'danger' ? (
-                  <Warning className="w-5 h-5" weight="bold" />
-                ) : (
-                  <Info className="w-5 h-5" weight="bold" />
-                )}
-              </div>
-
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-ink tracking-tight">
-                  {confirmState.options.title || '操作确认'}
-                </h3>
-                <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+      {confirmState && (
+        <Modal
+          isOpen={confirmState.isOpen}
+          onClose={() => handleConfirmClose(false)}
+          title={
+            confirmState.options.title ||
+            (confirmState.options.variant === 'danger' ? '⚠️ 高风险操作确认' : '操作确认')
+          }
+          subtitle={confirmState.options.subtitle}
+          maxWidth="max-w-xl"
+          zIndex="z-[9999]"
+        >
+          <div className="space-y-4">
+            {confirmState.options.variant === 'danger' ? (
+              <div className="p-4 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/60 text-xs space-y-2.5">
+                <div className="flex items-center gap-2 font-bold text-sm text-rose-700 dark:text-rose-300">
+                  <Warning className="w-5 h-5 text-rose-600 dark:text-rose-400 flex-shrink-0" weight="fill" />
+                  <span>{confirmState.options.dangerTitle || '高风险操作确认'}</span>
+                </div>
+                <p className="leading-relaxed font-sans">
                   {confirmState.options.message}
                 </p>
               </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-paper-2 text-ink border border-line text-xs space-y-2.5 shadow-subtle">
+                <div className="flex items-center gap-2 font-semibold text-sm text-ink">
+                  <Info className="w-5 h-5 text-accent flex-shrink-0" weight="fill" />
+                  <span>提示说明</span>
+                </div>
+                <p className="leading-relaxed text-ink-muted font-sans">
+                  {confirmState.options.message}
+                </p>
+              </div>
+            )}
 
+            {confirmState.options.details && confirmState.options.details.length > 0 && (
+              <div className="p-4 rounded-xl bg-paper-2 border border-line text-xs space-y-2 shadow-subtle">
+                <div className="font-semibold text-ink">影响范围确认：</div>
+                <ul className="space-y-1.5 text-ink-muted list-disc list-inside">
+                  {confirmState.options.details.map((item, idx) => (
+                    <li key={idx} className="leading-relaxed">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-line flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => handleConfirmClose(false)}
-                className="text-ink-muted hover:text-ink transition-colors p-1 rounded"
+                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line shadow-subtle transition-colors"
               >
-                <X className="w-4 h-4" />
+                {confirmState.options.cancelText || '取消并返回'}
               </button>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="pt-3 border-t border-line/60 flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleConfirmClose(false)}
-                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors shadow-subtle"
-              >
-                {confirmState.options.cancelText || '取消'}
-              </button>
-
               <button
                 type="button"
                 onClick={() => handleConfirmClose(true)}
-                className={`px-4 py-2 text-xs font-medium rounded-lg transition-all shadow-subtle active:translate-y-px ${
+                className={`px-5 py-2 font-medium text-xs rounded-lg transition-all shadow-subtle active:translate-y-px flex items-center gap-2 ${
                   confirmState.options.variant === 'danger'
                     ? 'bg-rose-600 hover:bg-rose-700 text-white dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-200 dark:border dark:border-rose-800'
                     : 'bg-accent hover:bg-accent-hover text-white'
                 }`}
                 autoFocus
               >
-                {confirmState.options.confirmText || '确定'}
+                {confirmState.options.variant === 'danger' ? (
+                  <Trash className="w-4 h-4" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>
+                  {confirmState.options.confirmText ||
+                    (confirmState.options.variant === 'danger' ? '确认彻底删除' : '确认')}
+                </span>
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </NotificationContext.Provider>
   );
