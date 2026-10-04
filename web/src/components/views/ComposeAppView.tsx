@@ -563,7 +563,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             )}
 
             {/* Action Buttons Row */}
-            <div className="mt-5 pt-4 border-t border-line/60 flex flex-wrap items-center justify-between gap-4">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2.5">
                 {mode === 'create' ? (
                   <>
