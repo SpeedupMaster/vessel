@@ -124,8 +124,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             {/* Freed space highlight counter */}
             <div className="my-5 p-5 rounded-xl bg-paper-3/50 border border-line flex items-center justify-between shadow-subtle">
               <div>
-                <span className="text-[11px] font-mono text-ink-faint block uppercase">上次清理释放空间</span>
-                <div className="text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                <span className="text-[11px] text-ink-faint block uppercase">上次清理释放空间</span>
+                <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                   <RollingCounter value={freedMb} precision={1} suffix=" MB" />
                 </div>
               </div>
@@ -148,7 +148,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             )}
 
             {/* Strategy Toggles */}
-            <div className="space-y-3.5 mt-5 text-xs font-mono">
+            <div className="space-y-3.5 mt-5 text-xs">
               <label className="flex items-center gap-2.5 text-ink cursor-pointer">
                 <input
                   type="checkbox"
@@ -177,7 +177,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   type="number"
                   value={unusedRetentionHours}
                   onChange={(e) => setUnusedRetentionHours(Number(e.target.value))}
-                  className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
                 />
                 <span className="text-[11px] text-ink-faint block mt-1">
                   只有超过该时长且未被任何容器引用的镜像才会被清理，防止误删热备镜像。
@@ -190,7 +190,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   type="text"
                   value={pruneSchedule}
                   onChange={(e) => setPruneSchedule(e.target.value)}
-                  className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
                 />
               </div>
             </div>
@@ -218,8 +218,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
             <div className="my-5 p-5 rounded-xl bg-paper-3/50 border border-line flex items-center justify-between shadow-subtle">
               <div>
-                <span className="text-[11px] font-mono text-ink-faint block uppercase">巡检状态</span>
-                <span className="text-sm font-mono text-ink font-semibold mt-1 block">
+                <span className="text-[11px] text-ink-faint block uppercase">巡检状态</span>
+                <span className="text-sm text-ink font-semibold mt-1 block">
                   {maintenance?.lastCheckedAt
                     ? `上次检查: ${new Date(maintenance.lastCheckedAt).toLocaleTimeString()}`
                     : '尚未执行巡检'}
@@ -236,7 +236,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               </Button8State>
             </div>
 
-            <div className="space-y-3.5 mt-5 text-xs font-mono">
+            <div className="space-y-3.5 mt-5 text-xs">
               <label className="flex items-center gap-2.5 text-ink cursor-pointer">
                 <input
                   type="checkbox"
@@ -253,7 +253,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   type="text"
                   value={checkSchedule}
                   onChange={(e) => setCheckSchedule(e.target.value)}
-                  className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
                 />
                 <span className="text-[11px] text-ink-faint block mt-1">
                   默认每 6 小时 (0 */6 * * *) 自动对比远程 Registry 与本地镜像 Digest。
@@ -264,7 +264,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             {/* List of Apps with updates */}
             {appsWithUpdates.length > 0 && (
               <div className="mt-5 pt-4 border-t border-line space-y-2.5">
-                <span className="text-[11px] font-mono uppercase text-amber-600 dark:text-amber-400 font-bold block">
+                <span className="text-[11px] uppercase text-amber-600 dark:text-amber-400 font-bold block">
                   检测到新版本的应用:
                 </span>
                 {appsWithUpdates.map((a) => (
@@ -274,9 +274,9 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   >
                     <div>
                       <span className="font-semibold text-ink">{a.name}</span>
-                      <p className="text-[11px] font-mono text-amber-700 dark:text-amber-300/80">{a.currentImageTag}</p>
+                      <p className="text-[11px] text-amber-700 dark:text-amber-300/80">{a.currentImageTag}</p>
                     </div>
-                    <span className="text-[10px] font-mono text-amber-700 bg-amber-100 border border-amber-300 dark:text-amber-300 dark:bg-amber-900/40 dark:border-amber-800 px-2.5 py-0.5 rounded-full font-medium">
+                    <span className="text-[10px] text-amber-700 bg-amber-100 border border-amber-300 dark:text-amber-300 dark:bg-amber-900/40 dark:border-amber-800 px-2.5 py-0.5 rounded-full font-medium">
                       发现新 Digest
                     </span>
                   </div>

@@ -269,7 +269,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-line/60">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-xs font-mono text-ink-muted hover:text-accent transition-colors group"
+            className="flex items-center gap-2 text-xs text-ink-muted hover:text-accent transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             <span>返回受管应用列表</span>
@@ -357,7 +357,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               )}
 
               {/* Subtitle / ID */}
-              <p className="text-xs font-mono text-ink-muted mt-0.5">
+              <p className="text-xs text-ink-muted mt-0.5">
                 {mode === 'create'
                   ? name
                     ? `应用标识: ${name.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`
@@ -531,7 +531,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             {mode === 'create' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-1">
                 <div>
-                  <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">
                     应用名称 *
                   </label>
                   <input
@@ -548,7 +548,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+                  <label className="block text-xs font-medium text-ink-muted mb-1.5">
                     应用描述
                   </label>
                   <input
@@ -675,13 +675,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <div className="flex items-center gap-2.5">
                 {/* YAML Validation Indicator */}
                 {yamlValidation.valid ? (
-                  <span className="inline-flex items-center gap-1 font-mono text-[11px] px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 rounded-full font-medium">
                     <Check className="w-3 h-3 text-emerald-500" />
                     YAML 语法有效
                   </span>
                 ) : (
                   <span
-                    className="inline-flex items-center gap-1 font-mono text-[11px] px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 rounded-full truncate max-w-xs"
+                    className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 rounded-full truncate max-w-xs font-medium"
                     title={yamlValidation.error || ''}
                   >
                     <Warning className="w-3 h-3 text-rose-500" />
@@ -722,7 +722,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
             {/* Card Footer: Save Button */}
             <div className="mt-4 pt-4 flex items-center justify-between border-t border-line/60">
-              <span className="text-xs text-ink-faint font-mono">
+              <span className="text-xs text-ink-faint">
                 Tab 键自动补全 2 格缩进 · 支持 docker compose v2 标准语法
               </span>
 
@@ -840,7 +840,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm text-ink">{tmpl.name}</span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted border border-line">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted border border-line">
                       {tmpl.category}
                     </span>
                   </div>
@@ -927,7 +927,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
 
           {(app.containers || []).length === 0 ? (
-            <div className="py-12 text-center text-ink-muted text-xs font-mono">
+            <div className="py-12 text-center text-ink-muted text-xs">
               暂未检测到运行中的容器实例。请点击上方「部署应用」启动应用编排。
             </div>
           ) : (
@@ -941,13 +941,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         {c.state}
                       </Badge>
                     </div>
-                    <p className="text-xs text-ink-muted font-mono">
+                    <p className="text-xs text-ink-muted">
                       镜像: {c.image} · 容器 ID: {c.id.slice(0, 12)}
                     </p>
                   </div>
 
                   <div className="text-right">
-                    <span className="text-xs font-mono text-ink-muted">
+                    <span className="text-xs text-ink-muted">
                       {c.ports?.length ? c.ports.join(', ') : '无直接对外映射端口'}
                     </span>
                   </div>
@@ -983,7 +983,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 <div key={dom.id} className="py-3.5 flex items-center justify-between">
                   <div>
                     <span className="font-semibold text-sm text-ink">{dom.domain}</span>
-                    <p className="text-xs text-ink-muted font-mono mt-0.5">
+                    <p className="text-xs text-ink-muted mt-0.5">
                       反代目标端口: {dom.targetPort} · 证书颁发商: {dom.sslIssuer}
                     </p>
                   </div>
@@ -1025,7 +1025,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 <div key={b.id} className="py-3.5 flex items-center justify-between">
                   <div>
                     <span className="font-semibold text-sm text-ink">{b.fileName}</span>
-                    <p className="text-xs text-ink-muted font-mono mt-0.5">
+                    <p className="text-xs text-ink-muted mt-0.5">
                       大小: {(b.fileSizeBytes / 1024 / 1024).toFixed(2)} MB · 时间: {b.createdAt}
                     </p>
                   </div>
@@ -1050,7 +1050,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             <p className="text-xs text-ink-muted mt-0.5">系统底层元数据与生命周期安全管理</p>
           </div>
 
-          <div className="space-y-3 font-mono text-xs">
+          <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between p-3.5 rounded-lg bg-paper-3/50 border border-line">
               <span className="text-ink-muted">应用唯一标识 (UUID):</span>
               <span className="text-ink font-medium">{app?.id || '未生成 (创建后确定)'}</span>
@@ -1104,7 +1104,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             <div className="space-y-3">
               <div className="text-xs text-ink-muted flex items-center justify-between">
                 <span>解析服务数量: {Object.keys(yamlValidation.parsed?.services || {}).length} 个</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-medium">YAML 校验有效</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">YAML 校验有效</span>
               </div>
 
               <div className="space-y-2.5">
@@ -1112,7 +1112,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   ([sName, sCfg]: [string, any]) => (
                     <div
                       key={sName}
-                      className="p-4 rounded-xl bg-paper-2 border border-line font-mono text-xs space-y-1.5 shadow-subtle"
+                      className="p-4 rounded-xl bg-paper-2 border border-line text-xs space-y-1.5 shadow-subtle"
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-accent">{sName}</span>

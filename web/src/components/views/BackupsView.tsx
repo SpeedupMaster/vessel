@@ -130,7 +130,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 R2 S3 API Endpoint *
               </label>
               <input
@@ -138,12 +138,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 value={endpoint}
                 onChange={(e) => setEndpoint(e.target.value)}
                 placeholder="https://<account_id>.r2.cloudflarestorage.com"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 Bucket 存储桶名称 *
               </label>
               <input
@@ -151,12 +151,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 value={bucketName}
                 onChange={(e) => setBucketName(e.target.value)}
                 placeholder="vessel-backups"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 Access Key ID *
               </label>
               <input
@@ -164,12 +164,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 value={accessKeyId}
                 onChange={(e) => setAccessKeyId(e.target.value)}
                 placeholder="R2 API Token Access Key"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 Secret Access Key *
               </label>
               <input
@@ -177,12 +177,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 value={secretAccessKey}
                 onChange={(e) => setSecretAccessKey(e.target.value)}
                 placeholder="留空则保持现有密钥不变"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 Cron 定时周期表达式
               </label>
               <input
@@ -190,12 +190,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 value={cronSchedule}
                 onChange={(e) => setCronSchedule(e.target.value)}
                 placeholder="0 3 * * * (每日凌晨3点)"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 保留版本数 (超过自动清理旧归档)
               </label>
               <input
@@ -204,7 +204,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 onChange={(e) => setRetentionCount(Number(e.target.value))}
                 min={1}
                 max={30}
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -253,10 +253,10 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
       {/* Backup History Table */}
       <div className="card-vessel overflow-hidden shadow-subtle">
         <div className="p-5 border-b border-line flex items-center justify-between">
-          <h4 className="text-xs font-mono uppercase text-ink-muted font-bold tracking-wider">
+          <h4 className="text-xs uppercase text-ink-muted font-bold tracking-wider">
             归档版本历史记录 ({backups.length})
           </h4>
-          <span className="text-xs font-mono text-ink-faint">
+          <span className="text-xs text-ink-faint">
             保留策略: 最新 {retentionCount} 个版本
           </span>
         </div>
@@ -270,7 +270,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             {backups.map((b) => (
               <div
                 key={b.id}
-                className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono hover:bg-paper-3/40 transition-colors"
+                className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:bg-paper-3/40 transition-colors"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2.5">

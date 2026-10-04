@@ -91,7 +91,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
       {/* Domains Table */}
       <div className="card-vessel overflow-hidden shadow-subtle">
         <div className="p-5 border-b border-line flex items-center justify-between">
-          <h4 className="text-xs font-mono uppercase text-ink-muted font-bold tracking-wider">
+          <h4 className="text-xs uppercase text-ink-muted font-bold tracking-wider">
             已挂载域名路由清单 ({domains.length})
           </h4>
         </div>
@@ -115,14 +115,14 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                         href={`https://${d.domain}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-base font-semibold text-ink font-mono hover:text-accent flex items-center gap-1.5 transition-colors"
+                        className="text-base font-semibold text-ink hover:text-accent flex items-center gap-1.5 transition-colors"
                       >
                         <span>https://{d.domain}</span>
                       </a>
                       <Badge variant={d.sslStatus}>{d.sslStatus === 'active' ? 'HTTPS 已生效' : d.sslStatus}</Badge>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-ink-muted">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
                       <span>应用: <strong className="text-ink font-medium">{matchedApp?.name || d.appId}</strong></span>
                       <span>
                         转发上游:{' '}
@@ -172,7 +172,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
       >
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+            <label className="block text-xs uppercase text-ink-muted mb-1.5">
               绑定域名 *
             </label>
             <input
@@ -181,7 +181,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
               value={domainInput}
               onChange={(e) => setDomainInput(e.target.value)}
               placeholder="例如: app.example.com"
-              className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none font-mono transition-colors"
+              className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
             />
             <p className="text-[11px] text-ink-faint mt-1.5">
               请确保该域名的 A/AAAA 记录已正确解析至本机器的公网 IP。
@@ -189,7 +189,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+            <label className="block text-xs uppercase text-ink-muted mb-1.5">
               目标应用 *
             </label>
             <select
@@ -207,7 +207,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
 
           <div className="grid grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 Compose 内部服务名
               </label>
               <input
@@ -215,12 +215,12 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 value={serviceNameInput}
                 onChange={(e) => setServiceNameInput(e.target.value)}
                 placeholder="例如: web, app, n8n"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none font-mono transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+              <label className="block text-xs uppercase text-ink-muted mb-1.5">
                 容器端口 *
               </label>
               <input
@@ -229,13 +229,13 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 value={targetPortInput}
                 onChange={(e) => setTargetPortInput(e.target.value)}
                 placeholder="例如: 3000, 5678, 80"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none font-mono transition-colors"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+            <label className="block text-xs uppercase text-ink-muted mb-1.5">
               代理对接方式
             </label>
             <div className="grid grid-cols-2 gap-3 text-xs">

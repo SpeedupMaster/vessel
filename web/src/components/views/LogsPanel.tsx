@@ -251,7 +251,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
             </div>
 
             {loading && (
-              <span className="text-[11px] text-accent font-mono flex items-center gap-1.5 ml-1">
+              <span className="text-[11px] text-accent flex items-center gap-1.5 ml-1">
                 <ArrowsClockwise className="w-3.5 h-3.5 animate-spin" />
                 <span>实时同步中...</span>
               </span>
@@ -316,7 +316,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="在日志中搜索关键词..."
-            className="w-full bg-paper border border-line rounded-lg pl-9 pr-8 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono transition-colors"
+            className="w-full bg-paper border border-line rounded-lg pl-9 pr-8 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
           />
           {search && (
             <button
@@ -375,7 +375,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
 
       {/* REAL-TIME LOG VIEWER - HIGH CONTRAST TERMINAL VIEWPORT */}
       <div className="bg-paper border border-line rounded-xl overflow-hidden shadow-subtle dark:bg-zinc-950">
-        <div className="bg-paper-2/80 px-4 py-2.5 border-b border-line flex items-center justify-between text-xs font-mono text-ink-muted select-none dark:bg-zinc-900/80 dark:border-zinc-800 dark:text-zinc-400">
+        <div className="bg-paper-2/80 px-4 py-2.5 border-b border-line flex items-center justify-between text-xs text-ink-muted select-none dark:bg-zinc-900/80 dark:border-zinc-800 dark:text-zinc-400">
           <span>
             显示 {filteredLogs.length} / {parsedLogs.length} 行
             {isPaused && <span className="text-amber-600 dark:text-amber-400 ml-2">(滚屏已暂停)</span>}
@@ -387,7 +387,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
 
         <div className="p-3.5 font-mono text-xs overflow-x-auto min-h-[380px] max-h-[560px] overflow-y-auto space-y-1 bg-paper text-ink dark:bg-zinc-950 dark:text-zinc-200 select-text">
           {filteredLogs.length === 0 ? (
-            <div className="py-24 text-center text-ink-faint dark:text-zinc-500 text-xs font-mono">
+            <div className="py-24 text-center text-ink-faint dark:text-zinc-500 text-xs">
               {search
                 ? `未找到包含 "${search}" 的日志条目`
                 : '暂无容器输出日志。若容器刚启动，正在等待首批标准输出...'}

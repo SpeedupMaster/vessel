@@ -79,7 +79,7 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-paper flex items-center justify-center font-mono text-xs">
+      <div className="min-h-screen bg-paper flex items-center justify-center font-sans text-xs">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
           <span className="tracking-wider text-ink-muted">VESSEL 控制中心正在初始化...</span>

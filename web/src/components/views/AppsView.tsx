@@ -194,7 +194,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                     >
                       {app.name}
                     </h3>
-                    <p className="text-xs font-mono text-ink-muted mt-0.5">{app.id}</p>
+                    <p className="text-xs text-ink-muted mt-0.5">{app.id}</p>
                   </div>
                   <Badge variant={app.status}>{app.status}</Badge>
                 </div>
@@ -208,11 +208,11 @@ export const AppsView: React.FC<AppsViewProps> = ({
 
                 {/* Image & Update Badge */}
                 <div className="mt-5 pt-3.5 border-t border-line/60 flex items-center justify-between text-xs">
-                  <span className="font-mono text-ink-faint truncate max-w-[180px]">
+                  <span className="text-ink-faint truncate max-w-[180px]">
                     {app.currentImageTag || 'Compose 编排托管'}
                   </span>
                   {app.updateAvailable && (
-                    <span className="inline-flex items-center gap-1 font-mono text-[11px] px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-full">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-full">
                       <Sparkle className="w-3 h-3 text-amber-500" weight="bold" />
                       可升级
                     </span>

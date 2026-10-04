@@ -53,7 +53,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               </p>
             </div>
           </div>
-          <span className="text-xs font-mono px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800">
+          <span className="text-xs px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800">
             连接中...
           </span>
         </div>
@@ -73,17 +73,17 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
           </div>
           <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold font-mono text-ink tracking-tight">
+            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
               <RollingCounter value={apps.length} />
             </span>
-            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               ({runningApps.length} 运行中)
             </span>
           </div>
           <div className="pt-3 border-t border-line/60 text-xs text-ink-faint flex items-center justify-between">
             <span>活跃容器: {metrics.runningContainers}</span>
             {updatesCount > 0 && (
-              <span className="text-amber-600 dark:text-amber-400 font-mono font-medium">
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
                 ● {updatesCount} 项可更新
               </span>
             )}
@@ -102,10 +102,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
           </div>
           <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold font-mono text-ink tracking-tight">
+            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
               <RollingCounter value={domains.length} />
             </span>
-            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               Caddy 自动证书
             </span>
           </div>
@@ -126,10 +126,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
           </div>
           <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold font-mono text-ink tracking-tight">
+            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
               <RollingCounter value={backups.length} />
             </span>
-            <span className="text-xs font-mono text-accent font-medium">已存档快照</span>
+            <span className="text-xs text-accent font-medium">已存档快照</span>
           </div>
           <div className="pt-3 border-t border-line/60 text-xs text-ink-faint flex items-center justify-between">
             <span>双层灾备保护</span>
@@ -151,10 +151,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
           </div>
           <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold font-mono text-ink tracking-tight">
+            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
               72<span className="text-xl text-ink-muted font-normal ml-0.5">h</span>
             </span>
-            <span className="text-xs font-mono text-amber-600 dark:text-amber-400 font-medium">保留保护期</span>
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">保留保护期</span>
           </div>
           <div className="pt-3 border-t border-line/60 text-xs text-ink-faint flex items-center justify-between">
             <span>定时安全清理</span>
@@ -199,7 +199,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-ink-muted font-mono">{app.id}</p>
+                  <p className="text-xs text-ink-muted">{app.id}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -251,7 +251,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 {domains.slice(0, 4).map((d) => (
                   <div
                     key={d.id}
-                    className="p-3.5 rounded-lg bg-paper-3/50 border border-line text-xs font-mono transition-colors hover:border-paper-4"
+                    className="p-3.5 rounded-lg bg-paper-3/50 border border-line text-xs transition-colors hover:border-paper-4"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-ink font-semibold">{d.domain}</span>

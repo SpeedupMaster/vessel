@@ -44,10 +44,11 @@
   --color-blue-bg: #eff6ff;
   --color-blue-border: #bfdbfe;
 
-  /* Typography Stacks */
-  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
-  --font-body: 'Geist', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
-  --font-mono: 'Geist Mono', 'JetBrains Mono', Fira Code, Consolas, monospace;
+  /* Typography Stacks - 100% Unified */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
 
   /* Spacing & Radii */
   --radius-sm: 4px;

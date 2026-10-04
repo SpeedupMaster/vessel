@@ -42,11 +42,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
         <div>
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm tracking-tight text-ink font-sans">VESSEL</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 bg-paper-3 text-ink-muted border border-line rounded">
+            <span className="text-[10px] px-1.5 py-0.2 bg-paper-3 text-ink-muted border border-line rounded">
               v1.0
             </span>
           </div>
-          <p className="text-[11px] text-ink-faint font-mono">Docker Compose Hub</p>
+          <p className="text-[11px] text-ink-faint">Docker Compose Hub</p>
         </div>
       </div>
 
@@ -72,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
               {item.count !== undefined && item.count > 0 && (
                 <span
                   className={clsx(
-                    'text-[11px] font-mono px-2 py-0.5 rounded-full transition-colors',
+                    'text-[11px] px-2 py-0.5 rounded-full transition-colors',
                     active ? 'bg-accent/10 text-accent font-medium' : 'bg-paper-3 text-ink-muted'
                   )}
                 >
@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
         </div>
         <div className="mt-2.5 text-[11px] text-ink-faint flex justify-between">
           <span>运行中容器:</span>
-          <span className="text-ink font-medium font-mono">{metrics.runningContainers}</span>
+          <span className="text-ink font-medium">{metrics.runningContainers}</span>
         </div>
       </div>
     </aside>

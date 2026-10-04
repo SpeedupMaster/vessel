@@ -39,7 +39,7 @@ export const RollingCounter: React.FC<RollingCounterProps> = ({
   }, [value, precision, suffix, duration]);
 
   return (
-    <span ref={spanRef} className={`font-mono tabular-nums ${className}`}>
+    <span ref={spanRef} className={`tabular-nums ${className}`}>
       {value.toFixed(precision) + suffix}
     </span>
   );

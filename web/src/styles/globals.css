@@ -4,20 +4,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base Minimalist Discipline */
-html, body {
+/* Base Minimalist Discipline - Single Unified Typography */
+html, body, button, input, select, textarea {
   overflow-x: clip;
   background-color: var(--color-paper);
   color: var(--color-ink);
-  font-family: var(--font-body);
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-style: normal !important;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
 }
 
 /* Minimalist Engineered Scrollbar */

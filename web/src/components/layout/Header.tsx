@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ title, metrics, onRefresh, onQui
 
       <div className="flex items-center gap-3 sm:gap-4">
         {/* Real-time Telemetry Strip */}
-        <div className="hidden lg:flex items-center divide-x divide-line rounded-lg border border-line bg-paper-2 px-1 py-1 text-xs font-mono">
+        <div className="hidden lg:flex items-center divide-x divide-line rounded-lg border border-line bg-paper-2 px-1 py-1 text-xs font-sans">
           {/* CPU */}
           <div className="flex items-center gap-2 px-3 py-0.5">
             <Cpu className="w-3.5 h-3.5 text-accent" weight="bold" />

@@ -106,7 +106,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-ink">{reg.name}</h4>
-                      <p className="text-[11px] font-mono text-ink-faint">{reg.server}</p>
+                      <p className="text-[11px] text-ink-faint">{reg.server}</p>
                     </div>
                   </div>
                   <Badge variant={reg.status === 'connected' ? 'connected' : 'unverified'}>
@@ -116,7 +116,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
 
                 <div className="mt-5 space-y-3.5">
                   <div>
-                    <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5">
+                    <label className="block text-xs uppercase text-ink-muted mb-1.5">
                       {isGHCR ? 'GitHub 用户名' : '账号 / 用户名'}
                     </label>
                     <input
@@ -124,12 +124,12 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                       value={currentUsername}
                       onChange={(e) => handleInputChange(reg.id, 'username', e.target.value)}
                       placeholder={isGHCR ? '例如: your-github-id' : 'username'}
-                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono uppercase text-ink-muted mb-1.5 flex items-center justify-between">
+                    <label className="block text-xs uppercase text-ink-muted mb-1.5 flex items-center justify-between">
                       <span>{isGHCR ? 'GitHub PAT 令牌 (需包含 read:packages 权限)' : '密码 / 访问令牌'}</span>
                       {isGHCR && (
                         <a
@@ -148,7 +148,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                       value={currentToken}
                       onChange={(e) => handleInputChange(reg.id, 'token', e.target.value)}
                       placeholder={reg.token ? '•••••••••••••••• (已保存，留空保持不变)' : 'ghp_xxxxxxxxxxxx'}
-                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -189,7 +189,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
 
       {/* Usage Guide */}
       <div className="card-vessel p-7 sm:p-8 shadow-subtle">
-        <h4 className="text-xs font-mono uppercase text-ink-muted font-bold tracking-wider mb-2 flex items-center gap-2">
+        <h4 className="text-xs uppercase text-ink-muted font-bold tracking-wider mb-2 flex items-center gap-2">
           <Info className="w-4 h-4 text-accent" weight="bold" />
           私有镜像使用指南
         </h4>
