@@ -65,16 +65,21 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Intro Banner */}
-      <div className="card-vessel p-7 sm:p-8 shadow-subtle">
+      {/* Page Header (De-boxed, modern SaaS standard) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-paper-3 flex items-center justify-center text-accent flex-shrink-0 shadow-subtle">
-            <GithubLogo className="w-5 h-5" weight="bold" />
+          <div className="w-10 h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle">
+            <Package className="w-5 h-5 text-accent" weight="bold" />
           </div>
           <div>
-            <h3 className="font-semibold text-base text-ink tracking-tight font-sans">
-              私有镜像凭证中心 (GHCR & Docker Hub)
-            </h3>
+            <div className="flex items-center gap-2.5">
+              <h2 className="font-semibold text-lg text-ink tracking-tight font-sans">
+                私有镜像凭证中心 (GHCR & Docker Hub)
+              </h2>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
+                {registries.filter((r) => r.status === 'connected').length} / {registries.length} 已连接
+              </span>
+            </div>
             <p className="text-xs text-ink-muted mt-1.5 max-w-2xl leading-relaxed">
               绑定 GitHub 个人访问令牌（PAT）或 Docker Hub 凭据，Vessel 将自动注入 Docker
               运行时的登录鉴权状态，使得受管的 Compose 应用能够免密无缝拉取私有 Registry 镜像。
@@ -95,9 +100,9 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
           return (
             <div key={reg.id} className="card-vessel p-6 sm:p-7 flex flex-col justify-between space-y-5 shadow-subtle">
               <div>
-                <div className="flex items-center justify-between pb-4 border-b border-line">
+                <div className="flex items-center justify-between pb-4 border-b border-line/50 dark:border-white/[0.06]">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-paper-3 flex items-center justify-center text-ink shadow-subtle">
+                    <div className="w-8 h-8 rounded-lg bg-paper-2 dark:bg-white/[0.05] border border-line/40 dark:border-white/[0.06] flex items-center justify-center text-ink shadow-subtle">
                       {isGHCR ? (
                         <GithubLogo className="w-4 h-4" weight="bold" />
                       ) : (
@@ -106,7 +111,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-ink">{reg.name}</h4>
-                      <p className="text-[11px] text-ink-faint">{reg.server}</p>
+                      <p className="text-[11px] text-ink-muted/80 dark:text-zinc-500 font-mono">{reg.server}</p>
                     </div>
                   </div>
                   <Badge variant={reg.status === 'connected' ? 'connected' : 'unverified'}>
@@ -116,7 +121,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
 
                 <div className="mt-5 space-y-3.5">
                   <div>
-                    <label className="block text-xs uppercase text-ink-muted mb-1.5">
+                    <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
                       {isGHCR ? 'GitHub 用户名' : '账号 / 用户名'}
                     </label>
                     <input
@@ -129,7 +134,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs uppercase text-ink-muted mb-1.5 flex items-center justify-between">
+                    <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5 flex items-center justify-between">
                       <span>{isGHCR ? 'GitHub PAT 令牌 (需包含 read:packages 权限)' : '密码 / 访问令牌'}</span>
                       {isGHCR && (
                         <a
@@ -172,7 +177,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                 )}
               </div>
 
-              <div className="pt-4 border-t border-line flex justify-end">
+              <div className="pt-4 border-t border-line/50 dark:border-white/[0.06] flex justify-end">
                 <Button8State
                   variant="primary"
                   size="sm"
@@ -188,15 +193,17 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
       </div>
 
       {/* Usage Guide */}
-      <div className="card-vessel p-7 sm:p-8 shadow-subtle">
-        <h4 className="text-xs uppercase text-ink-muted font-bold tracking-wider mb-2 flex items-center gap-2">
+      <div className="card-vessel p-6 sm:p-7 shadow-subtle">
+        <div className="flex items-center gap-2 mb-2">
           <Info className="w-4 h-4 text-accent" weight="bold" />
-          私有镜像使用指南
-        </h4>
+          <h4 className="text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-semibold tracking-wider">
+            私有镜像使用指南
+          </h4>
+        </div>
         <p className="text-xs text-ink-muted leading-relaxed">
-          绑定成功后，在任何应用的 <code className="text-accent font-mono">docker-compose.yml</code> 中直接填写私有镜像路径即可拉取，无需在 compose 中声明认证：
+          绑定成功后，在任何应用的 <code className="text-accent font-mono bg-accent/10 px-1.5 py-0.5 rounded text-[11px]">docker-compose.yml</code> 中直接填写私有镜像路径即可拉取，无需在 compose 中声明认证：
         </p>
-        <pre className="mt-3 p-4 bg-paper dark:bg-zinc-950 border border-line rounded-xl text-xs font-mono text-emerald-700 dark:text-emerald-400 leading-relaxed overflow-x-auto shadow-subtle">
+        <pre className="mt-3.5 p-4 bg-paper-2/70 dark:bg-[#0d1117] border border-line/60 dark:border-white/[0.08] rounded-xl text-xs font-mono text-emerald-600 dark:text-emerald-400 leading-relaxed overflow-x-auto shadow-subtle">
 {`services:
   my-private-service:
     image: ghcr.io/<your-username>/<your-repo>:latest

@@ -6,6 +6,8 @@ import {
   Trash,
   LockKey,
   Anchor,
+  Warning,
+  CircleNotch,
 } from '@phosphor-icons/react';
 import { DomainItem, AppItem } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
@@ -29,7 +31,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   onDeleteDomain,
   onRenewDomain,
 }) => {
-  const { toast, confirm } = useNotification();
+  const { toast } = useNotification();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [domainInput, setDomainInput] = useState('');
   const [appIdInput, setAppIdInput] = useState(apps[0]?.id || 'vessel-system');
@@ -37,6 +39,32 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   const [targetPortInput, setTargetPortInput] = useState('3900');
   const [targetTypeInput, setTargetTypeInput] = useState<'internal' | 'host'>('host');
   const [loading, setLoading] = useState(false);
+
+  // Danger delete modal state
+  const [deletingDomain, setDeletingDomain] = useState<DomainItem | null>(null);
+  const [deleteDomainInput, setDeleteDomainInput] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isDomainDeleteConfirmed = Boolean(
+    deletingDomain &&
+      deleteDomainInput.trim().length > 0 &&
+      deleteDomainInput.trim().toLowerCase() === deletingDomain.domain.trim().toLowerCase()
+  );
+
+  const handleConfirmDeleteDomain = async () => {
+    if (!deletingDomain || !isDomainDeleteConfirmed || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteDomain(deletingDomain.id);
+      toast.success(`域名 ${deletingDomain.domain} 已成功解绑`);
+      setDeletingDomain(null);
+      setDeleteDomainInput('');
+    } catch (err: any) {
+      toast.error(`解绑失败: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSelectApp = (val: string) => {
     setAppIdInput(val);
@@ -108,57 +136,56 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Top Banner explaining Caddy Automatic HTTPS */}
-      <div className="card-vessel p-7 sm:p-8 shadow-subtle">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-paper-3 flex items-center justify-center text-accent flex-shrink-0 shadow-subtle">
-              <LockKey className="w-5 h-5" weight="bold" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-base text-ink tracking-tight font-sans">
-                Caddy 智能反向代理与自动证书续订
-              </h3>
-              <p className="text-xs text-ink-muted mt-1.5 max-w-2xl leading-relaxed">
-                绑定您的公网域名并解析至当前服务器 IP。支持反代任何 Docker Compose 容器，亦可直接为
-                <strong> Vessel 管理控制台自身</strong> 配置独立访问域名与 HTTPS。由内置 Caddy 引擎全自动签发与静默续期证书。
-              </p>
-            </div>
+      {/* Page Header (De-boxed, modern SaaS standard) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle">
+            <LockKey className="w-5 h-5" weight="bold" />
           </div>
-
-          <Button8State
-            variant="primary"
-            icon={<Plus className="w-4 h-4" weight="bold" />}
-            onClick={handleOpenAdd}
-          >
-            绑定新域名
-          </Button8State>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h2 className="font-semibold text-lg text-ink tracking-tight font-sans">
+                Caddy 智能反向代理与自动证书续订
+              </h2>
+              {domains.length > 0 && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
+                  共 {domains.length} 个路由
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-ink-muted mt-1.5 max-w-2xl leading-relaxed">
+              绑定您的公网域名并解析至当前服务器 IP。支持反代任何 Docker Compose 容器，亦可直接为
+              <strong className="text-ink dark:text-zinc-200 font-semibold"> Vessel 管理控制台自身</strong> 配置独立访问域名与 HTTPS。由内置 Caddy 引擎全自动签发与静默续期证书。
+            </p>
+          </div>
         </div>
+
+        <Button8State
+          variant="primary"
+          icon={<Plus className="w-4 h-4" weight="bold" />}
+          onClick={handleOpenAdd}
+        >
+          绑定新域名
+        </Button8State>
       </div>
 
-      {/* Domains Table */}
+      {/* Domains List Card */}
       <div className="card-vessel overflow-hidden shadow-subtle">
-        <div className="p-5 border-b border-line flex items-center justify-between">
-          <h4 className="text-xs uppercase text-ink-muted font-bold tracking-wider">
-            已挂载域名路由清单 ({domains.length})
-          </h4>
-        </div>
-
         {domains.length === 0 ? (
           <div className="py-16 text-center text-ink-muted text-xs">
             暂无已绑定的域名。点击右上角「绑定新域名」为应用或控制台配置 HTTPS 访问。
           </div>
         ) : (
-          <div className="divide-y divide-line">
+          <div className="divide-y divide-line/60 dark:divide-white/[0.06]">
             {domains.map((d) => {
               const matchedApp = apps.find((a) => a.id === d.appId);
               const isVesselSystem = d.appId === 'vessel-system';
               return (
                 <div
                   key={d.id}
-                  className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-paper-3/40 transition-colors"
+                  className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-paper-2/50 dark:hover:bg-white/[0.02] transition-colors"
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     <div className="flex items-center gap-3">
                       <a
                         href={`https://${d.domain}`}
@@ -171,9 +198,10 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                       <Badge variant={d.sslStatus}>{d.sslStatus === 'active' ? 'HTTPS 已生效' : d.sslStatus}</Badge>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs">
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+                      {/* 所属应用 */}
                       <div className="flex items-center gap-1.5">
-                        <span className="text-ink-muted">所属应用:</span>
+                        <span className="text-ink-muted/80 dark:text-zinc-500 font-normal">所属应用:</span>
                         {isVesselSystem ? (
                           <span className="inline-flex items-center gap-1.5 text-accent font-semibold">
                             <Anchor className="w-3.5 h-3.5" weight="bold" />
@@ -184,16 +212,20 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                           <span className="text-ink dark:text-zinc-100 font-medium">{matchedApp?.name || d.appId}</span>
                         )}
                       </div>
+
+                      {/* 转发上游 */}
                       <div className="flex items-center gap-1.5">
-                        <span className="text-ink-muted">转发上游:</span>
+                        <span className="text-ink-muted/80 dark:text-zinc-500 font-normal">转发上游:</span>
                         <code className="font-mono text-[11.5px] text-ink dark:text-zinc-100 font-medium bg-paper-3/50 dark:bg-white/[0.05] px-1.5 py-0.5 rounded border border-line/40 dark:border-white/[0.08]">
                           {isVesselSystem
                             ? '127.0.0.1:3900 (本机控制台)'
                             : (d.targetType === 'internal' ? `${d.serviceName}:${d.targetPort} (容器内部)` : `127.0.0.1:${d.targetPort} (宿主机)`)}
                         </code>
                       </div>
+
+                      {/* 证书机构 */}
                       <div className="flex items-center gap-1.5">
-                        <span className="text-ink-muted">证书机构:</span>
+                        <span className="text-ink-muted/80 dark:text-zinc-500 font-normal">证书机构:</span>
                         <span className="text-ink dark:text-zinc-100 font-medium">{d.sslIssuer}</span>
                       </div>
                     </div>
@@ -209,31 +241,11 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                       检测/续订
                     </Button8State>
                     <button
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: '⚠️ 危险操作：解绑域名路由',
-                          subtitle: `域名绑定: ${d.domain} -> ${d.serviceName}:${d.targetPort}`,
-                          dangerTitle: '解绑操作不可撤回！',
-                          message: `确定要解绑并移除域名 "${d.domain}" 吗？此操作将立即清除 Caddy 反向代理路由规则并重新加载服务配置。`,
-                          details: [
-                            'Caddy 配置文件中该域名的规则块将被完全移除',
-                            '外部流量将无法再通过此域名访问目标容器服务',
-                            'Caddy 服务将自动重新加载配置以使路由变更生效',
-                          ],
-                          confirmText: '确认解绑域名',
-                          cancelText: '取消并返回',
-                          variant: 'danger',
-                        });
-                        if (ok) {
-                          try {
-                            await onDeleteDomain(d.id);
-                            toast.success(`域名 ${d.domain} 已成功解绑`);
-                          } catch (err: any) {
-                            toast.error(`解绑失败: ${err.message}`);
-                          }
-                        }
+                      onClick={() => {
+                        setDeletingDomain(d);
+                        setDeleteDomainInput('');
                       }}
-                      className="p-2 rounded-lg text-ink-muted hover:text-white hover:bg-rose-600 hover:border-rose-600 dark:hover:bg-rose-600 dark:hover:border-rose-600 border border-line transition-all cursor-pointer shadow-subtle"
+                      className="p-2 rounded-lg text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
                       data-tooltip="解绑并移除反向代理"
                     >
                       <Trash className="w-4 h-4" />
@@ -245,6 +257,97 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* DELETE CONFIRMATION MODAL WITH INPUT VERIFICATION */}
+      <Modal
+        isOpen={Boolean(deletingDomain)}
+        onClose={() => !isDeleting && setDeletingDomain(null)}
+        title={
+          <div className="flex items-center gap-2 text-ink font-semibold">
+            <Trash className="w-5 h-5 text-rose-500" weight="bold" />
+            <span>危险操作：确认解绑域名路由</span>
+          </div>
+        }
+        subtitle={deletingDomain ? `域名绑定: https://${deletingDomain.domain}` : ''}
+        maxWidth="max-w-lg"
+      >
+        {deletingDomain && (
+          <div className="space-y-4">
+            {/* Warning Message Box */}
+            <div className="p-4 rounded-xl bg-rose-500/[0.04] border border-rose-500/20 dark:border-rose-500/25 text-xs space-y-2 shadow-subtle">
+              <div className="flex items-center gap-2 font-semibold text-sm text-ink dark:text-rose-200">
+                <Warning className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
+                <span>此操作不可撤回，请务必谨慎！</span>
+              </div>
+              <p className="text-ink-muted leading-relaxed">
+                解绑后将立即清除 Caddy 配置文件中该域名的规则块并重载服务。外部流量将无法再通过此域名访问目标容器或控制台。
+              </p>
+            </div>
+
+            {/* Input Verification Box */}
+            <div className="space-y-2 pt-1">
+              <label className="block text-xs text-ink-muted leading-relaxed">
+                请输入完整域名 <strong className="text-ink font-semibold select-all font-mono">{deletingDomain.domain}</strong> 以确认解绑：
+              </label>
+              <input
+                type="text"
+                value={deleteDomainInput}
+                onChange={(e) => setDeleteDomainInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && isDomainDeleteConfirmed && !isDeleting) {
+                    handleConfirmDeleteDomain();
+                  }
+                }}
+                placeholder={deletingDomain.domain}
+                autoFocus
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-mono focus:border-accent focus:ring-2 focus:ring-accent/15 focus:outline-none transition-all shadow-subtle"
+              />
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-4 mt-2 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeletingDomain(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line shadow-subtle transition-colors cursor-pointer"
+              >
+                取消
+              </button>
+
+              {!isDomainDeleteConfirmed ? (
+                <button
+                  type="button"
+                  disabled
+                  className="px-4 py-2 bg-paper-3 dark:bg-[#21262d] text-ink-muted/50 dark:text-[#8b949e] border border-line/50 dark:border-white/[0.06] text-xs font-medium rounded-lg cursor-not-allowed flex items-center gap-1.5 select-none"
+                >
+                  <Trash className="w-4 h-4 opacity-40" />
+                  <span>确认解绑域名</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteDomain}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 dark:bg-[#da3633] dark:hover:bg-[#f85149] text-white font-bold text-xs rounded-lg shadow-md shadow-red-600/25 transition-all flex items-center gap-1.5 active:translate-y-px cursor-pointer"
+                >
+                  {isDeleting ? (
+                    <>
+                      <CircleNotch className="w-4 h-4 animate-spin text-white" />
+                      <span>正在解绑...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="w-4 h-4 text-white" weight="bold" />
+                      <span>确认解绑域名</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* ADD DOMAIN MODAL */}
       <Modal
