@@ -13,7 +13,7 @@ import { MaintenanceView } from './components/views/MaintenanceView.js';
 import { LoginView } from './components/views/LoginView.js';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal.js';
 import { GlobalTooltip } from './components/common/Tooltip.js';
-import { ShieldWarning } from '@phosphor-icons/react';
+import { ShieldWarning, X } from '@phosphor-icons/react';
 
 interface RouteState {
   tab: NavTab;
@@ -58,6 +58,9 @@ function MainConsole() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [route, setRoute] = useState<RouteState>(() => parsePath(window.location.pathname));
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isPasswordWarningDismissed, setIsPasswordWarningDismissed] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && sessionStorage.getItem('vessel_dismiss_password_warning') === '1';
+  });
   const mainContentRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -228,7 +231,6 @@ function MainConsole() {
           metrics={metrics}
           user={user}
           onRefresh={refreshAll}
-          onQuickBackup={triggerSystemBackup}
           onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           onLogout={async () => {
             await logout();
@@ -236,28 +238,40 @@ function MainConsole() {
           }}
         />
 
-        {/* Security Alert Banner for Default Password */}
-        {user?.isDefaultPassword && (
-          <div className="bg-amber-500/10 border-b border-amber-500/25 px-6 py-2.5 flex items-center justify-between gap-4 text-xs font-sans animate-fade-in">
-            <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-300">
-              <ShieldWarning className="w-4 h-4 shrink-0 text-amber-500" weight="fill" />
-              <span>
-                <strong>安全提醒：</strong> 当前系统正在使用初始默认密码 (<code className="px-1.5 py-0.5 rounded bg-amber-500/15 font-mono text-amber-800 dark:text-amber-200">vessel2026</code>)。为防止公网未授权访问，建议尽快修改。
-              </span>
-            </div>
-            <button
-              onClick={() => setIsChangePasswordOpen(true)}
-              className="text-xs font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-amber-100 hover:underline shrink-0 cursor-pointer flex items-center gap-1"
-            >
-              <span>立即修改密码</span>
-              <span>&rarr;</span>
-            </button>
-          </div>
-        )}
-
         {/* Dynamic View Container */}
         <main className="flex-1 overflow-y-auto p-6 md:p-10 lg:p-12">
           <div ref={mainContentRef} className="max-w-7xl mx-auto pb-16">
+            {/* Inset Dismissible Security Banner */}
+            {user?.isDefaultPassword && !isPasswordWarningDismissed && (
+              <div className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between gap-4 text-xs font-sans animate-fade-in shadow-subtle">
+                <div className="flex items-center gap-3 text-amber-800 dark:text-amber-200">
+                  <ShieldWarning className="w-4 h-4 shrink-0 text-amber-500" weight="fill" />
+                  <span>
+                    <strong>安全提醒：</strong> 当前系统正在使用初始默认密码 (<code className="px-1.5 py-0.5 rounded bg-amber-500/15 font-mono text-amber-900 dark:text-amber-100">vessel2026</code>)。为防止公网未授权访问，建议尽快修改。
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => setIsChangePasswordOpen(true)}
+                    className="text-xs font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+                  >
+                    <span>立即修改密码</span>
+                    <span>&rarr;</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsPasswordWarningDismissed(true);
+                      sessionStorage.setItem('vessel_dismiss_password_warning', '1');
+                    }}
+                    title="忽略本次提醒"
+                    className="p-1 rounded-md text-amber-700/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-200 hover:bg-amber-500/15 transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" weight="bold" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {route.tab === 'overview' && (
               <OverviewView
                 metrics={metrics}

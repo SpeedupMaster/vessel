@@ -72,8 +72,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
               {item.count !== undefined && item.count > 0 && (
                 <span
                   className={clsx(
-                    'text-[11px] px-2 py-0.5 rounded-full font-mono',
-                    active ? 'bg-accent/10 text-accent font-medium' : 'bg-paper-3 text-ink-muted'
+                    'text-[11px] px-2 py-0.5 rounded-full font-mono font-medium transition-colors',
+                    active
+                      ? 'bg-accent/15 text-accent border border-accent/20'
+                      : 'bg-paper-3/90 dark:bg-white/[0.08] text-ink dark:text-zinc-100 border border-line/60 dark:border-white/[0.08]'
                   )}
                 >
                   {item.count}
@@ -88,24 +90,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
       <div className="p-5 border-t border-line bg-paper/40">
         <div className="flex items-center justify-between text-xs">
           <span className="text-ink-muted text-[11px]">Docker 引擎</span>
-          <div className="flex items-center gap-1.5">
-            <Circle
-              weight="fill"
-              className={clsx('w-2 h-2', isDockerOnline ? 'text-emerald-500 animate-pulse' : 'text-rose-500')}
-            />
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              {isDockerOnline ? (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              ) : (
+                <span className="absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-40 animate-pulse" />
+              )}
+              <span
+                className={clsx(
+                  'relative inline-flex rounded-full h-2 w-2',
+                  isDockerOnline
+                    ? 'bg-emerald-500'
+                    : 'bg-[#ff6b6b] shadow-[0_0_8px_rgba(255,107,107,0.6)]'
+                )}
+              />
+            </span>
             <span
               className={clsx(
-                'text-[11px] font-medium',
-                isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                'text-[11px] font-semibold tracking-wide',
+                isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-[#ff6b6b]'
               )}
             >
               {isDockerOnline ? '已连接' : '离线'}
             </span>
           </div>
         </div>
-        <div className="mt-2.5 text-[11px] text-ink-faint flex justify-between">
+        <div className="mt-3 text-[11px] text-ink-faint flex justify-between items-center">
           <span>运行中容器:</span>
-          <span className="text-ink font-medium">{metrics.runningContainers}</span>
+          <span className="text-ink font-mono font-medium">{metrics.runningContainers}</span>
         </div>
       </div>
     </aside>
