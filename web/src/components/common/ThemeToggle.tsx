@@ -15,18 +15,20 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
     return (
       <button
         type="button"
-        onClick={toggleTheme}
+        onClick={(e) => toggleTheme(e)}
         data-tooltip={`切换主题 (当前: ${theme === 'system' ? '跟随系统' : theme === 'dark' ? '深色' : '浅色'})`}
         className={clsx(
-          'p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-all duration-150 cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50',
+          'p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-transform duration-150 cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 active:scale-90 group',
           className
         )}
       >
-        {resolvedTheme === 'dark' ? (
-          <Moon className="w-4 h-4 text-sky-400" weight="fill" />
-        ) : (
-          <Sun className="w-4 h-4 text-amber-500" weight="fill" />
-        )}
+        <div className="relative w-4 h-4 flex items-center justify-center">
+          {resolvedTheme === 'dark' ? (
+            <Moon className="w-4 h-4 text-sky-400 transition-transform duration-300 group-hover:-rotate-12" weight="fill" />
+          ) : (
+            <Sun className="w-4 h-4 text-amber-500 transition-transform duration-300 group-hover:rotate-45" weight="fill" />
+          )}
+        </div>
       </button>
     );
   }
@@ -41,7 +43,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
       label: '浅色模式',
       icon: (active) => (
         <Sun
-          className={clsx('w-3.5 h-3.5 transition-colors duration-150', active ? 'text-amber-500' : 'text-ink-faint')}
+          className={clsx('w-3.5 h-3.5 transition-transform duration-200', active ? 'text-amber-500 scale-110' : 'text-ink-faint hover:scale-105')}
           weight={active ? 'fill' : 'bold'}
         />
       ),
@@ -51,7 +53,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
       label: '跟随系统',
       icon: (active) => (
         <Desktop
-          className={clsx('w-3.5 h-3.5 transition-colors duration-150', active ? 'text-accent' : 'text-ink-faint')}
+          className={clsx('w-3.5 h-3.5 transition-transform duration-200', active ? 'text-accent scale-110' : 'text-ink-faint hover:scale-105')}
           weight={active ? 'bold' : 'bold'}
         />
       ),
@@ -61,7 +63,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
       label: '深色模式',
       icon: (active) => (
         <Moon
-          className={clsx('w-3.5 h-3.5 transition-colors duration-150', active ? 'text-sky-400' : 'text-ink-faint')}
+          className={clsx('w-3.5 h-3.5 transition-transform duration-200', active ? 'text-sky-400 scale-110' : 'text-ink-faint hover:scale-105')}
           weight={active ? 'fill' : 'bold'}
         />
       ),
@@ -83,10 +85,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
           <button
             key={opt.id}
             type="button"
-            onClick={() => setTheme(opt.id)}
+            onClick={(e) => setTheme(opt.id, e)}
             data-tooltip={opt.label}
             className={clsx(
-              'relative p-1.5 rounded-[6px] text-xs transition-all duration-150 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 border',
+              'relative p-1.5 rounded-[6px] text-xs transition-transform duration-150 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 border active:scale-95',
               isActive
                 ? 'bg-white dark:bg-neutral-800 text-ink shadow-subtle border-line/60 dark:border-white/10 font-medium'
                 : 'text-ink-faint hover:text-ink-muted hover:bg-paper-2/40 border-transparent'

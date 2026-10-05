@@ -6,8 +6,8 @@ export type ResolvedTheme = 'light' | 'dark';
 interface ThemeContextValue {
   theme: Theme;
   resolvedTheme: ResolvedTheme;
-  setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
+  setTheme: (theme: Theme, event?: React.MouseEvent | MouseEvent | null) => void;
+  toggleTheme: (event?: React.MouseEvent | MouseEvent | null) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -33,8 +33,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
-  useEffect(() => {
+  const applyThemeToDOM = (isDark: boolean) => {
     const root = document.documentElement;
+    setResolvedTheme(isDark ? 'dark' : 'light');
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  };
+
+  useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const updateTheme = () => {
@@ -44,13 +53,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         isDark = theme === 'dark';
       }
-
-      setResolvedTheme(isDark ? 'dark' : 'light');
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+      applyThemeToDOM(isDark);
     };
 
     updateTheme();
@@ -65,18 +68,85 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    try {
-      localStorage.setItem(STORAGE_KEY, newTheme);
-    } catch (_) {}
+  const executeThemeTransition = (
+    newTheme: Theme,
+    event?: React.MouseEvent | MouseEvent | null
+  ) => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const targetIsDark = newTheme === 'system' ? mediaQuery.matches : newTheme === 'dark';
+
+    // If resolved theme wouldn't change, just persist and return
+    if ((targetIsDark && resolvedTheme === 'dark') || (!targetIsDark && resolvedTheme === 'light')) {
+      setThemeState(newTheme);
+      try {
+        localStorage.setItem(STORAGE_KEY, newTheme);
+      } catch (_) {}
+      return;
+    }
+
+    const isViewTransitionSupported =
+      typeof document !== 'undefined' &&
+      'startViewTransition' in document &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!isViewTransitionSupported) {
+      // Fallback: smooth synchronized CSS color transition
+      const root = document.documentElement;
+      root.classList.add('theme-transitioning');
+      setThemeState(newTheme);
+      try {
+        localStorage.setItem(STORAGE_KEY, newTheme);
+      } catch (_) {}
+      applyThemeToDOM(targetIsDark);
+      window.setTimeout(() => {
+        root.classList.remove('theme-transitioning');
+      }, 350);
+      return;
+    }
+
+    // View Transition API with Circular Reveal Wave Animation (Linear / VitePress style)
+    const x = event?.clientX ?? window.innerWidth / 2;
+    const y = event?.clientY ?? window.innerHeight / 2;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = (document as any).startViewTransition(() => {
+      setThemeState(newTheme);
+      try {
+        localStorage.setItem(STORAGE_KEY, newTheme);
+      } catch (_) {}
+      applyThemeToDOM(targetIsDark);
+    });
+
+    transition.ready.then(() => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ];
+      document.documentElement.animate(
+        {
+          clipPath,
+        },
+        {
+          duration: 450,
+          easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
   };
 
-  const toggleTheme = () => {
+  const setTheme = (newTheme: Theme, event?: React.MouseEvent | MouseEvent | null) => {
+    executeThemeTransition(newTheme, event);
+  };
+
+  const toggleTheme = (event?: React.MouseEvent | MouseEvent | null) => {
     if (resolvedTheme === 'dark') {
-      setTheme('light');
+      setTheme('light', event);
     } else {
-      setTheme('dark');
+      setTheme('dark', event);
     }
   };
 

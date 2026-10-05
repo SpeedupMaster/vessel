@@ -59,10 +59,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
               key={item.id}
               onClick={() => onSelectTab(item.id)}
               className={clsx(
-                'w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm transition-all duration-150',
+                'w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm border font-sans select-none cursor-pointer',
                 active
-                  ? 'bg-paper dark:bg-paper-3 text-ink font-medium border border-line shadow-subtle'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
+                  ? 'bg-paper dark:bg-paper-3 text-ink font-medium border-line shadow-subtle'
+                  : 'border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
               )}
             >
               <div className="flex items-center gap-3">
@@ -72,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
               {item.count !== undefined && item.count > 0 && (
                 <span
                   className={clsx(
-                    'text-[11px] px-2 py-0.5 rounded-full transition-colors',
+                    'text-[11px] px-2 py-0.5 rounded-full font-mono',
                     active ? 'bg-accent/10 text-accent font-medium' : 'bg-paper-3 text-ink-muted'
                   )}
                 >
