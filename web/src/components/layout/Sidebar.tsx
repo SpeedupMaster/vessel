@@ -25,7 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
     { id: 'overview', label: '控制台概览', icon: <SquaresFour className="w-4 h-4" /> },
     { id: 'apps', label: '应用与编排', icon: <HardDrives className="w-4 h-4" />, count: metrics.totalApps },
     { id: 'domains', label: '域名与证书', icon: <Globe className="w-4 h-4" />, count: metrics.activeDomains },
-    { id: 'registries', label: '私有镜像', icon: <Package className="w-4 h-4" /> },
+    { id: 'registries', label: '私有镜像凭证', icon: <Package className="w-4 h-4" /> },
     { id: 'maintenance', label: '巡检与安全瘦身', icon: <Broom className="w-4 h-4" /> },
     { id: 'backups', label: 'Cloudflare R2 备份', icon: <CloudArrowUp className="w-4 h-4" />, count: metrics.totalBackups },
   ];
