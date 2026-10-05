@@ -197,3 +197,132 @@ input::-moz-selection, textarea::-moz-selection {
 .animate-tooltip-in {
   animation: tooltipIn 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Sticky Action Bar Animation */
+@keyframes stickyBarSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-sticky-bar {
+  animation: stickyBarSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Dropdown Animation */
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-dropdown {
+  animation: dropdownFadeIn 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Code Syntax Highlighting (Prism theme matching Linear / GitHub Dark / Tokyo Night) */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6e7781;
+  font-style: italic;
+}
+
+html.dark .token.comment,
+html.dark .token.prolog,
+html.dark .token.doctype,
+html.dark .token.cdata {
+  color: #8b949e;
+}
+
+.token.punctuation {
+  color: #57606a;
+}
+html.dark .token.punctuation {
+  color: #a1a1aa;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #cf222e;
+}
+html.dark .token.property,
+html.dark .token.tag,
+html.dark .token.boolean,
+html.dark .token.number,
+html.dark .token.constant,
+html.dark .token.symbol,
+html.dark .token.deleted {
+  color: #ff7b72;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #0a3069;
+}
+html.dark .token.selector,
+html.dark .token.attr-name,
+html.dark .token.string,
+html.dark .token.char,
+html.dark .token.builtin,
+html.dark .token.inserted {
+  color: #7ee787;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.token.variable {
+  color: #953800;
+}
+html.dark .token.operator,
+html.dark .token.entity,
+html.dark .token.url,
+html.dark .token.variable {
+  color: #ffa657;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword,
+.token.key {
+  color: #0969da;
+  font-weight: 600;
+}
+html.dark .token.atrule,
+html.dark .token.attr-value,
+html.dark .token.keyword,
+html.dark .token.key {
+  color: #79c0ff;
+  font-weight: 600;
+}
+
+.token.regex,
+.token.important {
+  color: #8250df;
+}
+html.dark .token.regex,
+html.dark .token.important {
+  color: #d2a8ff;
+}
+

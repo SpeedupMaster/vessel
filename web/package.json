@@ -13,6 +13,7 @@
     "@phosphor-icons/react": "^2.1.7",
     "clsx": "^2.1.1",
     "gsap": "^3.12.5",
+    "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.5.5",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/prismjs": "^1.26.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",

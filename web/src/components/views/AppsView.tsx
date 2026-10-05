@@ -7,6 +7,9 @@ import {
   ArrowsClockwise,
   Code,
   Sparkle,
+  MagnifyingGlass,
+  Package,
+  X,
 } from '@phosphor-icons/react';
 import { AppItem, ComposeTemplate, DomainItem, BackupRecord } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
@@ -143,13 +146,25 @@ export const AppsView: React.FC<AppsViewProps> = ({
       {/* Top Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-faint">
+            <MagnifyingGlass className="w-4 h-4" />
+          </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索受管应用 (名称 / ID)..."
-            className="w-full bg-paper border border-line rounded-lg px-4 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent font-sans transition-colors"
+            className="w-full bg-paper border border-line rounded-lg pl-9 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent font-sans transition-colors shadow-subtle"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-ink-faint hover:text-ink cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         <Button8State
@@ -191,9 +206,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
           {filteredApps.map((app) => (
             <div
               key={app.id}
-              className="card-vessel p-6 sm:p-7 flex flex-col justify-between hover:border-paper-4 transition-all shadow-subtle hover:shadow-card"
+              className="card-vessel p-6 sm:p-7 flex flex-col justify-between hover:border-ink-muted/30 dark:hover:border-white/20 transition-all shadow-subtle hover:shadow-card group"
             >
-              <div>
+              <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -206,42 +221,47 @@ export const AppsView: React.FC<AppsViewProps> = ({
                     >
                       {app.name}
                     </h3>
-                    <p className="text-xs text-ink-muted mt-0.5">{app.id}</p>
+                    <p className="text-[11px] text-ink-faint font-mono mt-0.5">{app.id}</p>
                   </div>
-                  <Badge variant={app.status}>{app.status}</Badge>
+                  <Badge variant={app.status}>{app.status === 'running' ? '运行中' : app.status === 'stopped' ? '已停止' : app.status}</Badge>
                 </div>
 
-                {/* Description */}
-                {app.description && (
-                  <p className="text-xs text-ink-muted mt-3 line-clamp-2 leading-relaxed">
-                    {app.description}
-                  </p>
-                )}
-
-                {/* Image & Update Badge */}
-                <div className="mt-5 pt-3.5 border-t border-line/60 flex items-center justify-between text-xs">
-                  <span className="text-ink-faint truncate max-w-[180px]">
-                    {app.currentImageTag || 'Compose 编排托管'}
-                  </span>
-                  {app.updateAvailable && (
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-full">
-                      <Sparkle className="w-3 h-3 text-amber-500" weight="bold" />
-                      可升级
-                    </span>
+                {/* Content Group (Description + Image Metadata, NO harsh divider) */}
+                <div className="space-y-2.5">
+                  {app.description && (
+                    <p className="text-xs text-ink-muted line-clamp-2 leading-relaxed">
+                      {app.description}
+                    </p>
                   )}
+
+                  {/* Image & Update Badge */}
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <div className="flex items-center gap-1.5 text-ink-faint font-mono text-[11px] min-w-0">
+                      <Package className="w-3.5 h-3.5 flex-shrink-0 text-ink-muted/70" />
+                      <span className="truncate max-w-[200px]" title={app.currentImageTag || 'Compose 编排托管'}>
+                        {app.currentImageTag || 'Compose 编排托管'}
+                      </span>
+                    </div>
+                    {app.updateAvailable && (
+                      <span className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-full font-medium flex-shrink-0">
+                        <Sparkle className="w-3 h-3 text-amber-500" weight="bold" />
+                        可升级
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Quick Actions Footer */}
-              <div className="mt-6 pt-3.5 border-t border-line flex items-center justify-between gap-2">
+              {/* Quick Actions Footer - 4% Ghost Divider */}
+              <div className="mt-5 pt-3.5 border-t border-line/20 dark:border-white/[0.04] flex items-center justify-between gap-2">
                 <button
                   onClick={() => {
                     setSelectedAppId(app.id);
                     setViewMode('detail');
                   }}
-                  className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-accent/10 transition-colors cursor-pointer"
+                  className="text-xs font-medium text-ink-muted hover:text-accent flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-paper-3 transition-colors cursor-pointer"
                 >
-                  <Code className="w-4 h-4" />
+                  <Code className="w-3.5 h-3.5" />
                   <span>配置与终端</span>
                 </button>
 
@@ -251,27 +271,27 @@ export const AppsView: React.FC<AppsViewProps> = ({
                       <button
                         onClick={() => onRestart(app.id)}
                         data-tooltip="重启应用"
-                        className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line/60 transition-colors cursor-pointer shadow-subtle"
                       >
-                        <ArrowsClockwise className="w-4 h-4" />
+                        <ArrowsClockwise className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => onStop(app.id)}
                         data-tooltip="停止容器"
-                        className="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-ink-muted hover:text-white hover:bg-rose-600 hover:border-rose-600 border border-line/60 transition-all cursor-pointer shadow-subtle"
                       >
-                        <Stop className="w-4 h-4" />
+                        <Stop className="w-3.5 h-3.5" />
                       </button>
                     </>
                   ) : (
-                    <Button8State
-                      size="sm"
-                      variant="primary"
-                      icon={<Play className="w-3.5 h-3.5" weight="fill" />}
+                    <button
+                      type="button"
                       onClick={() => onDeploy(app.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-paper-2 hover:bg-accent text-ink hover:text-white border border-line hover:border-accent transition-all shadow-subtle cursor-pointer active:translate-y-px group/btn"
                     >
-                      启动
-                    </Button8State>
+                      <Play className="w-3 h-3 text-ink-muted group-hover/btn:text-white transition-colors" weight="fill" />
+                      <span>启动</span>
+                    </button>
                   )}
                 </div>
               </div>

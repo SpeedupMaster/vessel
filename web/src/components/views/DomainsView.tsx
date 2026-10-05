@@ -126,15 +126,21 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                       <Badge variant={d.sslStatus}>{d.sslStatus === 'active' ? 'HTTPS 已生效' : d.sslStatus}</Badge>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
-                      <span>应用: <strong className="text-ink font-medium">{matchedApp?.name || d.appId}</strong></span>
-                      <span>
-                        转发上游:{' '}
-                        <code className="text-accent bg-paper-3 px-2 py-0.5 rounded font-mono">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-ink-muted">所属应用:</span>
+                        <span className="text-ink dark:text-zinc-100 font-medium">{matchedApp?.name || d.appId}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-ink-muted">转发上游:</span>
+                        <code className="font-mono text-[11.5px] text-ink dark:text-zinc-100 font-medium bg-paper-3/50 dark:bg-white/[0.05] px-1.5 py-0.5 rounded border border-line/40 dark:border-white/[0.08]">
                           {d.targetType === 'internal' ? `${d.serviceName}:${d.targetPort} (容器内部)` : `127.0.0.1:${d.targetPort} (宿主机)`}
                         </code>
-                      </span>
-                      <span>证书机构: {d.sslIssuer}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-ink-muted">证书机构:</span>
+                        <span className="text-ink dark:text-zinc-100 font-medium">{d.sslIssuer}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -172,7 +178,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                           }
                         }
                       }}
-                      className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors border border-line cursor-pointer"
+                      className="p-2 rounded-lg text-ink-muted hover:text-white hover:bg-rose-600 hover:border-rose-600 dark:hover:bg-rose-600 dark:hover:border-rose-600 border border-line transition-all cursor-pointer shadow-subtle"
                       data-tooltip="解绑并移除反向代理"
                     >
                       <Trash className="w-4 h-4" />

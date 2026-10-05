@@ -6,11 +6,11 @@ import {
   WarningCircle,
   Broom,
   ArrowRight,
+  Play,
 } from '@phosphor-icons/react';
 import { AppItem, DomainItem, R2Config, SystemMetrics, BackupRecord } from '../../types/index.js';
 import { RollingCounter } from '../common/RollingCounter.js';
 import { Badge } from '../common/Badge.js';
-import { Button8State } from '../common/Button8State.js';
 
 interface OverviewViewProps {
   metrics: SystemMetrics;
@@ -59,12 +59,12 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       )}
 
-      {/* Top Telemetry KPI Cards - Spacious Magazine Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Top Telemetry KPI Cards - Clean, Borderless & Grouped Data */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Apps Card */}
         <div
           onClick={() => onNavigate('apps')}
-          className="card-vessel p-7 sm:p-8 cursor-pointer hover:border-accent/40 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
+          className="card-vessel p-6 sm:p-7 cursor-pointer hover:border-ink-muted/30 dark:hover:border-white/20 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-ink-muted">
             <span className="text-xs font-sans tracking-wide text-ink-faint">Compose 应用</span>
@@ -72,28 +72,30 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <HardDrives className="w-4 h-4" weight="bold" />
             </div>
           </div>
-          <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               <RollingCounter value={apps.length} />
-            </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              ({runningApps.length} 运行中)
-            </span>
-          </div>
-          <div className="pt-3 border-t border-line/60 text-xs text-ink-faint flex items-center justify-between">
-            <span>活跃容器: {metrics.runningContainers}</span>
-            {updatesCount > 0 && (
-              <span className="text-amber-600 dark:text-amber-400 font-medium">
-                ● {updatesCount} 项可更新
+            </div>
+            <div className="mt-2 text-xs text-ink-muted flex items-center gap-1.5 flex-wrap">
+              <span className={runningApps.length > 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-ink-muted'}>
+                {runningApps.length} 运行中
               </span>
-            )}
+              <span className="text-ink-faint">·</span>
+              <span>{metrics.runningContainers} 活跃容器</span>
+              {updatesCount > 0 && (
+                <>
+                  <span className="text-ink-faint">·</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">{updatesCount} 项可更新</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Domains & SSL Card */}
         <div
           onClick={() => onNavigate('domains')}
-          className="card-vessel p-7 sm:p-8 cursor-pointer hover:border-accent/40 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
+          className="card-vessel p-6 sm:p-7 cursor-pointer hover:border-ink-muted/30 dark:hover:border-white/20 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-ink-muted">
             <span className="text-xs font-sans tracking-wide text-ink-faint">域名与 SSL 证书</span>
@@ -101,23 +103,22 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <Globe className="w-4 h-4" weight="bold" />
             </div>
           </div>
-          <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               <RollingCounter value={domains.length} />
-            </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Caddy 自动证书
-            </span>
-          </div>
-          <div className="pt-3 border-t border-line/60 text-xs text-ink-faint">
-            Let's Encrypt / ZeroSSL 自动签发
+            </div>
+            <div className="mt-2 text-xs text-ink-muted flex items-center gap-1.5 flex-wrap">
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">Caddy 自动证书</span>
+              <span className="text-ink-faint">·</span>
+              <span className="text-ink-faint">Let's Encrypt 自动续签</span>
+            </div>
           </div>
         </div>
 
         {/* Cloudflare R2 Card */}
         <div
           onClick={() => onNavigate('backups')}
-          className="card-vessel p-7 sm:p-8 cursor-pointer hover:border-accent/40 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
+          className="card-vessel p-6 sm:p-7 cursor-pointer hover:border-ink-muted/30 dark:hover:border-white/20 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-ink-muted">
             <span className="text-xs font-sans tracking-wide text-ink-faint">Cloudflare R2 灾备</span>
@@ -125,24 +126,24 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <CloudArrowUp className="w-4 h-4" weight="bold" />
             </div>
           </div>
-          <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
               <RollingCounter value={backups.length} />
-            </span>
-            <span className="text-xs text-accent font-medium">已存档快照</span>
-          </div>
-          <div className="pt-3 border-t border-line/60 text-xs text-ink-faint flex items-center justify-between">
-            <span>双层灾备保护</span>
-            <span className={r2Config?.enabled ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-ink-faint'}>
-              {r2Config?.enabled ? '定时已开启' : '未配置'}
-            </span>
+            </div>
+            <div className="mt-2 text-xs text-ink-muted flex items-center gap-1.5 flex-wrap">
+              <span className="text-ink font-medium">已存快照</span>
+              <span className="text-ink-faint">·</span>
+              <span className={r2Config?.enabled ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-ink-faint'}>
+                {r2Config?.enabled ? '定时已开启' : '双层灾备未配置'}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Maintenance / Prune Card */}
         <div
           onClick={() => onNavigate('maintenance')}
-          className="card-vessel p-7 sm:p-8 cursor-pointer hover:border-accent/40 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
+          className="card-vessel p-6 sm:p-7 cursor-pointer hover:border-ink-muted/30 dark:hover:border-white/20 transition-all group shadow-subtle hover:shadow-card flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-ink-muted">
             <span className="text-xs font-sans tracking-wide text-ink-faint">安全镜像瘦身</span>
@@ -150,15 +151,15 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <Broom className="w-4 h-4" weight="bold" />
             </div>
           </div>
-          <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-4xl sm:text-5xl font-bold text-ink tracking-tight">
-              72<span className="text-xl text-ink-muted font-normal ml-0.5">h</span>
-            </span>
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">保留保护期</span>
-          </div>
-          <div className="pt-3 border-t border-line/60 text-xs text-ink-faint flex items-center justify-between">
-            <span>定时安全清理</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-medium">悬空镜像修剪</span>
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-ink tracking-tight">
+              72<span className="text-lg text-ink-muted font-normal ml-0.5">h</span>
+            </div>
+            <div className="mt-2 text-xs text-ink-muted flex items-center gap-1.5 flex-wrap">
+              <span className="text-amber-600 dark:text-amber-400 font-medium">保留保护期</span>
+              <span className="text-ink-faint">·</span>
+              <span className="text-ink-faint">悬空层安全修剪</span>
+            </div>
           </div>
         </div>
       </div>
@@ -166,8 +167,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       {/* Two Column Layout: Applications Overview & SSL Routes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left: Deployed Applications Table */}
-        <div className="lg:col-span-2 card-vessel p-7 sm:p-8 shadow-subtle">
-          <div className="flex items-center justify-between pb-5 border-b border-line mb-4">
+        <div className="lg:col-span-2 card-vessel p-6 sm:p-7 shadow-subtle">
+          <div className="flex items-center justify-between pb-4 border-b border-line/30 dark:border-white/[0.04] mb-3">
             <div>
               <h3 className="text-sm font-semibold tracking-tight text-ink font-sans">
                 受管 Compose 应用
@@ -176,49 +177,56 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
             <button
               onClick={() => onNavigate('apps')}
-              className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1.5 transition-colors"
+              className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>查看全部 ({apps.length})</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="divide-y divide-line">
+          <div className="divide-y divide-line/20 dark:divide-white/[0.04]">
             {apps.map((app) => (
               <div
                 key={app.id}
-                className="py-4 flex items-center justify-between hover:bg-paper-3/40 px-3 -mx-3 rounded-lg transition-colors"
+                className="py-3.5 flex items-center justify-between hover:bg-paper-3/40 px-3 -mx-3 rounded-lg transition-colors"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2.5">
                     <span className="font-medium text-sm text-ink">{app.name}</span>
-                    <Badge variant={app.status}>{app.status}</Badge>
+                    <Badge variant={app.status}>{app.status === 'running' ? '运行中' : app.status === 'stopped' ? '已停止' : app.status}</Badge>
                     {app.updateAvailable && (
                       <span className="text-[10px] font-sans px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
                         可更新镜像
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-ink-muted">{app.id}</p>
+                  <p className="text-xs text-ink-muted font-mono">{app.id}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {app.status !== 'running' ? (
-                    <Button8State
-                      size="sm"
-                      variant="primary"
-                      onClick={() => onDeploy(app.id)}
+                    <button
+                      type="button"
+                      disabled={!isDockerOnline}
+                      data-tooltip={!isDockerOnline ? '请等待 Docker Daemon 连接后再操作' : '快捷启动此应用'}
+                      onClick={() => isDockerOnline && onDeploy(app.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all shadow-subtle ${
+                        !isDockerOnline
+                          ? 'bg-paper-2 text-ink-muted/40 border-line/40 cursor-not-allowed opacity-50'
+                          : 'bg-paper-2 hover:bg-paper-3 text-accent border-line hover:border-accent/40 active:translate-y-px cursor-pointer'
+                      }`}
                     >
-                      启动上线
-                    </Button8State>
+                      <Play className={`w-3 h-3 ${!isDockerOnline ? 'text-ink-muted/40' : 'text-accent'}`} weight="fill" />
+                      <span>启动上线</span>
+                    </button>
                   ) : (
-                    <Button8State
-                      size="sm"
-                      variant="ghost"
+                    <button
+                      type="button"
                       onClick={() => onNavigate('apps')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-colors cursor-pointer"
                     >
-                      详情 / 终端
-                    </Button8State>
+                      <span>详情 / 终端</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -227,39 +235,51 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
 
         {/* Right: Bound Domains & Quick Actions */}
-        <div className="space-y-8">
-          {/* Caddy Domains Card */}
-          <div className="card-vessel p-7 sm:p-8 shadow-subtle">
-            <div className="flex items-center justify-between pb-4 border-b border-line mb-4">
+        <div className="space-y-6">
+          {/* Caddy Domains Card - Flat, Borderless List */}
+          <div className="card-vessel p-6 sm:p-7 shadow-subtle">
+            <div className="flex items-center justify-between pb-3.5 border-b border-line/30 dark:border-white/[0.04] mb-3">
               <h3 className="text-sm font-semibold tracking-tight text-ink font-sans">
                 Caddy 域名路由
               </h3>
               <button
                 onClick={() => onNavigate('domains')}
-                className="text-xs font-medium text-accent hover:text-accent-hover transition-colors"
+                className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1 transition-colors cursor-pointer"
               >
-                配置
+                <span>管理</span>
+                <ArrowRight className="w-3 h-3" />
               </button>
             </div>
 
             {domains.length === 0 ? (
-              <div className="py-8 text-center text-xs text-ink-muted border border-dashed border-line rounded-lg">
-                尚未绑定域名，点击上方配置绑定
+              <div className="py-8 text-center text-xs text-ink-muted">
+                尚未绑定域名，点击上方管理进入配置
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-line/20 dark:divide-white/[0.04]">
                 {domains.slice(0, 4).map((d) => (
                   <div
                     key={d.id}
-                    className="p-3.5 rounded-lg bg-paper-3/50 border border-line text-xs transition-colors hover:border-paper-4"
+                    className="py-3 first:pt-0 last:pb-0 hover:bg-paper-3/30 -mx-2 px-2 rounded-lg transition-colors space-y-1.5"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-ink font-semibold">{d.domain}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-medium">● HTTPS 有效</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-ink font-semibold text-xs tracking-tight">{d.domain}</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 text-[10.5px] font-medium flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        HTTPS 有效
+                      </span>
                     </div>
-                    <div className="mt-1.5 text-ink-faint text-[11px] flex justify-between">
-                      <span>目标: {d.serviceName}:{d.targetPort}</span>
-                      <span>Let's Encrypt</span>
+                    <div className="text-[11px] text-ink-muted flex items-center gap-2 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <span>目标:</span>
+                        <code className="font-mono text-[10.5px] bg-paper-3/60 dark:bg-white/[0.05] px-1.5 py-0.2 rounded text-ink dark:text-zinc-200 border border-line/40 dark:border-white/[0.06]">
+                          {d.targetType === 'internal' ? `${d.serviceName}:${d.targetPort}` : `127.0.0.1:${d.targetPort}`}
+                        </code>
+                      </span>
+                      <span className="text-ink-faint">·</span>
+                      <span className="text-ink-faint font-mono text-[10.5px]">
+                        {d.sslIssuer || "Let's Encrypt (Auto-Renew)"}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -267,30 +287,55 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             )}
           </div>
 
-          {/* Quick Maintenance Hub */}
-          <div className="card-vessel p-7 sm:p-8 shadow-subtle">
-            <h3 className="text-sm font-semibold tracking-tight text-ink font-sans pb-4 border-b border-line mb-4">
+          {/* Quick Maintenance Hub - Solid Secondary Buttons with Clear Affordance */}
+          <div className="card-vessel p-6 sm:p-7 shadow-subtle">
+            <h3 className="text-sm font-semibold tracking-tight text-ink font-sans pb-3.5 border-b border-line/30 dark:border-white/[0.04] mb-3.5">
               运维快捷动作
             </h3>
             <div className="space-y-2.5">
-              <Button8State
-                size="sm"
-                variant="secondary"
-                className="w-full justify-start py-2.5 px-3.5"
-                icon={<CloudArrowUp className="w-4 h-4 text-accent" weight="bold" />}
+              <button
+                type="button"
                 onClick={onTriggerBackup}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-paper-2/80 hover:bg-paper-3 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-line/80 hover:border-ink-muted/30 dark:border-white/10 dark:hover:border-white/20 transition-all text-left shadow-subtle group cursor-pointer"
               >
-                立即创建系统 R2 灾备快照
-              </Button8State>
-              <Button8State
-                size="sm"
-                variant="secondary"
-                className="w-full justify-start py-2.5 px-3.5"
-                icon={<Broom className="w-4 h-4 text-amber-500" weight="bold" />}
-                onClick={onTriggerPrune}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-paper-3 dark:bg-white/[0.06] flex items-center justify-center text-accent group-hover:scale-105 transition-transform flex-shrink-0">
+                    <CloudArrowUp className="w-4 h-4" weight="bold" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-ink group-hover:text-accent transition-colors">
+                      立即创建系统 R2 灾备快照
+                    </div>
+                    <div className="text-[11px] text-ink-muted mt-0.5">全量打包应用编排与环境数据并推送云端</div>
+                  </div>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
+              </button>
+
+              <button
+                type="button"
+                disabled={!isDockerOnline}
+                data-tooltip={!isDockerOnline ? '请等待 Docker Daemon 连接后再操作' : '清理无用镜像与悬空层'}
+                onClick={() => isDockerOnline && onTriggerPrune()}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left shadow-subtle group ${
+                  !isDockerOnline
+                    ? 'bg-paper-2/40 dark:bg-white/[0.02] border-line/40 dark:border-white/[0.04] opacity-50 cursor-not-allowed'
+                    : 'bg-paper-2/80 hover:bg-paper-3 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-line/80 hover:border-ink-muted/30 dark:border-white/10 dark:hover:border-white/20 cursor-pointer'
+                }`}
               >
-                执行安全 Docker 镜像瘦身
-              </Button8State>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-paper-3 dark:bg-white/[0.06] flex items-center justify-center text-amber-500 group-hover:scale-105 transition-transform flex-shrink-0">
+                    <Broom className="w-4 h-4" weight="bold" />
+                  </div>
+                  <div>
+                    <div className={`text-xs font-semibold ${!isDockerOnline ? 'text-ink-muted' : 'text-ink group-hover:text-amber-500'} transition-colors`}>
+                      执行安全 Docker 镜像瘦身
+                    </div>
+                    <div className="text-[11px] text-ink-muted mt-0.5">一键修剪已废弃的孤立层与未引用镜像缓存</div>
+                  </div>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all" />
+              </button>
             </div>
           </div>
         </div>

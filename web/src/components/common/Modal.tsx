@@ -6,8 +6,8 @@ import { X } from '@phosphor-icons/react';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   children: React.ReactNode;
   maxWidth?: string;
   zIndex?: string;

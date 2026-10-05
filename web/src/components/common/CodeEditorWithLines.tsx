@@ -1,5 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useMemo } from 'react';
 import clsx from 'clsx';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-yaml.js';
+import 'prismjs/components/prism-bash.js';
 
 interface CodeEditorWithLinesProps {
   value: string;
@@ -9,6 +12,17 @@ interface CodeEditorWithLinesProps {
   maxHeight?: string;
   readOnly?: boolean;
   className?: string;
+  language?: 'yaml' | 'bash' | 'plain';
+  borderless?: boolean;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
@@ -19,16 +33,38 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
   maxHeight,
   readOnly = false,
   className,
+  language = 'yaml',
+  borderless = false,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
 
   const lines = value.split('\n');
   const lineCount = Math.max(lines.length, 1);
 
+  const highlightedCode = useMemo(() => {
+    if (!value || language === 'plain') return '';
+    try {
+      const grammar = language === 'yaml' ? Prism.languages.yaml : language === 'bash' ? Prism.languages.bash : null;
+      if (grammar) {
+        return Prism.highlight(value, grammar, language);
+      }
+    } catch {
+      // fallback to plain text if error occurs
+    }
+    return '';
+  }, [value, language]);
+
   const syncScroll = () => {
-    if (textareaRef.current && gutterRef.current) {
-      gutterRef.current.scrollTop = textareaRef.current.scrollTop;
+    if (textareaRef.current) {
+      if (gutterRef.current) {
+        gutterRef.current.scrollTop = textareaRef.current.scrollTop;
+      }
+      if (preRef.current) {
+        preRef.current.scrollTop = textareaRef.current.scrollTop;
+        preRef.current.scrollLeft = textareaRef.current.scrollLeft;
+      }
     }
   };
 
@@ -83,10 +119,13 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
     textarea.setSelectionRange(start, end);
   };
 
+  const isHighlighting = Boolean(highlightedCode && value);
+
   return (
     <div
       className={clsx(
-        'relative flex rounded-lg border border-line bg-paper text-ink font-mono text-xs overflow-hidden transition-colors',
+        'relative flex text-ink font-mono text-xs overflow-hidden transition-colors',
+        borderless ? 'border-0 rounded-none bg-transparent' : 'rounded-lg border border-line bg-paper',
         className
       )}
       style={{ minHeight, maxHeight }}
@@ -95,7 +134,10 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
       <div
         ref={gutterRef}
         aria-hidden="true"
-        className="select-none py-3 px-3 bg-paper-2 border-r border-line text-ink-faint text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem]"
+        className={clsx(
+          'select-none py-3 px-3 text-ink-muted text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem]',
+          borderless ? 'bg-paper-3/20 border-r border-line/50' : 'bg-paper-2 border-r border-line'
+        )}
       >
         {Array.from({ length: lineCount }).map((_, idx) => (
           <div
@@ -109,19 +151,44 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
         ))}
       </div>
 
-      {/* Code Textarea */}
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        onScroll={syncScroll}
-        onKeyDown={handleKeyDown}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        spellCheck={false}
-        className="flex-1 w-full p-3 bg-transparent text-ink font-mono text-xs leading-[1.625rem] resize-y outline-none overflow-auto whitespace-pre font-normal cursor-text select-text"
-        style={{ minHeight }}
-      />
+      {/* Code Area: Container for Syntax Overlay & Editable Textarea */}
+      <div className="relative flex-1 min-w-0 overflow-hidden">
+        {/* Highlighting Overlay (Pre) */}
+        {isHighlighting && (
+          <pre
+            ref={preRef}
+            aria-hidden="true"
+            className="absolute inset-0 p-3 m-0 bg-transparent text-ink font-mono text-xs leading-[1.625rem] whitespace-pre overflow-hidden pointer-events-none select-none font-normal"
+            style={{ tabSize: 2 }}
+          >
+            <code
+              dangerouslySetInnerHTML={{
+                __html: highlightedCode + (value.endsWith('\n') ? ' ' : ''),
+              }}
+            />
+          </pre>
+        )}
+
+        {/* Textarea Input */}
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          onScroll={syncScroll}
+          onKeyDown={handleKeyDown}
+          readOnly={readOnly}
+          placeholder={placeholder}
+          spellCheck={false}
+          className={clsx(
+            'w-full h-full p-3 m-0 bg-transparent font-mono text-xs leading-[1.625rem] resize-y outline-none overflow-auto whitespace-pre font-normal cursor-text',
+            isHighlighting
+              ? 'relative z-10 text-transparent caret-ink dark:caret-white selection:bg-accent/25 selection:text-transparent'
+              : 'text-ink'
+          )}
+          style={{ minHeight, maxHeight, tabSize: 2 }}
+        />
+      </div>
     </div>
   );
 };
+
