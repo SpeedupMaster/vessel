@@ -33,6 +33,8 @@ import {
   CheckCircle,
   CaretDown,
   CircleNotch,
+  DownloadSimple,
+  ArrowCounterClockwise,
 } from '@phosphor-icons/react';
 import { AppItem, ComposeTemplate, DomainItem, BackupRecord } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
@@ -42,6 +44,7 @@ import { Modal } from '../common/Modal.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { LogsPanel } from './LogsPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
+import { formatBytes } from '../../utils/format.js';
 
 interface ComposeAppViewProps {
   mode: 'create' | 'edit';
@@ -60,6 +63,9 @@ interface ComposeAppViewProps {
   onRebuild: (id: string) => Promise<void>;
   onFreshVolumes?: (id: string) => Promise<any>;
   onBackup: (id: string) => Promise<any>;
+  onDownloadBackup?: (id: string, fileName: string) => void;
+  onRestoreBackup?: (id: string) => Promise<any>;
+  onDeleteBackup?: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
   onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
   onDeleteDomain?: (id: string) => Promise<any>;
@@ -83,6 +89,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   onRebuild,
   onFreshVolumes,
   onBackup,
+  onDownloadBackup,
+  onRestoreBackup,
+  onDeleteBackup,
   onSubscribeLogs,
   onCreateDomain,
   onDeleteDomain,
@@ -143,6 +152,70 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Backup Tab states & handlers
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [restoringBackup, setRestoringBackup] = useState<BackupRecord | null>(null);
+  const [restoreConfirmInput, setRestoreConfirmInput] = useState('');
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [deletingBackup, setDeletingBackup] = useState<BackupRecord | null>(null);
+  const [isDeletingBackup, setIsDeletingBackup] = useState(false);
+
+  const handleAppBackup = async () => {
+    if (!app || isBackingUp) return;
+    setIsBackingUp(true);
+    try {
+      await onBackup(app.id);
+      toast.success(`应用 ${app.name} 的数据卷与编排快照已备份成功！`);
+    } catch (err: any) {
+      toast.error(`备份失败: ${err.message || '未知错误'}`);
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleDownloadBackup = (b: BackupRecord) => {
+    if (onDownloadBackup) {
+      onDownloadBackup(b.id, b.fileName);
+    } else {
+      const token = localStorage.getItem('vessel_token') || '';
+      const url = `/api/r2/backups/${b.id}/download?token=${encodeURIComponent(token)}`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = b.fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  const handleConfirmRestoreBackup = async () => {
+    if (!restoringBackup || !onRestoreBackup || isRestoringBackup) return;
+    setIsRestoringBackup(true);
+    try {
+      await onRestoreBackup(restoringBackup.id);
+      toast.success(`应用 ${app?.name || ''} 快照恢复成功！`);
+      setRestoringBackup(null);
+    } catch (err: any) {
+      toast.error(`恢复快照失败: ${err.message || '未知错误'}`);
+    } finally {
+      setIsRestoringBackup(false);
+    }
+  };
+
+  const handleConfirmDeleteBackup = async () => {
+    if (!deletingBackup || !onDeleteBackup || isDeletingBackup) return;
+    setIsDeletingBackup(true);
+    try {
+      await onDeleteBackup(deletingBackup.id);
+      toast.success('备份归档已成功删除');
+      setDeletingBackup(null);
+    } catch (err: any) {
+      toast.error(`删除备份失败: ${err.message || '未知错误'}`);
+    } finally {
+      setIsDeletingBackup(false);
+    }
+  };
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -2055,13 +2128,15 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               </p>
             </div>
 
-            <button
-              onClick={() => onBackup(app.id)}
-              className="px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-medium rounded-lg flex items-center gap-1.5 shadow-subtle cursor-pointer transition-all active:translate-y-px"
+            <Button8State
+              size="sm"
+              variant="primary"
+              state={isBackingUp ? 'loading' : 'default'}
+              icon={<CloudArrowUp className="w-4 h-4 text-white" />}
+              onClick={handleAppBackup}
             >
-              <CloudArrowUp className="w-4 h-4 text-white" />
-              <span>立即备份此应用</span>
-            </button>
+              立即备份此应用
+            </Button8State>
           </div>
 
           <div className="rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] overflow-hidden shadow-subtle">
@@ -2072,14 +2147,51 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             ) : (
               <div className="divide-y divide-line/40">
                 {appBackups.map((b) => (
-                  <div key={b.id} className="p-4 sm:p-4.5 flex items-center justify-between hover:bg-paper-3/20 transition-colors">
-                    <div>
-                      <span className="font-semibold text-xs sm:text-sm text-ink font-mono">{b.fileName}</span>
-                      <p className="text-xs text-ink-muted mt-0.5">
-                        大小: {(b.fileSizeBytes / 1024 / 1024).toFixed(2)} MB · 时间: {b.createdAt}
+                  <div key={b.id} className="p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-paper-3/20 transition-colors">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-xs sm:text-sm text-ink font-mono">{b.fileName}</span>
+                        <Badge variant="running">已同步 R2</Badge>
+                      </div>
+                      <p className="text-xs text-ink-muted">
+                        大小: <span className="font-mono text-ink font-medium">{formatBytes(b.fileSizeBytes)}</span> · 时间: {new Date(b.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <Badge variant="connected">{b.status}</Badge>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      {onRestoreBackup && (
+                        <Button8State
+                          size="sm"
+                          variant="secondary"
+                          icon={<ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />}
+                          onClick={() => {
+                            setRestoringBackup(b);
+                            setRestoreConfirmInput('');
+                          }}
+                        >
+                          恢复
+                        </Button8State>
+                      )}
+
+                      <Button8State
+                        size="sm"
+                        variant="secondary"
+                        icon={<DownloadSimple className="w-3.5 h-3.5" />}
+                        onClick={() => handleDownloadBackup(b)}
+                      >
+                        下载
+                      </Button8State>
+
+                      {onDeleteBackup && (
+                        <button
+                          onClick={() => setDeletingBackup(b)}
+                          className="p-1.5 text-ink-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="删除该备份记录"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2632,6 +2744,99 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   )}
                 </button>
               )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Danger Modal: Confirm App Restore */}
+      {restoringBackup && (
+        <Modal
+          isOpen={!!restoringBackup}
+          onClose={() => !isRestoringBackup && setRestoringBackup(null)}
+          title="⚠️ 确认恢复应用快照"
+          subtitle={`快照归档: ${restoringBackup.fileName}`}
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 text-xs space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-sm text-ink">
+                <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
+                <span>快照恢复风险警示</span>
+              </div>
+              <p className="text-ink-muted leading-relaxed">
+                恢复操作将使用快照归档覆盖当前应用 <strong>{app?.name}</strong> 的本地 Compose 编排配置、.env 环境变量与数据卷。
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-1 text-xs">
+              <label className="block text-ink-muted leading-relaxed">
+                请输入应用标识 <strong className="text-ink font-semibold select-all font-mono">{app?.id}</strong> 以确认恢复：
+              </label>
+              <input
+                type="text"
+                value={restoreConfirmInput}
+                onChange={(e) => setRestoreConfirmInput(e.target.value)}
+                placeholder={app?.id}
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none"
+              />
+            </div>
+
+            <div className="pt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRestoringBackup(null)}
+                disabled={isRestoringBackup}
+                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
+              >
+                取消
+              </button>
+              <Button8State
+                size="sm"
+                variant="primary"
+                state={isRestoringBackup ? 'loading' : 'default'}
+                disabled={restoreConfirmInput !== app?.id || isRestoringBackup}
+                onClick={handleConfirmRestoreBackup}
+              >
+                确认恢复快照
+              </Button8State>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Confirm Delete Backup */}
+      {deletingBackup && (
+        <Modal
+          isOpen={!!deletingBackup}
+          onClose={() => !isDeletingBackup && setDeletingBackup(null)}
+          title="删除备份归档"
+          subtitle={`归档文件: ${deletingBackup.fileName}`}
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-ink-muted leading-relaxed">
+              确定要删除此备份归档吗？若已配置 Cloudflare R2，云端对应的存储快照也将一并永久删除。
+            </p>
+
+            <div className="pt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeletingBackup(null)}
+                disabled={isDeletingBackup}
+                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
+              >
+                取消
+              </button>
+              <Button8State
+                size="sm"
+                variant="danger"
+                state={isDeletingBackup ? 'loading' : 'default'}
+                disabled={isDeletingBackup}
+                onClick={handleConfirmDeleteBackup}
+              >
+                确认删除
+              </Button8State>
             </div>
           </div>
         </Modal>

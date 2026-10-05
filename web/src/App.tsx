@@ -304,6 +304,9 @@ function MainConsole() {
                 onRebuild={rebuildApp}
                 onFreshVolumes={freshVolumesApp}
                 onBackup={backupApp}
+                onDownloadBackup={downloadBackup}
+                onRestoreBackup={restoreBackup}
+                onDeleteBackup={deleteBackup}
                 onSubscribeLogs={subscribeLogs}
                 onCreateDomain={createDomain}
                 onDeleteDomain={deleteDomain}

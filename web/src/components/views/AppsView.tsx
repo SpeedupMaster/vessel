@@ -36,6 +36,9 @@ interface AppsViewProps {
   onRebuild: (id: string) => Promise<any>;
   onFreshVolumes?: (id: string) => Promise<any>;
   onBackup: (id: string) => Promise<any>;
+  onDownloadBackup?: (id: string, fileName: string) => void;
+  onRestoreBackup?: (id: string) => Promise<any>;
+  onDeleteBackup?: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
   onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
   onDeleteDomain?: (id: string) => Promise<any>;
@@ -59,6 +62,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
   onRebuild,
   onFreshVolumes,
   onBackup,
+  onDownloadBackup,
+  onRestoreBackup,
+  onDeleteBackup,
   onSubscribeLogs,
   onCreateDomain,
   onDeleteDomain,
@@ -126,6 +132,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onRestart={onRestart}
         onRebuild={onRebuild}
         onBackup={onBackup}
+        onDownloadBackup={onDownloadBackup}
+        onRestoreBackup={onRestoreBackup}
+        onDeleteBackup={onDeleteBackup}
         onSubscribeLogs={onSubscribeLogs}
         onCreateDomain={onCreateDomain}
         onDeleteDomain={onDeleteDomain}
@@ -156,6 +165,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onRebuild={onRebuild}
         onFreshVolumes={onFreshVolumes}
         onBackup={onBackup}
+        onDownloadBackup={onDownloadBackup}
+        onRestoreBackup={onRestoreBackup}
+        onDeleteBackup={onDeleteBackup}
         onSubscribeLogs={onSubscribeLogs}
         onCreateDomain={onCreateDomain}
         onDeleteDomain={onDeleteDomain}

@@ -173,6 +173,32 @@ export class R2BackupService {
         fs.mkdirSync(appDir, { recursive: true });
       }
 
+      // Ensure compose configuration, environment and metadata exist in appDir before archiving
+      const composePath = path.join(appDir, 'docker-compose.yml');
+      const envPath = path.join(appDir, '.env');
+      const metadataPath = path.join(appDir, 'app_metadata.json');
+
+      fs.writeFileSync(composePath, app.composeYaml || '', 'utf-8');
+      fs.writeFileSync(envPath, app.envContent || '', 'utf-8');
+      fs.writeFileSync(
+        metadataPath,
+        JSON.stringify(
+          {
+            id: app.id,
+            name: app.name,
+            description: app.description || '',
+            status: app.status,
+            composeYaml: app.composeYaml || '',
+            envContent: app.envContent || '',
+            createdAt: app.createdAt,
+            backedUpAt: new Date().toISOString(),
+          },
+          null,
+          2
+        ),
+        'utf-8'
+      );
+
       const sizeBytes = await this.createArchive(appDir, localZipPath);
 
       if (client && r2Config.enabled && r2Config.bucketName) {
@@ -363,7 +389,58 @@ export class R2BackupService {
         const appDir = path.join(APPS_DATA_DIR, record.targetId);
         if (!fs.existsSync(appDir)) fs.mkdirSync(appDir, { recursive: true });
         zip.extractAllTo(appDir, true);
-        return { success: true, message: `应用 ${record.targetName} 数据卷快照已成功恢复！` };
+
+        // Sync restored app entity in db
+        const metadataPath = path.join(appDir, 'app_metadata.json');
+        const composePath = path.join(appDir, 'docker-compose.yml');
+        const envPath = path.join(appDir, '.env');
+
+        const apps = db.get('apps') || [];
+        const appIndex = apps.findIndex((a) => a.id === record.targetId);
+
+        if (appIndex >= 0) {
+          const app = { ...apps[appIndex] };
+          if (fs.existsSync(metadataPath)) {
+            try {
+              const meta = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+              if (meta.name) app.name = meta.name;
+              if (meta.description !== undefined) app.description = meta.description;
+              if (meta.composeYaml) app.composeYaml = meta.composeYaml;
+              if (meta.envContent !== undefined) app.envContent = meta.envContent;
+            } catch {}
+          } else if (fs.existsSync(composePath)) {
+            app.composeYaml = fs.readFileSync(composePath, 'utf-8');
+            if (fs.existsSync(envPath)) {
+              app.envContent = fs.readFileSync(envPath, 'utf-8');
+            }
+          }
+          app.updatedAt = new Date().toISOString();
+          apps[appIndex] = app;
+          db.set('apps', apps);
+        } else if (fs.existsSync(metadataPath) || fs.existsSync(composePath)) {
+          // Recreate deleted app if missing
+          let meta: any = {};
+          if (fs.existsSync(metadataPath)) {
+            try {
+              meta = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+            } catch {}
+          }
+          const restoredApp: AppItem = {
+            id: meta.id || record.targetId,
+            name: meta.name || record.targetName,
+            description: meta.description || '',
+            status: 'stopped',
+            composeYaml: meta.composeYaml || (fs.existsSync(composePath) ? fs.readFileSync(composePath, 'utf-8') : ''),
+            envContent: meta.envContent || (fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : ''),
+            autoUpdate: false,
+            createdAt: meta.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            containers: [],
+          };
+          db.set('apps', [restoredApp, ...apps]);
+        }
+
+        return { success: true, message: `应用 ${record.targetName} 的数据卷与编排快照已成功恢复！` };
       }
     } catch (err: any) {
       return { success: false, error: `解压并恢复快照失败: ${err.message}` };

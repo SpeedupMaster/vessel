@@ -17,6 +17,7 @@ import { Button8State } from '../common/Button8State.js';
 import { Badge } from '../common/Badge.js';
 import { Modal } from '../common/Modal.js';
 import { useNotification } from '../../context/NotificationContext.js';
+import { formatBytes } from '../../utils/format.js';
 
 interface BackupsViewProps {
   r2Config: R2Config | null;
@@ -418,7 +419,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
                 <div className="flex items-center gap-4 text-ink-muted/80 dark:text-zinc-400">
                   <div className="flex items-center gap-4 text-xs font-mono">
-                    <span>{(b.fileSizeBytes / 1024 / 1024).toFixed(2)} MB</span>
+                    <span>{formatBytes(b.fileSizeBytes)}</span>
                     <span className="text-ink-muted/60 dark:text-zinc-600 font-sans">•</span>
                     <span className="font-sans">{new Date(b.createdAt).toLocaleString()}</span>
                   </div>
