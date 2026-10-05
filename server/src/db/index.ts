@@ -185,6 +185,11 @@ class Database {
   public getAll(): DatabaseSchema {
     return this.data;
   }
+
+  public reload(): DatabaseSchema {
+    this.data = this.load();
+    return this.data;
+  }
 }
 
 export const db = new Database();

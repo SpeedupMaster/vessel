@@ -267,6 +267,34 @@ export function useData() {
     return data;
   };
 
+  const deleteBackup = async (id: string) => {
+    const res = await apiFetch(`/api/r2/backups/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to delete backup');
+    }
+    setBackups((prev) => prev.filter((b) => b.id !== id));
+  };
+
+  const downloadBackup = (id: string, fileName: string) => {
+    const token = localStorage.getItem('vessel_token') || '';
+    const url = `/api/r2/backups/${id}/download?token=${encodeURIComponent(token)}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const restoreBackup = async (id: string) => {
+    const res = await apiFetch(`/api/r2/backups/${id}/restore`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to restore backup');
+    await fetchAll();
+    return data;
+  };
+
   // REGISTRIES ACTIONS
   const saveRegistry = async (reg: Partial<RegistryItem>) => {
     const res = await apiFetch('/api/registries', {
@@ -348,6 +376,9 @@ export function useData() {
     saveR2Config,
     testR2Connection,
     triggerSystemBackup,
+    deleteBackup,
+    downloadBackup,
+    restoreBackup,
     saveRegistry,
     testRegistry,
     saveMaintenance,

@@ -87,6 +87,9 @@ function MainConsole() {
     saveR2Config,
     testR2Connection,
     triggerSystemBackup,
+    deleteBackup,
+    downloadBackup,
+    restoreBackup,
     saveRegistry,
     testRegistry,
     saveMaintenance,
@@ -311,6 +314,9 @@ function MainConsole() {
                 onSaveConfig={saveR2Config}
                 onTestConnection={testR2Connection}
                 onTriggerBackupNow={triggerSystemBackup}
+                onDeleteBackup={deleteBackup}
+                onDownloadBackup={downloadBackup}
+                onRestoreBackup={restoreBackup}
               />
             )}
 

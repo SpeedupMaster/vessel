@@ -1,9 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import archiver from 'archiver';
-import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import AdmZip from 'adm-zip';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { DATA_DIR, APPS_DATA_DIR, db } from '../db/index.js';
 import { BackupRecord, R2Config, AppItem } from '../types/index.js';
+import { caddyService } from './caddy.js';
 
 export class R2BackupService {
   private getS3Client(config?: R2Config): S3Client | null {
@@ -75,13 +83,13 @@ export class R2BackupService {
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `vessel_system_${timestamp}.zip`;
-    const tempDir = path.join(DATA_DIR, 'tmp_backups');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    const backupsDir = path.join(DATA_DIR, 'backups');
+    if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
 
-    const localZipPath = path.join(tempDir, fileName);
+    const localZipPath = path.join(backupsDir, fileName);
 
     try {
-      // Create zip of DATA_DIR excluding tmp_backups
+      // Create zip of DATA_DIR excluding backups
       const sizeBytes = await new Promise<number>((resolve, reject) => {
         const output = fs.createWriteStream(localZipPath);
         const archive = archiver('zip', { zlib: { level: 9 } });
@@ -135,11 +143,6 @@ export class R2BackupService {
       r2Config.lastBackupMessage = `Backup created (${(sizeBytes / 1024 / 1024).toFixed(2)} MB)`;
       db.set('r2Config', { ...r2Config });
 
-      // Clean local zip
-      try {
-        fs.unlinkSync(localZipPath);
-      } catch {}
-
       await this.enforceRetention('vessel_system');
       return { success: true, record };
     } catch (e: any) {
@@ -159,10 +162,10 @@ export class R2BackupService {
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `vessel_app_${app.id}_${timestamp}.zip`;
-    const tempDir = path.join(DATA_DIR, 'tmp_backups');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    const backupsDir = path.join(DATA_DIR, 'backups');
+    if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
 
-    const localZipPath = path.join(tempDir, fileName);
+    const localZipPath = path.join(backupsDir, fileName);
     const appDir = path.join(APPS_DATA_DIR, app.id);
 
     try {
@@ -198,14 +201,172 @@ export class R2BackupService {
       const backups = db.get('backups');
       db.set('backups', [record, ...backups]);
 
-      try {
-        fs.unlinkSync(localZipPath);
-      } catch {}
-
       await this.enforceRetention(app.id);
       return { success: true, record };
     } catch (e: any) {
       return { success: false, error: e.message };
+    }
+  }
+
+  /**
+   * Get a readable download stream for a backup
+   */
+  public async getBackupDownload(id: string): Promise<{
+    stream: NodeJS.ReadableStream;
+    fileName: string;
+    contentLength?: number;
+  } | null> {
+    const backups = db.get('backups') || [];
+    const record = backups.find((b) => b.id === id);
+    if (!record) return null;
+
+    // Check local storage first
+    const localPath = path.join(DATA_DIR, 'backups', record.fileName);
+    if (fs.existsSync(localPath)) {
+      const stat = fs.statSync(localPath);
+      return {
+        stream: fs.createReadStream(localPath),
+        fileName: record.fileName,
+        contentLength: stat.size,
+      };
+    }
+
+    // If not local, stream from R2
+    const r2Config = db.get('r2Config');
+    const client = this.getS3Client(r2Config);
+    if (client && r2Config.bucketName) {
+      try {
+        const key =
+          record.type === 'system'
+            ? `system/${record.fileName}`
+            : `apps/${record.targetId}/${record.fileName}`;
+        const res = await client.send(
+          new GetObjectCommand({
+            Bucket: r2Config.bucketName,
+            Key: key,
+          })
+        );
+        if (res.Body) {
+          return {
+            stream: res.Body as any,
+            fileName: record.fileName,
+            contentLength: res.ContentLength,
+          };
+        }
+      } catch (err: any) {
+        console.error(`[R2] Failed to fetch object for download: ${err.message}`);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Delete a backup archive both locally and from R2
+   */
+  public async deleteBackup(id: string): Promise<{ success: boolean; error?: string }> {
+    const backups = db.get('backups') || [];
+    const record = backups.find((b) => b.id === id);
+    if (!record) return { success: false, error: '未找到该备份记录' };
+
+    // Delete from R2
+    const r2Config = db.get('r2Config');
+    const client = this.getS3Client(r2Config);
+    if (client && r2Config.bucketName) {
+      const key =
+        record.type === 'system'
+          ? `system/${record.fileName}`
+          : `apps/${record.targetId}/${record.fileName}`;
+      try {
+        await client.send(
+          new DeleteObjectCommand({
+            Bucket: r2Config.bucketName,
+            Key: key,
+          })
+        );
+      } catch (err: any) {
+        console.warn(`[R2] Failed to delete from R2: ${err.message}`);
+      }
+    }
+
+    // Delete local file
+    const localPath = path.join(DATA_DIR, 'backups', record.fileName);
+    if (fs.existsSync(localPath)) {
+      try {
+        fs.unlinkSync(localPath);
+      } catch {}
+    }
+
+    // Update DB
+    db.set(
+      'backups',
+      backups.filter((b) => b.id !== id)
+    );
+    return { success: true };
+  }
+
+  /**
+   * Restore a backup snapshot archive to system or app
+   */
+  public async restoreBackup(id: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const backups = db.get('backups') || [];
+    const record = backups.find((b) => b.id === id);
+    if (!record) return { success: false, error: '未找到该备份记录' };
+
+    const backupsDir = path.join(DATA_DIR, 'backups');
+    let localPath = path.join(backupsDir, record.fileName);
+
+    // If local file does not exist, fetch from R2
+    if (!fs.existsSync(localPath)) {
+      const r2Config = db.get('r2Config');
+      const client = this.getS3Client(r2Config);
+      if (client && r2Config.bucketName) {
+        try {
+          const key =
+            record.type === 'system'
+              ? `system/${record.fileName}`
+              : `apps/${record.targetId}/${record.fileName}`;
+          const res = await client.send(
+            new GetObjectCommand({
+              Bucket: r2Config.bucketName,
+              Key: key,
+            })
+          );
+          if (res.Body) {
+            if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
+            const buffer = Buffer.from(await res.Body.transformToByteArray());
+            fs.writeFileSync(localPath, buffer);
+          }
+        } catch (err: any) {
+          return { success: false, error: `从 Cloudflare R2 拉取备份快照失败: ${err.message}` };
+        }
+      }
+    }
+
+    if (!fs.existsSync(localPath)) {
+      return { success: false, error: '备份文件不存在，无法执行恢复' };
+    }
+
+    try {
+      const zip = new AdmZip(localPath);
+
+      if (record.type === 'system') {
+        // Extract everything to DATA_DIR
+        zip.extractAllTo(DATA_DIR, true);
+        // Reload database in memory
+        db.reload();
+        // Sync Caddyfile reverse proxy rules
+        caddyService.syncCaddyfile();
+        return { success: true, message: `系统快照 ${record.fileName} 已成功恢复生效！` };
+      } else {
+        // App volume restore
+        const appDir = path.join(APPS_DATA_DIR, record.targetId);
+        if (!fs.existsSync(appDir)) fs.mkdirSync(appDir, { recursive: true });
+        zip.extractAllTo(appDir, true);
+        return { success: true, message: `应用 ${record.targetName} 数据卷快照已成功恢复！` };
+      }
+    } catch (err: any) {
+      return { success: false, error: `解压并恢复快照失败: ${err.message}` };
     }
   }
 
@@ -223,11 +384,24 @@ export class R2BackupService {
       const keep = backups.filter((b) => !toRemove.includes(b));
       db.set('backups', keep);
 
-      // Attempt to delete from R2
+      // Delete from local filesystem
+      for (const item of toRemove) {
+        const localPath = path.join(DATA_DIR, 'backups', item.fileName);
+        if (fs.existsSync(localPath)) {
+          try {
+            fs.unlinkSync(localPath);
+          } catch {}
+        }
+      }
+
+      // Delete from R2
       const client = this.getS3Client(r2Config);
       if (client && r2Config.bucketName) {
         for (const item of toRemove) {
-          const key = item.type === 'system' ? `system/${item.fileName}` : `apps/${item.targetId}/${item.fileName}`;
+          const key =
+            item.type === 'system'
+              ? `system/${item.fileName}`
+              : `apps/${item.targetId}/${item.fileName}`;
           client.send(new DeleteObjectCommand({ Bucket: r2Config.bucketName, Key: key })).catch(() => {});
         }
       }

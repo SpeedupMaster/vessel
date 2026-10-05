@@ -592,6 +592,39 @@ apiRouter.get('/r2/backups', (req: Request, res: Response) => {
   res.json(backups);
 });
 
+apiRouter.get('/r2/backups/:id/download', requireAuth, async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const result = await r2BackupService.getBackupDownload(id);
+  if (!result) {
+    return res.status(404).json({ error: '备份文件不存在或已被清除' });
+  }
+
+  res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+  res.setHeader('Content-Type', 'application/zip');
+  if (result.contentLength) {
+    res.setHeader('Content-Length', result.contentLength);
+  }
+  result.stream.pipe(res);
+});
+
+apiRouter.delete('/r2/backups/:id', requireAuth, async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const result = await r2BackupService.deleteBackup(id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  res.json({ success: true });
+});
+
+apiRouter.post('/r2/backups/:id/restore', requireAuth, async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const result = await r2BackupService.restoreBackup(id);
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+  res.json({ success: true, message: result.message });
+});
+
 apiRouter.post('/r2/backup-now', requireAuth, async (req: Request, res: Response) => {
   const result = await r2BackupService.runSystemBackup();
   if (result.success) {
