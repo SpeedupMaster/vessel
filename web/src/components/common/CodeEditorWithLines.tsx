@@ -86,7 +86,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
   return (
     <div
       className={clsx(
-        'relative flex rounded-lg border border-line bg-paper text-ink font-mono text-xs overflow-hidden focus-within:border-accent transition-colors',
+        'relative flex rounded-lg border border-line bg-paper text-ink font-mono text-xs overflow-hidden transition-colors',
         className
       )}
       style={{ minHeight, maxHeight }}
