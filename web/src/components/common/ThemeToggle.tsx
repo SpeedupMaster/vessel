@@ -14,26 +14,58 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
   if (variant === 'icon') {
     return (
       <button
+        type="button"
         onClick={toggleTheme}
-        title={`切换主题 (当前: ${theme === 'system' ? '跟随系统' : theme === 'dark' ? '深色' : '浅色'})`}
+        data-tooltip={`切换主题 (当前: ${theme === 'system' ? '跟随系统' : theme === 'dark' ? '深色' : '浅色'})`}
         className={clsx(
-          'p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-all duration-150',
+          'p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-all duration-150 cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50',
           className
         )}
       >
         {resolvedTheme === 'dark' ? (
-          <Moon className="w-4 h-4 text-sky-400" weight="bold" />
+          <Moon className="w-4 h-4 text-sky-400" weight="fill" />
         ) : (
-          <Sun className="w-4 h-4 text-amber-500" weight="bold" />
+          <Sun className="w-4 h-4 text-amber-500" weight="fill" />
         )}
       </button>
     );
   }
 
-  const options: { id: Theme; label: string; icon: React.ReactNode }[] = [
-    { id: 'light', label: '浅色模式', icon: <Sun className="w-3.5 h-3.5" weight="bold" /> },
-    { id: 'system', label: '跟随系统', icon: <Desktop className="w-3.5 h-3.5" weight="bold" /> },
-    { id: 'dark', label: '深色模式', icon: <Moon className="w-3.5 h-3.5" weight="bold" /> },
+  const options: {
+    id: Theme;
+    label: string;
+    icon: (isActive: boolean) => React.ReactNode;
+  }[] = [
+    {
+      id: 'light',
+      label: '浅色模式',
+      icon: (active) => (
+        <Sun
+          className={clsx('w-3.5 h-3.5 transition-colors duration-150', active ? 'text-amber-500' : 'text-ink-faint')}
+          weight={active ? 'fill' : 'bold'}
+        />
+      ),
+    },
+    {
+      id: 'system',
+      label: '跟随系统',
+      icon: (active) => (
+        <Desktop
+          className={clsx('w-3.5 h-3.5 transition-colors duration-150', active ? 'text-accent' : 'text-ink-faint')}
+          weight={active ? 'bold' : 'bold'}
+        />
+      ),
+    },
+    {
+      id: 'dark',
+      label: '深色模式',
+      icon: (active) => (
+        <Moon
+          className={clsx('w-3.5 h-3.5 transition-colors duration-150', active ? 'text-sky-400' : 'text-ink-faint')}
+          weight={active ? 'fill' : 'bold'}
+        />
+      ),
+    },
   ];
 
   return (
@@ -41,7 +73,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
       role="group"
       aria-label="主题切换"
       className={clsx(
-        'inline-flex items-center p-0.5 bg-paper-3/80 border border-line rounded-lg transition-colors',
+        'inline-flex items-center p-0.5 bg-paper-3/90 dark:bg-neutral-900 border border-line rounded-lg transition-colors select-none',
         className
       )}
     >
@@ -50,16 +82,17 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
         return (
           <button
             key={opt.id}
+            type="button"
             onClick={() => setTheme(opt.id)}
-            title={opt.label}
+            data-tooltip={opt.label}
             className={clsx(
-              'relative p-1.5 rounded-md text-xs transition-all duration-150 flex items-center justify-center',
+              'relative p-1.5 rounded-[6px] text-xs transition-all duration-150 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 border',
               isActive
-                ? 'bg-paper text-ink shadow-subtle border border-line/60 font-medium'
-                : 'text-ink-faint hover:text-ink-muted'
+                ? 'bg-white dark:bg-neutral-800 text-ink shadow-subtle border-line/60 dark:border-white/10 font-medium'
+                : 'text-ink-faint hover:text-ink-muted hover:bg-paper-2/40 border-transparent'
             )}
           >
-            {opt.icon}
+            {opt.icon(isActive)}
           </button>
         );
       })}

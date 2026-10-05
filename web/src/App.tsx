@@ -9,6 +9,7 @@ import { DomainsView } from './components/views/DomainsView.js';
 import { BackupsView } from './components/views/BackupsView.js';
 import { RegistriesView } from './components/views/RegistriesView.js';
 import { MaintenanceView } from './components/views/MaintenanceView.js';
+import { GlobalTooltip } from './components/common/Tooltip.js';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('overview');
@@ -71,7 +72,7 @@ export function App() {
       case 'backups':
         return 'Cloudflare R2 定时备份';
       case 'registries':
-        return '私有镜像仓凭证管理';
+        return '私有镜像凭证管理';
       case 'maintenance':
         return '镜像更新巡检与安全瘦身';
     }
@@ -137,6 +138,9 @@ export function App() {
                 onFreshVolumes={freshVolumesApp}
                 onBackup={backupApp}
                 onSubscribeLogs={subscribeLogs}
+                onCreateDomain={createDomain}
+                onDeleteDomain={deleteDomain}
+                onRenewDomain={renewDomain}
               />
             )}
 
@@ -180,6 +184,9 @@ export function App() {
           </div>
         </main>
       </div>
+
+      {/* Modern Custom Tooltip Engine across the whole website */}
+      <GlobalTooltip />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { AppItem } from '../../types/index.js';
+import { CustomSelect } from '../common/CustomSelect.js';
 
 interface LogsPanelProps {
   app: AppItem;
@@ -178,25 +179,20 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
           <label className="block text-xs font-semibold text-ink-muted mb-1.5 select-none">
             选择日志目标容器
           </label>
-          <div className="relative">
-            <select
-              value={selectedService}
-              onChange={(e) => setSelectedService(e.target.value)}
-              className="w-full appearance-none bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-medium focus:border-accent focus:outline-none cursor-pointer pr-10 hover:border-paper-4 transition-colors"
-            >
-              <option value="all">
-                全部容器聚合日志
-              </option>
-              {containerList.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name} ({c.id.slice(0, 12)}) [{c.state}] {c.status}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-ink-muted">
-              <CaretDown className="w-4 h-4" />
-            </div>
-          </div>
+          <CustomSelect
+            value={selectedService}
+            onChange={(val) => setSelectedService(val)}
+            options={[
+              { value: 'all', label: '全部容器聚合日志', badge: `${containerList.length} 个容器` },
+              ...containerList.map((c) => ({
+                value: c.name,
+                label: c.name,
+                badge: c.state,
+                description: `${c.id.slice(0, 12)} · ${c.status}`,
+              })),
+            ]}
+            placeholder="选择目标容器..."
+          />
         </div>
 
         {/* CONTROLS TOOLBAR */}

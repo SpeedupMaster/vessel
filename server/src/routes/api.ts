@@ -39,7 +39,7 @@ apiRouter.get('/apps/:id', async (req: Request, res: Response) => {
 });
 
 apiRouter.post('/apps', async (req: Request, res: Response) => {
-  const { name, description, composeYaml, envContent, autoUpdate } = req.body;
+  const { name, description, composeYaml, envContent, autoUpdate, domainBinding } = req.body;
   if (!name || !composeYaml) {
     return res.status(400).json({ error: 'Name and composeYaml are required' });
   }
@@ -69,6 +69,30 @@ apiRouter.post('/apps', async (req: Request, res: Response) => {
   db.set('apps', [...apps]);
 
   dockerService.prepareAppFiles(newApp);
+
+  // If domainBinding is provided, bind domain immediately and sync Caddy
+  if (domainBinding && domainBinding.domain && domainBinding.targetPort) {
+    const cleanDomain = String(domainBinding.domain).trim().toLowerCase();
+    const certStatus = await caddyService.checkCertStatus(cleanDomain);
+    const newDomain: DomainItem = {
+      id: uuidv4(),
+      domain: cleanDomain,
+      appId: id,
+      serviceName: domainBinding.serviceName || 'web',
+      targetPort: Number(domainBinding.targetPort),
+      targetType: domainBinding.targetType === 'host' ? 'host' : 'internal',
+      sslStatus: certStatus.status,
+      sslIssuer: certStatus.issuer,
+      sslExpiresAt: certStatus.expiresAt,
+      createdAt: new Date().toISOString(),
+    };
+
+    const domains = db.get('domains') || [];
+    domains.push(newDomain);
+    db.set('domains', domains);
+    caddyService.syncCaddyfile();
+  }
+
   res.status(201).json(newApp);
 });
 

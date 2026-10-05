@@ -10,6 +10,7 @@ import { DomainItem, AppItem } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { Modal } from '../common/Modal.js';
+import { CustomSelect } from '../common/CustomSelect.js';
 import { useNotification } from '../../context/NotificationContext.js';
 
 interface DomainsViewProps {
@@ -171,8 +172,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                           }
                         }
                       }}
-                      className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors border border-line"
-                      title="解绑并移除反向代理"
+                      className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors border border-line cursor-pointer"
+                      data-tooltip="解绑并移除反向代理"
                     >
                       <Trash className="w-4 h-4" />
                     </button>
@@ -214,17 +215,16 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
             <label className="block text-xs uppercase text-ink-muted mb-1.5">
               目标应用 *
             </label>
-            <select
+            <CustomSelect
               value={appIdInput}
-              onChange={(e) => setAppIdInput(e.target.value)}
-              className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
-            >
-              {apps.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.id})
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setAppIdInput(val)}
+              options={apps.map((a) => ({
+                value: a.id,
+                label: a.name,
+                badge: a.id.slice(0, 8),
+              }))}
+              placeholder="选择目标应用..."
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">

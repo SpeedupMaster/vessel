@@ -102,7 +102,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
             key={idx}
             onClick={() => handleLineClick(idx)}
             className="tabular-nums cursor-pointer hover:text-ink transition-colors select-none"
-            title={`点击选中第 ${idx + 1} 行`}
+            data-tooltip={`点击选中第 ${idx + 1} 行`}
           >
             {idx + 1}
           </div>

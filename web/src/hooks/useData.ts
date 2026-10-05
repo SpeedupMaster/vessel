@@ -108,7 +108,7 @@ export function useData() {
   };
 
   // APP ACTIONS
-  const createApp = async (app: Partial<AppItem>) => {
+  const createApp = async (app: Partial<AppItem> & { domainBinding?: any }) => {
     const res = await fetch('/api/apps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -120,6 +120,14 @@ export function useData() {
     }
     const created = await res.json();
     setApps((prev) => [...prev, created]);
+    if (app.domainBinding?.domain) {
+      fetch('/api/domains')
+        .then((r) => r.json())
+        .then((doms) => {
+          if (Array.isArray(doms)) setDomains(doms);
+        })
+        .catch(console.error);
+    }
     return created;
   };
 

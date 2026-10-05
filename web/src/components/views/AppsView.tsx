@@ -29,6 +29,9 @@ interface AppsViewProps {
   onFreshVolumes?: (id: string) => Promise<any>;
   onBackup: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
+  onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
+  onDeleteDomain?: (id: string) => Promise<any>;
+  onRenewDomain?: (id: string) => Promise<any>;
 }
 
 export const AppsView: React.FC<AppsViewProps> = ({
@@ -47,6 +50,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
   onFreshVolumes,
   onBackup,
   onSubscribeLogs,
+  onCreateDomain,
+  onDeleteDomain,
+  onRenewDomain,
 }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'detail'>('list');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
@@ -91,6 +97,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onRebuild={onRebuild}
         onBackup={onBackup}
         onSubscribeLogs={onSubscribeLogs}
+        onCreateDomain={onCreateDomain}
+        onDeleteDomain={onDeleteDomain}
+        onRenewDomain={onRenewDomain}
       />
     );
   }
@@ -122,6 +131,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onFreshVolumes={onFreshVolumes}
         onBackup={onBackup}
         onSubscribeLogs={onSubscribeLogs}
+        onCreateDomain={onCreateDomain}
+        onDeleteDomain={onDeleteDomain}
+        onRenewDomain={onRenewDomain}
       />
     );
   }
@@ -227,7 +239,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                     setSelectedAppId(app.id);
                     setViewMode('detail');
                   }}
-                  className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1.5 py-1"
+                  className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-accent/10 transition-colors cursor-pointer"
                 >
                   <Code className="w-4 h-4" />
                   <span>配置与终端</span>
@@ -238,15 +250,15 @@ export const AppsView: React.FC<AppsViewProps> = ({
                     <>
                       <button
                         onClick={() => onRestart(app.id)}
-                        title="重启应用"
-                        className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors"
+                        data-tooltip="重启应用"
+                        className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer"
                       >
                         <ArrowsClockwise className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onStop(app.id)}
-                        title="停止容器"
-                        className="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        data-tooltip="停止容器"
+                        className="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                       >
                         <Stop className="w-4 h-4" />
                       </button>

@@ -25,9 +25,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
     { id: 'overview', label: '控制台概览', icon: <SquaresFour className="w-4 h-4" /> },
     { id: 'apps', label: '应用与编排', icon: <HardDrives className="w-4 h-4" />, count: metrics.totalApps },
     { id: 'domains', label: '域名与证书', icon: <Globe className="w-4 h-4" />, count: metrics.activeDomains },
-    { id: 'backups', label: 'Cloudflare R2 备份', icon: <CloudArrowUp className="w-4 h-4" />, count: metrics.totalBackups },
-    { id: 'registries', label: '私有镜像仓 (GHCR)', icon: <Package className="w-4 h-4" /> },
+    { id: 'registries', label: '私有镜像', icon: <Package className="w-4 h-4" /> },
     { id: 'maintenance', label: '巡检与安全瘦身', icon: <Broom className="w-4 h-4" /> },
+    { id: 'backups', label: 'Cloudflare R2 备份', icon: <CloudArrowUp className="w-4 h-4" />, count: metrics.totalBackups },
   ];
 
   const isDockerOnline = metrics.dockerStatus === 'running';
@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
               className={clsx(
                 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm transition-all duration-150',
                 active
-                  ? 'bg-paper text-ink font-medium border border-line shadow-subtle'
+                  ? 'bg-paper dark:bg-paper-3 text-ink font-medium border border-line shadow-subtle'
                   : 'text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
               )}
             >

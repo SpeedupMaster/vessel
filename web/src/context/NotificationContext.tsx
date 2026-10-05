@@ -133,8 +133,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               <button
                 type="button"
                 onClick={() => removeToast(t.id)}
-                className="text-ink-muted hover:text-ink hover:bg-paper-2 transition-colors p-1 rounded-lg flex-shrink-0 -mr-1 -mt-1"
-                title="关闭"
+                className="text-ink-muted hover:text-ink hover:bg-paper-2 transition-colors p-1 rounded-lg flex-shrink-0 -mr-1 -mt-1 cursor-pointer"
+                data-tooltip="关闭"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

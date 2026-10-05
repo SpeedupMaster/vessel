@@ -23,12 +23,21 @@ import {
   Database,
   Stack,
   FolderSimple,
+  Plus,
+  ArrowSquareOut,
+  ShieldCheck,
+  Link as LinkIcon,
+  LockKey,
+  Info,
+  Lightning,
+  CheckCircle,
 } from '@phosphor-icons/react';
 import { AppItem, ComposeTemplate, DomainItem, BackupRecord } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { CodeEditorWithLines } from '../common/CodeEditorWithLines.js';
 import { Modal } from '../common/Modal.js';
+import { CustomSelect } from '../common/CustomSelect.js';
 import { LogsPanel } from './LogsPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
 
@@ -40,7 +49,7 @@ interface ComposeAppViewProps {
   domains?: DomainItem[];
   backups?: BackupRecord[];
   onBack: () => void;
-  onCreateApp: (app: Partial<AppItem>) => Promise<AppItem>;
+  onCreateApp: (app: Partial<AppItem> & { domainBinding?: any }) => Promise<AppItem>;
   onUpdateApp: (id: string, updates: Partial<AppItem>) => Promise<AppItem>;
   onDeleteApp: (id: string) => Promise<void>;
   onDeploy: (id: string) => Promise<void>;
@@ -50,6 +59,9 @@ interface ComposeAppViewProps {
   onFreshVolumes?: (id: string) => Promise<any>;
   onBackup: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
+  onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
+  onDeleteDomain?: (id: string) => Promise<any>;
+  onRenewDomain?: (id: string) => Promise<any>;
 }
 
 export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
@@ -70,6 +82,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   onFreshVolumes,
   onBackup,
   onSubscribeLogs,
+  onCreateDomain,
+  onDeleteDomain,
+  onRenewDomain,
 }) => {
   const { toast, confirm } = useNotification();
 
@@ -90,16 +105,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   // Form State
   const [name, setName] = useState(app?.name || '');
   const [description, setDescription] = useState(app?.description || '');
-  const [composeYaml, setComposeYaml] = useState(
-    app?.composeYaml ||
-      `services:
-  web:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    restart: unless-stopped
-`
-  );
+  const [composeYaml, setComposeYaml] = useState(app?.composeYaml || '');
   const [envContent, setEnvContent] = useState(app?.envContent || '');
   const [autoUpdate, setAutoUpdate] = useState(app ? app.autoUpdate : true);
 
@@ -111,6 +117,21 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [copiedYaml, setCopiedYaml] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [tempName, setTempName] = useState(app?.name || '');
+
+  // Domain binding in deployment (create mode)
+  const [bindDomainOnDeploy, setBindDomainOnDeploy] = useState(false);
+  const [deployDomain, setDeployDomain] = useState('');
+  const [deployServiceName, setDeployServiceName] = useState('');
+  const [deployTargetPort, setDeployTargetPort] = useState('');
+  const [deployTargetType, setDeployTargetType] = useState<'internal' | 'host'>('internal');
+
+  // Domain binding modal (edit mode or quick action)
+  const [isAddDomainModalOpen, setIsAddDomainModalOpen] = useState(false);
+  const [modalDomain, setModalDomain] = useState('');
+  const [modalServiceName, setModalServiceName] = useState('');
+  const [modalTargetPort, setModalTargetPort] = useState('');
+  const [modalTargetType, setModalTargetType] = useState<'internal' | 'host'>('internal');
+  const [isBindingDomain, setIsBindingDomain] = useState(false);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +171,89 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     }
   }, [composeYaml]);
 
+  // Detected services and ports from compose YAML
+  const detectedServices = useMemo(() => {
+    if (!yamlValidation.valid || !yamlValidation.parsed?.services) return [];
+    const servicesObj = yamlValidation.parsed.services;
+    const list: { name: string; ports: number[] }[] = [];
+    for (const [srvName, config] of Object.entries<any>(servicesObj)) {
+      const portSet = new Set<number>();
+      if (Array.isArray(config?.ports)) {
+        for (const p of config.ports) {
+          const str = String(p);
+          const parts = str.split(':');
+          const internalPort = parseInt(parts[parts.length - 1]?.split('/')[0], 10);
+          if (!isNaN(internalPort)) portSet.add(internalPort);
+          if (parts.length > 1) {
+            const hostPort = parseInt(parts[parts.length - 2]?.split('/')[0], 10);
+            if (!isNaN(hostPort)) portSet.add(hostPort);
+          }
+        }
+      }
+      list.push({
+        name: srvName,
+        ports: Array.from(portSet),
+      });
+    }
+    return list;
+  }, [yamlValidation]);
+
+  // Auto-fill defaults for create mode
+  useEffect(() => {
+    if (detectedServices.length > 0) {
+      if (!deployServiceName || !detectedServices.some((s) => s.name === deployServiceName)) {
+        setDeployServiceName(detectedServices[0].name);
+      }
+      if (!deployTargetPort && detectedServices[0].ports.length > 0) {
+        setDeployTargetPort(String(detectedServices[0].ports[0]));
+      }
+    }
+  }, [detectedServices, deployServiceName, deployTargetPort]);
+
+  // Open Add Domain Modal handler with intelligent defaults
+  const openAddDomainModal = () => {
+    const defaultSrv = detectedServices[0]?.name || 'web';
+    const defaultPort = detectedServices[0]?.ports[0] ? String(detectedServices[0].ports[0]) : '80';
+    setModalServiceName(defaultSrv);
+    setModalTargetPort(defaultPort);
+    setModalTargetType('internal');
+    setModalDomain('');
+    setIsAddDomainModalOpen(true);
+  };
+
+  // Submit Add Domain Modal
+  const handleModalBindDomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!app || !onCreateDomain) return;
+    const cleanDomain = modalDomain.trim().toLowerCase().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+    if (!cleanDomain) {
+      toast.error('请输入有效域名');
+      return;
+    }
+    if (!modalTargetPort || isNaN(Number(modalTargetPort))) {
+      toast.error('请输入有效目标端口');
+      return;
+    }
+
+    setIsBindingDomain(true);
+    try {
+      await onCreateDomain({
+        domain: cleanDomain,
+        appId: app.id,
+        serviceName: modalServiceName.trim() || 'web',
+        targetPort: Number(modalTargetPort),
+        targetType: modalTargetType,
+      });
+      toast.success(`域名 ${cleanDomain} 绑定成功！Caddy 正在自动化签发 SSL 证书`);
+      setIsAddDomainModalOpen(false);
+      setModalDomain('');
+    } catch (err: any) {
+      toast.error(`绑定域名失败: ${err.message}`);
+    } finally {
+      setIsBindingDomain(false);
+    }
+  };
+
   // Handle template selection
   const handleSelectTemplate = (tmpl: ComposeTemplate) => {
     setName(tmpl.name);
@@ -157,6 +261,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     setDescription(tmpl.description);
     setComposeYaml(tmpl.composeYaml);
     setEnvContent(tmpl.envContent || '');
+
+    // Check if envContent has DOMAIN=...
+    const match = (tmpl.envContent || '').match(/(?:^|\n)\s*DOMAIN\s*=\s*([^\s#\r\n]+)/i);
+    if (match && match[1]) {
+      setDeployDomain(match[1]);
+      setBindDomainOnDeploy(true);
+    }
     setActiveTab('general');
   };
 
@@ -195,22 +306,52 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       toast.error('请填写应用名称');
       return;
     }
+    if (!composeYaml.trim()) {
+      toast.error('请填写 Docker Compose 编排文件内容');
+      return;
+    }
     if (!yamlValidation.valid) {
       toast.error(`Docker Compose 语法错误: ${yamlValidation.error}`);
       return;
     }
 
+    if (bindDomainOnDeploy) {
+      if (!deployDomain.trim()) {
+        toast.error('已启用部署时绑定域名，请填写域名 (如 app.example.com)');
+        return;
+      }
+      if (!deployTargetPort || isNaN(Number(deployTargetPort))) {
+        toast.error('请填写有效的目标反向代理端口');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
+      const domainBinding =
+        bindDomainOnDeploy && deployDomain.trim()
+          ? {
+              domain: deployDomain.trim().toLowerCase(),
+              serviceName: deployServiceName.trim() || 'web',
+              targetPort: Number(deployTargetPort) || 80,
+              targetType: deployTargetType,
+            }
+          : undefined;
+
       const created = await onCreateApp({
         name: name.trim(),
         description: description.trim(),
         composeYaml,
         envContent,
         autoUpdate,
-      });
+        ...(domainBinding ? { domainBinding } : {}),
+      } as any);
 
-      toast.success('应用创建成功！');
+      toast.success(
+        domainBinding
+          ? `应用创建成功！已自动绑定域名 ${domainBinding.domain} 并配置 Caddy`
+          : '应用创建成功！'
+      );
       if (shouldDeploy && created?.id) {
         await onDeploy(created.id);
       }
@@ -225,6 +366,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   // Save / Update App in Edit Mode
   const handleSaveApp = async () => {
     if (!app) return;
+    if (!composeYaml.trim()) {
+      toast.error('请填写 Docker Compose 编排文件内容');
+      return;
+    }
     if (!yamlValidation.valid) {
       toast.error(`Docker Compose 语法错误: ${yamlValidation.error}`);
       return;
@@ -305,7 +450,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-line/60">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-xs text-ink-muted hover:text-accent transition-colors group"
+            className="flex items-center gap-2 px-2.5 py-1 -ml-2 rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors group cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             <span>返回受管应用列表</span>
@@ -381,8 +526,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       <h2 className="text-xl font-bold text-ink tracking-tight">{app?.name}</h2>
                       <button
                         onClick={() => setIsRenaming(true)}
-                        title="修改应用显示名称"
-                        className="p-1 rounded text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors"
+                        data-tooltip="修改应用显示名称"
+                        className="p-1 rounded text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer"
                       >
                         <PencilSimple className="w-3.5 h-3.5" />
                       </button>
@@ -408,8 +553,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             {mode === 'edit' && app && (
               <button
                 onClick={handleDeleteAppClick}
-                title="删除此应用"
-                className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-line transition-colors"
+                data-tooltip="删除此应用"
+                className="p-2 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-line transition-colors cursor-pointer"
               >
                 <Trash className="w-4 h-4" />
               </button>
@@ -424,7 +569,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             onClick={() => setActiveTab('general')}
             className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'general'
-                ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                 : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
             }`}
           >
@@ -437,7 +582,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             onClick={() => setActiveTab('environment')}
             className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'environment'
-                ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                 : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
             }`}
           >
@@ -447,17 +592,41 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
           {/* Mode specific tabs */}
           {mode === 'create' ? (
-            <button
-              onClick={() => setActiveTab('templates')}
-              className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'templates'
-                  ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
-                  : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
-              }`}
-            >
-              <Sparkle className="w-3.5 h-3.5 text-amber-500" />
-              <span>预置模板</span>
-            </button>
+            <>
+              {/* Domains Tab in Create Mode */}
+              <button
+                onClick={() => setActiveTab('domains')}
+                className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === 'domains'
+                    ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
+                    : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5 text-emerald-500" />
+                <span>
+                  域名绑定{' '}
+                  {bindDomainOnDeploy && deployDomain ? (
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded-full border border-emerald-500/20 font-mono">
+                      1
+                    </span>
+                  ) : (
+                    '(0)'
+                  )}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('templates')}
+                className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === 'templates'
+                    ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
+                    : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
+                }`}
+              >
+                <Sparkle className="w-3.5 h-3.5 text-amber-500" />
+                <span>预置模板</span>
+              </button>
+            </>
           ) : (
             <>
               {/* Deployments / Terminal Tab */}
@@ -465,7 +634,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 onClick={() => setActiveTab('deployments')}
                 className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'deployments'
-                    ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                    ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                     : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
                 }`}
               >
@@ -478,7 +647,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 onClick={() => setActiveTab('containers')}
                 className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'containers'
-                    ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                    ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                     : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
                 }`}
               >
@@ -491,7 +660,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 onClick={() => setActiveTab('domains')}
                 className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'domains'
-                    ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                    ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                     : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
                 }`}
               >
@@ -504,7 +673,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 onClick={() => setActiveTab('backups')}
                 className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'backups'
-                    ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                    ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                     : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
                 }`}
               >
@@ -517,7 +686,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 onClick={() => setActiveTab('logs')}
                 className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === 'logs'
-                    ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                    ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                     : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
                 }`}
               >
@@ -532,7 +701,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             onClick={() => setActiveTab('advanced')}
             className={`px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'advanced'
-                ? 'bg-paper border border-line text-ink font-medium shadow-subtle'
+                ? 'bg-paper dark:bg-paper-3 border border-line text-ink font-medium shadow-subtle'
                 : 'border border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
             }`}
           >
@@ -590,6 +759,150 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* In Create Mode: Domain Binding Section */}
+            {mode === 'create' && (
+              <div className="mt-4 pt-4 border-t border-line/60">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-emerald-500" />
+                    <div>
+                      <span className="text-xs font-semibold text-ink">部署时直接绑定公网域名</span>
+                      <span className="text-[11px] text-ink-muted ml-1.5 hidden sm:inline">
+                        (Caddy 自动申请 Let's Encrypt / ZeroSSL 证书并反向代理)
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={bindDomainOnDeploy}
+                    onClick={() => setBindDomainOnDeploy(!bindDomainOnDeploy)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      bindDomainOnDeploy ? 'bg-accent' : 'bg-paper-4'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        bindDomainOnDeploy ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {bindDomainOnDeploy && (
+                  <div className="mt-3.5 p-4 bg-paper-2 rounded-xl border border-line space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-semibold text-ink flex items-center gap-1">
+                          <span>公网域名 (FQDN)</span>
+                          <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-[11px] text-ink-faint">部署时自动注册 Caddyfile</span>
+                      </div>
+
+                      <div className="flex items-stretch rounded-xl border border-line bg-paper shadow-subtle focus-within:border-accent transition-colors overflow-hidden group">
+                        <div className="bg-paper-2 border-r border-line px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none group-focus-within:text-accent transition-colors">
+                          <LockKey className="w-3.5 h-3.5" weight="bold" />
+                          <span>https://</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={deployDomain}
+                          onChange={(e) => {
+                            let val = e.target.value.trim();
+                            val = val.replace(/^https?:\/\//i, '');
+                            setDeployDomain(val);
+                          }}
+                          placeholder="n8n.yourdomain.com"
+                          className="flex-1 min-w-0 bg-transparent px-3.5 py-2 text-xs text-ink font-mono placeholder:text-ink-faint focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          反代目标服务
+                        </label>
+                        {detectedServices.length > 0 ? (
+                          <CustomSelect
+                            value={deployServiceName}
+                            onChange={(val) => {
+                              setDeployServiceName(val);
+                              const s = detectedServices.find((ds) => ds.name === val);
+                              if (s && s.ports.length > 0) {
+                                setDeployTargetPort(String(s.ports[0]));
+                              }
+                            }}
+                            options={detectedServices.map((s) => ({
+                              value: s.name,
+                              label: s.name,
+                              badge: 'Compose 服务',
+                              description: s.ports.length > 0 ? `检测端口: ${s.ports.join(', ')}` : undefined,
+                            }))}
+                            placeholder="选择目标服务..."
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={deployServiceName}
+                            onChange={(e) => setDeployServiceName(e.target.value)}
+                            placeholder="web"
+                            className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none shadow-subtle transition-colors"
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          目标端口 (上游端口)
+                        </label>
+                        <input
+                          type="number"
+                          value={deployTargetPort}
+                          onChange={(e) => setDeployTargetPort(e.target.value)}
+                          placeholder="5678"
+                          className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono font-medium focus:border-accent focus:outline-none shadow-subtle transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {detectedServices.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[11px] text-ink-faint flex items-center gap-1 mr-1">
+                          <Lightning className="w-3.5 h-3.5 text-amber-500" weight="fill" />
+                          检测端口:
+                        </span>
+                        {detectedServices.flatMap((s) =>
+                          s.ports.map((p) => {
+                            const isSelected = deployServiceName === s.name && deployTargetPort === String(p);
+                            return (
+                              <button
+                                key={`${s.name}-${p}`}
+                                type="button"
+                                onClick={() => {
+                                  setDeployServiceName(s.name);
+                                  setDeployTargetPort(String(p));
+                                }}
+                                className={`px-2.5 py-1 text-xs font-mono rounded-md border transition-all flex items-center gap-1.5 cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-accent text-white border-accent shadow-subtle font-semibold'
+                                    : 'bg-paper hover:bg-paper-3 text-ink-muted hover:text-ink border-line'
+                                }`}
+                              >
+                                <span>{s.name}:{p}</span>
+                                {isSelected && <CheckCircle className="w-3 h-3 text-white" weight="bold" />}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -690,6 +1003,54 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* In Edit Mode: External Access Status Bar */}
+            {mode === 'edit' && app && (
+              <div className="mt-4 pt-3.5 border-t border-line/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-emerald-500" />
+                  <span className="text-ink-muted">外部公网路由:</span>
+                  {appDomains.length > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`https://${appDomains[0].domain}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-accent hover:underline flex items-center gap-1"
+                      >
+                        <span>https://{appDomains[0].domain}</span>
+                        <ArrowSquareOut className="w-3 h-3" />
+                      </a>
+                      {appDomains.length > 1 && (
+                        <span className="text-ink-faint">等 {appDomains.length} 个域名</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-ink-faint">暂未绑定公网域名</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={openAddDomainModal}
+                    className="text-xs text-accent hover:text-accent-hover font-medium flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-accent/10 transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" weight="bold" />
+                    <span>绑定新域名</span>
+                  </button>
+                  {appDomains.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('domains')}
+                      className="text-xs text-ink-muted hover:text-ink px-2.5 py-1 rounded-md hover:bg-paper-3 transition-colors cursor-pointer"
+                    >
+                      管理域名 ({appDomains.length})
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* CARD 2: COMPOSE FILE (Dokploy Code Editor with Line Numbers) */}
@@ -705,15 +1066,19 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               {/* Status & Copy controls */}
               <div className="flex items-center gap-2.5">
                 {/* YAML Validation Indicator */}
-                {yamlValidation.valid ? (
+                {!composeYaml.trim() ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-paper-3 text-ink-muted border border-line rounded-full font-medium">
+                    待填写编排配置
+                  </span>
+                ) : yamlValidation.valid ? (
                   <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 rounded-full font-medium">
                     <Check className="w-3 h-3 text-emerald-500" />
                     YAML 语法有效
                   </span>
                 ) : (
                   <span
-                    className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 rounded-full truncate max-w-xs font-medium"
-                    title={yamlValidation.error || ''}
+                    className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 rounded-full truncate max-w-xs font-medium cursor-help"
+                    data-tooltip={yamlValidation.error || ''}
                   >
                     <Warning className="w-3 h-3 text-rose-500" />
                     语法错误: {yamlValidation.error}
@@ -989,36 +1354,386 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         </div>
       )}
 
+      {/* ================= TAB CONTENT 6: DOMAINS (CREATE & EDIT MODES) ================= */}
+      {activeTab === 'domains' && mode === 'create' && (
+        <div className="card-vessel p-6 sm:p-7 shadow-subtle space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-line/60">
+            <div>
+              <h3 className="font-semibold text-base text-ink tracking-tight">部署时域名绑定</h3>
+              <p className="text-xs text-ink-muted mt-0.5">
+                在创建并部署此应用的同时，自动为 Caddy 注册反向代理路由并申请免费自动续订 SSL 证书
+              </p>
+            </div>
+            <span className="text-[11px] font-sans px-2.5 py-0.5 rounded-full bg-paper-3 text-ink-muted border border-line">
+              Caddy 自动化 HTTPS
+            </span>
+          </div>
+
+          <div className="p-4 bg-paper-2 rounded-xl border border-line space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Globe className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <h4 className="text-xs font-semibold text-ink">部署时自动绑定公网域名</h4>
+                  <p className="text-[11px] text-ink-muted">
+                    勾选后在部署启动时一键下发 Caddyfile 路由规则，无需部署后再次手动配置
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={bindDomainOnDeploy}
+                onClick={() => setBindDomainOnDeploy(!bindDomainOnDeploy)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  bindDomainOnDeploy ? 'bg-accent' : 'bg-paper-4'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    bindDomainOnDeploy ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {bindDomainOnDeploy && (
+              <div className="pt-3 border-t border-line/60 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-ink flex items-center gap-1">
+                      <span>绑定公网域名 (FQDN)</span>
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[11px] text-ink-faint">部署时自动下发至 Caddyfile</span>
+                  </div>
+
+                  <div className="flex items-stretch rounded-xl border border-line bg-paper shadow-subtle focus-within:border-accent transition-colors overflow-hidden group">
+                    <div className="bg-paper-2 border-r border-line px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none group-focus-within:text-accent transition-colors">
+                      <LockKey className="w-3.5 h-3.5" weight="bold" />
+                      <span>https://</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={deployDomain}
+                      onChange={(e) => {
+                        let val = e.target.value.trim();
+                        val = val.replace(/^https?:\/\//i, '');
+                        setDeployDomain(val);
+                      }}
+                      placeholder="n8n.yourdomain.com"
+                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 flex items-start gap-2.5 text-xs text-ink-muted leading-relaxed">
+                  <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" weight="fill" />
+                  <div>
+                    提示：请确保已在域名解析商处添加该域名的 <strong className="text-ink font-semibold">A / AAAA 记录</strong> 并指向本机公网 IP。
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      反向代理目标服务 <span className="text-rose-500">*</span>
+                    </label>
+                    {detectedServices.length > 0 ? (
+                      <CustomSelect
+                        value={deployServiceName}
+                        onChange={(val) => {
+                          setDeployServiceName(val);
+                          const s = detectedServices.find((ds) => ds.name === val);
+                          if (s && s.ports.length > 0) {
+                            setDeployTargetPort(String(s.ports[0]));
+                          }
+                        }}
+                        options={detectedServices.map((s) => ({
+                          value: s.name,
+                          label: s.name,
+                          badge: 'Compose 服务',
+                          description: s.ports.length > 0 ? `检测端口: ${s.ports.join(', ')}` : undefined,
+                        }))}
+                        placeholder="选择目标服务..."
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={deployServiceName}
+                        onChange={(e) => setDeployServiceName(e.target.value)}
+                        placeholder="web"
+                        className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none shadow-subtle transition-colors"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-ink mb-1.5">
+                      目标端口 (上游端口) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={deployTargetPort}
+                      onChange={(e) => setDeployTargetPort(e.target.value)}
+                      placeholder="5678"
+                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono font-medium focus:border-accent focus:outline-none shadow-subtle transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {detectedServices.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[11px] text-ink-faint flex items-center gap-1 mr-1">
+                      <Lightning className="w-3.5 h-3.5 text-amber-500" weight="fill" />
+                      检测端口快捷填入:
+                    </span>
+                    {detectedServices.flatMap((s) =>
+                      s.ports.map((p) => {
+                        const isSelected = deployServiceName === s.name && deployTargetPort === String(p);
+                        return (
+                          <button
+                            key={`${s.name}-${p}`}
+                            type="button"
+                            onClick={() => {
+                              setDeployServiceName(s.name);
+                              setDeployTargetPort(String(p));
+                            }}
+                            className={`px-2.5 py-1 text-xs font-mono rounded-md border transition-all flex items-center gap-1.5 cursor-pointer ${
+                              isSelected
+                                ? 'bg-accent text-white border-accent shadow-subtle font-semibold'
+                                : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line'
+                            }`}
+                          >
+                            <span>{s.name}:{p}</span>
+                            {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white" weight="bold" />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-2">
+                    反向代理目标网络
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setDeployTargetType('internal')}
+                      className={`p-3.5 text-left rounded-xl border transition-all relative flex flex-col justify-between cursor-pointer ${
+                        deployTargetType === 'internal'
+                          ? 'border-accent bg-accent/5 shadow-subtle'
+                          : 'border-line bg-paper hover:bg-paper-2'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <ShieldCheck className={`w-4 h-4 ${deployTargetType === 'internal' ? 'text-accent' : 'text-emerald-500'}`} weight="bold" />
+                            <span className="text-xs font-semibold text-ink">容器内部网络</span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium">推荐</span>
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${deployTargetType === 'internal' ? 'border-accent bg-accent' : 'border-line bg-paper'}`}>
+                            {deployTargetType === 'internal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-ink-muted leading-relaxed">
+                          基于 Docker 内部服务网络互通，容器端口无需向宿主机暴露更安全
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeployTargetType('host')}
+                      className={`p-3.5 text-left rounded-xl border transition-all relative flex flex-col justify-between cursor-pointer ${
+                        deployTargetType === 'host'
+                          ? 'border-accent bg-accent/5 shadow-subtle'
+                          : 'border-line bg-paper hover:bg-paper-2'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <HardDrives className={`w-4 h-4 ${deployTargetType === 'host' ? 'text-accent' : 'text-ink-muted'}`} weight="bold" />
+                            <span className="text-xs font-semibold text-ink">宿主机端口</span>
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${deployTargetType === 'host' ? 'border-accent bg-accent' : 'border-line bg-paper'}`}>
+                            {deployTargetType === 'host' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-ink-muted leading-relaxed">
+                          代理至主机映射的 localhost 端口，适合本机网络直通场景
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-line/60 flex items-center justify-between">
+            <button
+              onClick={() => setActiveTab('general')}
+              className="text-xs text-ink-muted hover:text-ink"
+            >
+              返回基础编排
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleCreate(false)}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 border border-line text-ink text-xs font-medium rounded-lg shadow-subtle"
+              >
+                保存草稿
+              </button>
+              <button
+                onClick={() => handleCreate(true)}
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-medium rounded-lg shadow-subtle flex items-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5 text-white" weight="fill" />
+                <span>{isSubmitting ? '正在创建并部署...' : '创建并立即部署'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ================= TAB CONTENT 6: DOMAINS (EDIT MODE) ================= */}
       {activeTab === 'domains' && mode === 'edit' && app && (
         <div className="card-vessel p-6 sm:p-7 shadow-subtle space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-line/60">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line/60">
             <div>
               <h3 className="font-semibold text-base text-ink tracking-tight">Caddy 域名路由绑定</h3>
               <p className="text-xs text-ink-muted mt-0.5">
-                为此应用栈配置的反向代理域名及 Let's Encrypt / ZeroSSL 证书
+                为此应用栈配置的反向代理公网域名及 Let's Encrypt / ZeroSSL 自动化证书
               </p>
             </div>
+
+            <Button8State
+              variant="primary"
+              size="sm"
+              icon={<Plus className="w-3.5 h-3.5" weight="bold" />}
+              onClick={openAddDomainModal}
+            >
+              绑定新域名
+            </Button8State>
           </div>
 
           {appDomains.length === 0 ? (
-            <div className="py-12 text-center text-ink-muted text-xs">
-              <p>该应用尚未绑定自定义外部域名。</p>
-              <p className="mt-1 text-ink-faint">
-                可前往「域名与证书」模块，为本应用的内网端口一键颁发自动续期 SSL 证书。
-              </p>
+            <div className="py-14 px-6 text-center border border-dashed border-line/80 rounded-xl bg-paper/50 flex flex-col items-center justify-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center shadow-subtle">
+                <Globe className="w-6 h-6" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <h4 className="text-sm font-semibold text-ink">该应用尚未绑定自定义公网域名</h4>
+                <p className="text-xs text-ink-muted leading-relaxed">
+                  可直接在此为本应用添加公网域名。Vessel 内置 Caddy 将自动向证书机构签发 SSL/TLS 证书，并在到期前 30 天静默自动续期。
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={openAddDomainModal}
+                className="mt-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-medium rounded-lg inline-flex items-center gap-1.5 shadow-subtle transition-all active:translate-y-px"
+              >
+                <Plus className="w-3.5 h-3.5" weight="bold" />
+                <span>立即为此应用绑定域名</span>
+              </button>
             </div>
           ) : (
-            <div className="divide-y divide-line">
+            <div className="space-y-3">
               {appDomains.map((dom) => (
-                <div key={dom.id} className="py-3.5 flex items-center justify-between">
-                  <div>
-                    <span className="font-semibold text-sm text-ink">{dom.domain}</span>
-                    <p className="text-xs text-ink-muted mt-0.5">
-                      反代目标端口: {dom.targetPort} · 证书颁发商: {dom.sslIssuer}
-                    </p>
+                <div
+                  key={dom.id}
+                  className="p-4 sm:p-5 rounded-xl border border-line bg-paper hover:border-line-focus hover:shadow-subtle transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                        <LockKey className="w-4 h-4" weight="bold" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://${dom.domain}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold text-base text-ink hover:text-accent flex items-center gap-1.5 transition-colors group"
+                        >
+                          <span>https://{dom.domain}</span>
+                          <ArrowSquareOut className="w-3.5 h-3.5 text-ink-muted group-hover:text-accent transition-colors" />
+                        </a>
+                        <Badge variant={dom.sslStatus}>
+                          {dom.sslStatus === 'active' ? 'HTTPS 活跃' : dom.sslStatus}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-muted pl-11">
+                      <span className="flex items-center gap-1.5">
+                        <span>上游目标:</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-mono text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/60 shadow-subtle">
+                          {dom.targetType === 'internal'
+                            ? `${dom.serviceName}:${dom.targetPort} (容器内部)`
+                            : `127.0.0.1:${dom.targetPort} (宿主机)`}
+                        </span>
+                      </span>
+                      <span>证书颁发机构: <strong className="text-ink font-medium">{dom.sslIssuer}</strong></span>
+                      {dom.sslExpiresAt && <span>证书到期: <span className="font-mono">{dom.sslExpiresAt}</span></span>}
+                    </div>
                   </div>
-                  <Badge variant="active">HTTPS 活跃</Badge>
+
+                  <div className="flex items-center gap-2 sm:self-center self-end pl-11 sm:pl-0">
+                    {onRenewDomain && (
+                      <button
+                        onClick={async () => {
+                          toast.info(`正在检测并续订域名 ${dom.domain} 证书...`);
+                          try {
+                            await onRenewDomain(dom.id);
+                            toast.success(`域名 ${dom.domain} 证书检测完成`);
+                          } catch (e: any) {
+                            toast.error(`检测续订失败: ${e.message}`);
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-2 border border-line text-xs font-medium flex items-center gap-1.5 transition-colors shadow-subtle cursor-pointer"
+                        data-tooltip="检测/续订证书"
+                      >
+                        <ArrowsClockwise className="w-3.5 h-3.5" />
+                        <span>检测续订</span>
+                      </button>
+                    )}
+
+                    {onDeleteDomain && (
+                      <button
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: '⚠️ 确认解除域名绑定',
+                            subtitle: `域名: ${dom.domain}`,
+                            dangerTitle: '解除绑定将立即移除反代路由',
+                            message: `确定要从当前应用解绑域名 "${dom.domain}" 吗？解绑后 Caddy 反向代理将不再路由该域名的流量。`,
+                            confirmText: '确认解除绑定',
+                            cancelText: '取消',
+                            variant: 'danger',
+                          });
+                          if (ok) {
+                            try {
+                              await onDeleteDomain(dom.id);
+                              toast.success(`域名 ${dom.domain} 已成功解绑`);
+                            } catch (e: any) {
+                              toast.error(`解绑失败: ${e.message}`);
+                            }
+                          }
+                        }}
+                        className="p-1.5 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-line transition-colors cursor-pointer"
+                        data-tooltip="解除绑定"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1230,6 +1945,218 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* ================= BIND DOMAIN MODAL ================= */}
+      <Modal
+        isOpen={isAddDomainModalOpen}
+        onClose={() => setIsAddDomainModalOpen(false)}
+        title="绑定公网域名与 SSL 路由"
+        subtitle={`受管服务: ${app?.name || name || '当前应用'}`}
+        maxWidth="max-w-xl"
+      >
+        <form onSubmit={handleModalBindDomain} className="space-y-5">
+          {/* Domain Input with Addon */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-ink flex items-center gap-1">
+                <span>公网域名 (FQDN)</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[11px] text-ink-faint">支持一级主域名或子域名</span>
+            </div>
+
+            <div className="flex items-stretch rounded-xl border border-line bg-paper shadow-subtle focus-within:border-accent transition-colors overflow-hidden group">
+              <div className="bg-paper-2 border-r border-line px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none group-focus-within:text-accent transition-colors">
+                <LockKey className="w-3.5 h-3.5" weight="bold" />
+                <span>https://</span>
+              </div>
+              <input
+                type="text"
+                required
+                value={modalDomain}
+                onChange={(e) => {
+                  let val = e.target.value.trim();
+                  val = val.replace(/^https?:\/\//i, '');
+                  setModalDomain(val);
+                }}
+                placeholder="n8n.yourdomain.com"
+                className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint focus:outline-none"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* DNS Guidance Banner */}
+          <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 flex items-start gap-2.5 text-xs text-ink-muted leading-relaxed">
+            <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" weight="fill" />
+            <div>
+              请确保已将该域名的 DNS <strong className="text-ink font-semibold">A / AAAA 记录</strong> 解析至当前服务器公网 IP。绑定后 Caddy 将在后台全自动通过 ACME 协议向 Let's Encrypt / ZeroSSL 申请并续订 TLS 证书。
+            </div>
+          </div>
+
+          {/* Service & Port Selectors */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-ink mb-1.5">
+                目标服务名 <span className="text-rose-500">*</span>
+              </label>
+              {detectedServices.length > 0 ? (
+                <CustomSelect
+                  value={modalServiceName}
+                  onChange={(val) => {
+                    setModalServiceName(val);
+                    const s = detectedServices.find((ds) => ds.name === val);
+                    if (s && s.ports.length > 0) {
+                      setModalTargetPort(String(s.ports[0]));
+                    }
+                  }}
+                  options={detectedServices.map((s) => ({
+                    value: s.name,
+                    label: s.name,
+                    badge: 'Compose 服务',
+                    description: s.ports.length > 0 ? `检测端口: ${s.ports.join(', ')}` : undefined,
+                  }))}
+                  placeholder="选择目标服务..."
+                />
+              ) : (
+                <input
+                  type="text"
+                  required
+                  value={modalServiceName}
+                  onChange={(e) => setModalServiceName(e.target.value)}
+                  placeholder="web"
+                  className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none shadow-subtle transition-colors"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-ink mb-1.5">
+                目标端口 (上游端口) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="number"
+                required
+                value={modalTargetPort}
+                onChange={(e) => setModalTargetPort(e.target.value)}
+                placeholder="5678"
+                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono font-medium focus:border-accent focus:outline-none shadow-subtle transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Quick Select Pill Buttons */}
+          {detectedServices.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[11px] text-ink-faint flex items-center gap-1 mr-1">
+                <Lightning className="w-3.5 h-3.5 text-amber-500" weight="fill" />
+                快速填入检测端口:
+              </span>
+              {detectedServices.flatMap((s) =>
+                s.ports.map((p) => {
+                  const isSelected = modalServiceName === s.name && modalTargetPort === String(p);
+                  return (
+                    <button
+                      key={`${s.name}-${p}`}
+                      type="button"
+                      onClick={() => {
+                        setModalServiceName(s.name);
+                        setModalTargetPort(String(p));
+                      }}
+                      className={`px-2.5 py-1 text-xs font-mono rounded-md border transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-accent text-white border-accent shadow-subtle font-semibold'
+                          : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line'
+                      }`}
+                    >
+                      <span>{s.name}:{p}</span>
+                      {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white" weight="bold" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* Target Network Mode Radio Cards */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-2">
+              反向代理目标网络
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setModalTargetType('internal')}
+                className={`p-3.5 text-left rounded-xl border transition-all relative flex flex-col justify-between cursor-pointer ${
+                  modalTargetType === 'internal'
+                    ? 'border-accent bg-accent/5 shadow-subtle'
+                    : 'border-line bg-paper hover:bg-paper-2'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <ShieldCheck className={`w-4 h-4 ${modalTargetType === 'internal' ? 'text-accent' : 'text-emerald-500'}`} weight="bold" />
+                      <span className="text-xs font-semibold text-ink">容器内部网络</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium">推荐</span>
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${modalTargetType === 'internal' ? 'border-accent bg-accent' : 'border-line bg-paper'}`}>
+                      {modalTargetType === 'internal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-ink-muted leading-relaxed">
+                    直通容器服务内网通信，无需向宿主机暴露端口，网络暴露面最小更安全
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModalTargetType('host')}
+                className={`p-3.5 text-left rounded-xl border transition-all relative flex flex-col justify-between cursor-pointer ${
+                  modalTargetType === 'host'
+                    ? 'border-accent bg-accent/5 shadow-subtle'
+                    : 'border-line bg-paper hover:bg-paper-2'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <HardDrives className={`w-4 h-4 ${modalTargetType === 'host' ? 'text-accent' : 'text-ink-muted'}`} weight="bold" />
+                      <span className="text-xs font-semibold text-ink">宿主机端口</span>
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${modalTargetType === 'host' ? 'border-accent bg-accent' : 'border-line bg-paper'}`}>
+                      {modalTargetType === 'host' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-ink-muted leading-relaxed">
+                    反向代理至主机 127.0.0.1 映射端口，适合需要本地端口调试的场景
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="pt-4 border-t border-line flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsAddDomainModalOpen(false)}
+              className="px-4 py-2 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 border border-line rounded-lg transition-colors shadow-subtle"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              disabled={isBindingDomain}
+              className="px-5 py-2 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-lg shadow-subtle transition-all flex items-center gap-2 active:translate-y-px"
+            >
+              <ShieldCheck className="w-4 h-4" weight="bold" />
+              <span>{isBindingDomain ? '正在配置 Caddy...' : '确认绑定并自动签发证书'}</span>
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

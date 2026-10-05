@@ -67,8 +67,8 @@ export const Header: React.FC<HeaderProps> = ({ title, metrics, onRefresh, onQui
 
           <button
             onClick={onRefresh}
-            title="刷新数据"
-            className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-all"
+            data-tooltip="刷新数据"
+            className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-all cursor-pointer"
           >
             <ArrowClockwise className="w-4 h-4" />
           </button>

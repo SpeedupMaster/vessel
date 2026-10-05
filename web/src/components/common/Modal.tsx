@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import { X } from '@phosphor-icons/react';
 
@@ -23,6 +24,11 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const backdropRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -58,9 +64,9 @@ export const Modal: React.FC<ModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  const modalElement = (
     <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 overflow-y-auto`}>
       {/* Backdrop */}
       <div
@@ -87,8 +93,10 @@ export const Modal: React.FC<ModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pt-4 pr-1">{children}</div>
+        <div className="flex-1 overflow-y-auto pt-4 px-1.5 pb-1">{children}</div>
       </div>
     </div>
   );
+
+  return createPortal(modalElement, document.body);
 };
