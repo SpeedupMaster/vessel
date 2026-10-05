@@ -32,19 +32,35 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
     defaultDbName: 'postgres',
     hasUserAndDb: true,
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none">
+      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
         <path
-          d="M24 4C14.06 4 6 12.06 6 22c0 6.64 3.6 12.44 8.95 15.61L14 44l8.32-3.12C23.09 40.95 23.54 41 24 41c9.94 0 18-8.06 18-18S33.94 4 24 4z"
-          fill="#336791"
-          opacity="0.15"
+          d="M16 2C8.82 2 3 7.82 3 15c0 2.65.79 5.11 2.15 7.17L3.5 28.5l6.58-1.78C11.96 27.5 13.93 28 16 28c7.18 0 13-5.82 13-13S23.18 2 16 2z"
+          fill="#DCE5EE"
+          className="dark:fill-[#202c38]"
         />
         <path
-          d="M32 20c-1-3-3.8-5-7.5-5-4.5 0-8 3-8 8 0 4 2.5 7.5 7 8 2.5.3 4.8-.8 6.2-2.7.4-.5 1.1-.6 1.6-.2.5.4.6 1.1.2 1.6-1.9 2.5-4.9 3.8-8.2 3.4-5.6-.6-8.8-5-8.8-10.1 0-6.2 4.4-10 10-10 4.6 0 8.2 2.5 9.4 6.2.2.6-.1 1.2-.7 1.5-.6.2-1.2-.1-1.2-.7z"
-          fill="#336791"
+          d="M22 10.5h-1.5c-.8-1.5-2.2-2.5-4.5-2.5-4.4 0-8 3.6-8 8s3.6 8 8 8c3.5 0 6.2-2.2 7.2-5.5"
+          stroke="#2B5D88"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          className="dark:stroke-[#5b96c7]"
         />
-        <circle cx="21" cy="22" r="2" fill="#336791" />
-        <circle cx="29" cy="22" r="2" fill="#336791" />
-        <path d="M25 27c0 1.5-1.5 2.5-3 2.5s-3-1-3-2.5" stroke="#336791" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="12.5" cy="13.5" r="1.6" fill="#2B5D88" className="dark:fill-[#5b96c7]" />
+        <circle cx="18.5" cy="13.5" r="1.6" fill="#2B5D88" className="dark:fill-[#5b96c7]" />
+        <path
+          d="M11 18h4c.8 0 1.5-.7 1.5-1.5"
+          stroke="#2B5D88"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          className="dark:stroke-[#5b96c7]"
+        />
+        <path
+          d="M11 20.5c2 2.2 5.5 2.2 7.5 0"
+          stroke="#2B5D88"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          className="dark:stroke-[#5b96c7]"
+        />
       </svg>
     ),
   },
@@ -56,22 +72,18 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
     defaultDbName: 'app_db',
     hasUserAndDb: true,
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none">
+      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
         <path
-          d="M24 4c-1 3-9 12-9 22 0 7.5 4 14 9 18 5-4 9-10.5 9-18 0-10-8-19-9-22z"
-          fill="#13AA52"
-          opacity="0.2"
-        />
-        <path
-          d="M24 5c-.3 1-8.5 11.2-8.5 21 0 7 3.8 13.2 8.5 17V5z"
+          d="M16 2.5C15 4.5 8 11.5 8 17.5c0 5 3.5 8.8 8 10.2V2.5z"
           fill="#13AA52"
         />
         <path
-          d="M24 5v38c4.7-3.8 8.5-10 8.5-17 0-9.8-8.2-20-8.5-21z"
+          d="M16 2.5v25.2c4.5-1.4 8-5.2 8-10.2 0-6-7-13-8-15z"
           fill="#116149"
+          className="dark:fill-[#0c4736]"
         />
         <path
-          d="M23.5 43v2h1v-2h-1z"
+          d="M15.2 27.7h1.6v2l-.8.8-.8-.8v-2z"
           fill="#13AA52"
         />
       </svg>
@@ -85,19 +97,23 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
     defaultDbName: 'app_db',
     hasUserAndDb: true,
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none">
+      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
         <path
-          d="M38 28c-2-6-7-10-14-10-5 0-9 2-12 5-3 3-4 8-4 13 0 2 1 4 3 5 4 2 9 3 14 3 8 0 14-3 17-9 1-2 1-5-4-7z"
+          d="M4 20c3 3 10 4 18 2.5 3-.6 5-1.5 6-2.5-2 1.5-5.5 2.5-11 2.5-5.5 0-10-1-13-2.5z"
+          fill="#D0D7DE"
+          opacity="0.7"
+          className="dark:fill-[#38424d] dark:opacity-80"
+        />
+        <path
+          d="M20 14c1.5-3.5 3.5-6.5 5-7.5-1.2 3.5-1.5 6-1 8.5 1.5-1.5 2.5-3 3-4-.5 3-1.8 5.5-3.5 7.5 2 0 4 .5 5.5 1.5-2.5 2-6.5 2.5-10.5 2 2-1 4-1.5 6.5-1.5-2.5-1.5-4-3.5-5-6.5z"
           fill="#8B949E"
-          opacity="0.2"
         />
         <path
-          d="M10 26c2-4 6-7 11-7 7 0 12 5 13 11 1 3 0 6-3 7-4 2-9 2-14 1-5-1-8-3-8-6 0-2 .4-4 1-6z"
+          d="M4 15.5c0-4.8 3.5-8.5 8.5-8.5 6.2 0 10.5 4.5 11 9.5 0 3.8-3.2 5.5-7.5 5.5-5 0-12-1.5-12-6.5z"
           fill="#003545"
-          className="dark:fill-slate-300"
+          className="dark:fill-[#0d4f63]"
         />
-        <circle cx="16" cy="24" r="1.5" fill="#C0C0C0" />
-        <path d="M34 22c3-1 6-3 8-6-1 4-3 7-5 9" stroke="#8B949E" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="8" cy="11" r="1.5" fill="#FFFFFF" />
       </svg>
     ),
   },
@@ -109,16 +125,16 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
     defaultDbName: 'app_db',
     hasUserAndDb: true,
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none">
+      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
         <path
-          d="M36 18c-3-5-9-8-15-8-8 0-14 5-15 13 0 4 2 8 5 11 4 4 10 5 16 4 5-1 9-4 12-8l-4-3c-2 3-5 5-9 6-5 1-9 0-12-3-2-2-3-5-3-8 1-6 5-9 11-9 4 0 8 2 10 5l4-3z"
-          fill="#00758F"
+          d="M24 10.5c-1.8-3.5-5.4-6-9.5-6-6.1 0-11 4.9-11 11s4.9 11 11 11c5.2 0 9.6-3.6 10.7-8.5"
+          stroke="#00758F"
+          strokeWidth="3.4"
+          strokeLinecap="round"
+          className="dark:stroke-[#0296b8]"
         />
-        <path
-          d="M34 16c2-2 5-4 9-4-1 3-3 6-5 8-1-1-2-2-4-4z"
-          fill="#F29111"
-        />
-        <circle cx="16" cy="20" r="1.5" fill="#F29111" />
+        <path d="M23.5 9.5l6.5-3.5-2.8 7-3.7-3.5z" fill="#F29111" />
+        <circle cx="9.5" cy="12.5" r="1.6" fill="#F29111" />
       </svg>
     ),
   },
@@ -128,19 +144,14 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
     defaultImage: 'redis:7-alpine',
     hasUserAndDb: false,
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none">
-        <path
-          d="M24 6L8 14l16 8 16-8L24 6z"
-          fill="#DC382D"
-        />
-        <path
-          d="M8 18l16 8 16-8v6l-16 8-16-8v-6z"
-          fill="#A8231B"
-        />
-        <path
-          d="M8 28l16 8 16-8v6l-16 8-16-8v-6z"
-          fill="#78140E"
-        />
+      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
+        <path d="M16 2.5L27 8.2 16 13.9 5 8.2 16 2.5z" fill="#DC382D" />
+        <path d="M5 8.5l11 5.7v3.2L5 11.7V8.5z" fill="#C62828" />
+        <path d="M16 14.2l11-5.7v3.2l-11 5.7v-3.2z" fill="#B71C1C" />
+        <path d="M5 14.2l11 5.7v3.2L5 17.4v-3.2z" fill="#B71C1C" />
+        <path d="M16 19.9l11-5.7v3.2l-11 5.7v-3.2z" fill="#8E1B1B" />
+        <path d="M5 19.9l11 5.7v3.2L5 23.1v-3.2z" fill="#8E1B1B" />
+        <path d="M16 25.6l11-5.7v3.2l-11 5.7v-3.2z" fill="#600E0E" />
       </svg>
     ),
   },
@@ -150,21 +161,15 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
     defaultImage: 'ghcr.io/tursodatabase/libsql-server:latest',
     hasUserAndDb: false,
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none">
+      <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
         <path
-          d="M12 36C12 24 22 12 36 8c-3 10-10 18-20 23-1.5.8-3 2.5-4 5z"
-          fill="#00D2B4"
-          opacity="0.2"
+          d="M5.5 24.5l3.2-3.2c3.5-3.5 7.5-9.5 15.3-15.3-3.2 6.5-8.5 13-14 17l-4.5 1.5z"
+          fill="#80F5DA"
+          opacity="0.75"
         />
         <path
-          d="M14 34c1-9 8-18 20-22-3 8-8 15-16 19-1.2.6-2.5 1.8-4 3z"
+          d="M5 25l3-3c3.5-3.5 7-8.5 14-13.5-3.5 5.5-7.5 10.5-12 14.5l-3 3-2-1z"
           fill="#00D2B4"
-        />
-        <path
-          d="M10 38l6-6"
-          stroke="#00D2B4"
-          strokeWidth="3"
-          strokeLinecap="round"
         />
       </svg>
     ),
