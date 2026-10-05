@@ -59,14 +59,17 @@ server.listen(PORT, HOST, async () => {
 
   caddyService.syncCaddyfile();
   console.log(`[Vessel] Caddyfile synced at: ${caddyService.getCaddyfilePath()}`);
+  await caddyService.ensureDaemon();
 });
 
 process.on('SIGTERM', () => {
+  caddyService.stopDaemon();
   wsHub.destroy();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
+  caddyService.stopDaemon();
   wsHub.destroy();
   process.exit(0);
 });

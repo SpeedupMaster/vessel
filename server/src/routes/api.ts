@@ -8,10 +8,77 @@ import { r2BackupService } from '../services/r2Backup.js';
 import { registryService } from '../services/registry.js';
 import { cleanerService } from '../services/cleaner.js';
 import { schedulerService } from '../services/scheduler.js';
+import { authService } from '../services/auth.js';
+import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { wsHub } from '../ws/wsHub.js';
 import { AppItem, DomainItem, R2Config, RegistryItem, MaintenanceConfig } from '../types/index.js';
 
 export const apiRouter = Router();
+
+// ======================= AUTH =======================
+apiRouter.get('/auth/status', (_req: Request, res: Response) => {
+  res.json({
+    initialized: true,
+    isDefaultPassword: authService.isDefaultPassword(),
+  });
+});
+
+apiRouter.post('/auth/login', (req: Request, res: Response) => {
+  const { username, password } = req.body;
+  const result = authService.login(username, password);
+  if (!result.success) {
+    return res.status(401).json({ error: result.error });
+  }
+  res.json({
+    success: true,
+    token: result.token,
+    user: { username: result.username },
+    isDefaultPassword: result.isDefaultPassword,
+  });
+});
+
+apiRouter.get('/auth/me', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  let token: string | undefined;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7).trim();
+  } else if (typeof req.query.token === 'string') {
+    token = req.query.token;
+  }
+
+  if (!token) {
+    return res.json({ authenticated: false, user: null, isDefaultPassword: false });
+  }
+
+  const result = authService.verifyToken(token);
+  if (!result.valid || !result.username) {
+    return res.json({ authenticated: false, user: null, isDefaultPassword: false });
+  }
+
+  res.json({
+    authenticated: true,
+    user: { username: result.username },
+    isDefaultPassword: authService.isDefaultPassword(),
+  });
+});
+
+apiRouter.post('/auth/change-password', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+  const result = authService.changePassword(currentPassword, newPassword);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  res.json({
+    success: true,
+    token: result.token,
+    isDefaultPassword: false,
+    message: '密码修改成功',
+  });
+});
+
+apiRouter.post('/auth/logout', (_req: Request, res: Response) => {
+  res.json({ success: true, message: '已安全登出' });
+});
 
 // ======================= SYSTEM =======================
 apiRouter.get('/system/status', async (req: Request, res: Response) => {
@@ -38,7 +105,7 @@ apiRouter.get('/apps/:id', async (req: Request, res: Response) => {
   res.json(app);
 });
 
-apiRouter.post('/apps', async (req: Request, res: Response) => {
+apiRouter.post('/apps', requireAuth, async (req: Request, res: Response) => {
   const { name, description, composeYaml, envContent, autoUpdate, domainBinding } = req.body;
   if (!name || !composeYaml) {
     return res.status(400).json({ error: 'Name and composeYaml are required' });
@@ -96,7 +163,7 @@ apiRouter.post('/apps', async (req: Request, res: Response) => {
   res.status(201).json(newApp);
 });
 
-apiRouter.put('/apps/:id', async (req: Request, res: Response) => {
+apiRouter.put('/apps/:id', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const idx = apps.findIndex((a) => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'App not found' });
@@ -125,7 +192,7 @@ apiRouter.put('/apps/:id', async (req: Request, res: Response) => {
   res.json(apps[idx]);
 });
 
-apiRouter.delete('/apps/:id', async (req: Request, res: Response) => {
+apiRouter.delete('/apps/:id', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
@@ -145,7 +212,7 @@ apiRouter.delete('/apps/:id', async (req: Request, res: Response) => {
   res.json({ success: true, message: 'App deleted' });
 });
 
-apiRouter.post('/apps/:id/deploy', async (req: Request, res: Response) => {
+apiRouter.post('/apps/:id/deploy', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
@@ -167,7 +234,7 @@ apiRouter.post('/apps/:id/deploy', async (req: Request, res: Response) => {
   res.json({ message: 'Deployment triggered', appId: app.id });
 });
 
-apiRouter.post('/apps/:id/stop', async (req: Request, res: Response) => {
+apiRouter.post('/apps/:id/stop', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
@@ -179,7 +246,7 @@ apiRouter.post('/apps/:id/stop', async (req: Request, res: Response) => {
   res.json({ success: true, message: 'App stopped' });
 });
 
-apiRouter.post('/apps/:id/restart', async (req: Request, res: Response) => {
+apiRouter.post('/apps/:id/restart', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
@@ -191,7 +258,7 @@ apiRouter.post('/apps/:id/restart', async (req: Request, res: Response) => {
   res.json({ success: true, message: 'App restarted' });
 });
 
-apiRouter.post('/apps/:id/rebuild', async (req: Request, res: Response) => {
+apiRouter.post('/apps/:id/rebuild', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
@@ -210,7 +277,7 @@ apiRouter.post('/apps/:id/rebuild', async (req: Request, res: Response) => {
   res.json({ message: 'Rebuild initiated' });
 });
 
-apiRouter.post('/apps/:id/fresh-volumes', async (req: Request, res: Response) => {
+apiRouter.post('/apps/:id/fresh-volumes', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
@@ -245,7 +312,7 @@ apiRouter.get('/apps/:id/logs', async (req: Request, res: Response) => {
   res.json({ logs });
 });
 
-apiRouter.post('/apps/:id/backup', async (req: Request, res: Response) => {
+apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
@@ -421,7 +488,7 @@ apiRouter.get('/domains', (req: Request, res: Response) => {
   res.json(domains);
 });
 
-apiRouter.post('/domains', async (req: Request, res: Response) => {
+apiRouter.post('/domains', requireAuth, async (req: Request, res: Response) => {
   const { domain, appId, serviceName, targetPort, targetType } = req.body;
   if (!domain || !appId || !targetPort) {
     return res.status(400).json({ error: 'domain, appId, and targetPort are required' });
@@ -449,7 +516,7 @@ apiRouter.post('/domains', async (req: Request, res: Response) => {
   res.status(201).json(newDomain);
 });
 
-apiRouter.delete('/domains/:id', (req: Request, res: Response) => {
+apiRouter.delete('/domains/:id', requireAuth, (req: Request, res: Response) => {
   const domains = db.get('domains') || [];
   const updated = domains.filter((d) => d.id !== req.params.id);
   db.set('domains', updated);
@@ -457,7 +524,7 @@ apiRouter.delete('/domains/:id', (req: Request, res: Response) => {
   res.json({ success: true, message: 'Domain deleted' });
 });
 
-apiRouter.post('/domains/:id/renew', async (req: Request, res: Response) => {
+apiRouter.post('/domains/:id/renew', requireAuth, async (req: Request, res: Response) => {
   const domains = db.get('domains') || [];
   const domain = domains.find((d) => d.id === req.params.id);
   if (!domain) return res.status(404).json({ error: 'Domain not found' });
@@ -483,7 +550,7 @@ apiRouter.get('/r2/config', (req: Request, res: Response) => {
   });
 });
 
-apiRouter.post('/r2/config', (req: Request, res: Response) => {
+apiRouter.post('/r2/config', requireAuth, (req: Request, res: Response) => {
   const current = db.get('r2Config');
   const { enabled, endpoint, bucketName, accessKeyId, secretAccessKey, cronSchedule, retentionCount } = req.body;
 
@@ -505,7 +572,7 @@ apiRouter.post('/r2/config', (req: Request, res: Response) => {
   res.json({ success: true, config: { ...updated, secretAccessKey: '••••••••••••••••' } });
 });
 
-apiRouter.post('/r2/test', async (req: Request, res: Response) => {
+apiRouter.post('/r2/test', requireAuth, async (req: Request, res: Response) => {
   const current = db.get('r2Config');
   const payload = req.body;
   const configToTest: R2Config = {
@@ -525,7 +592,7 @@ apiRouter.get('/r2/backups', (req: Request, res: Response) => {
   res.json(backups);
 });
 
-apiRouter.post('/r2/backup-now', async (req: Request, res: Response) => {
+apiRouter.post('/r2/backup-now', requireAuth, async (req: Request, res: Response) => {
   const result = await r2BackupService.runSystemBackup();
   if (result.success) {
     res.json({ success: true, record: result.record });
@@ -545,7 +612,7 @@ apiRouter.get('/registries', (req: Request, res: Response) => {
   );
 });
 
-apiRouter.post('/registries', (req: Request, res: Response) => {
+apiRouter.post('/registries', requireAuth, (req: Request, res: Response) => {
   const { id, name, server, username, token } = req.body;
   if (!id || !server) return res.status(400).json({ error: 'id and server are required' });
 
@@ -572,7 +639,7 @@ apiRouter.post('/registries', (req: Request, res: Response) => {
   res.json({ success: true, registry: { ...regItem, token: '••••••••••••••••' } });
 });
 
-apiRouter.post('/registries/:id/test', async (req: Request, res: Response) => {
+apiRouter.post('/registries/:id/test', requireAuth, async (req: Request, res: Response) => {
   const list = db.get('registries') || [];
   const reg = list.find((r) => r.id === req.params.id);
   if (!reg) return res.status(404).json({ error: 'Registry not found' });
@@ -587,7 +654,7 @@ apiRouter.get('/maintenance/config', (req: Request, res: Response) => {
   res.json(cfg);
 });
 
-apiRouter.post('/maintenance/config', (req: Request, res: Response) => {
+apiRouter.post('/maintenance/config', requireAuth, (req: Request, res: Response) => {
   const current = db.get('maintenance');
   const updated: MaintenanceConfig = {
     ...current,
@@ -598,7 +665,7 @@ apiRouter.post('/maintenance/config', (req: Request, res: Response) => {
   res.json(updated);
 });
 
-apiRouter.post('/maintenance/check-updates', async (req: Request, res: Response) => {
+apiRouter.post('/maintenance/check-updates', requireAuth, async (req: Request, res: Response) => {
   await schedulerService.runUpdateCheck();
   const apps = db.get('apps') || [];
   const updatesCount = apps.filter((a) => a.updateAvailable).length;
@@ -609,7 +676,7 @@ apiRouter.post('/maintenance/check-updates', async (req: Request, res: Response)
   });
 });
 
-apiRouter.post('/maintenance/prune', async (req: Request, res: Response) => {
+apiRouter.post('/maintenance/prune', requireAuth, async (req: Request, res: Response) => {
   const result = await cleanerService.runSafePrune();
   res.json(result);
 });

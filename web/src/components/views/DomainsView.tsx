@@ -5,6 +5,7 @@ import {
   ArrowsClockwise,
   Trash,
   LockKey,
+  Anchor,
 } from '@phosphor-icons/react';
 import { DomainItem, AppItem } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
@@ -31,11 +32,57 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   const { toast, confirm } = useNotification();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [domainInput, setDomainInput] = useState('');
-  const [appIdInput, setAppIdInput] = useState(apps[0]?.id || '');
-  const [serviceNameInput, setServiceNameInput] = useState('web');
-  const [targetPortInput, setTargetPortInput] = useState('3000');
-  const [targetTypeInput, setTargetTypeInput] = useState<'internal' | 'host'>('internal');
+  const [appIdInput, setAppIdInput] = useState(apps[0]?.id || 'vessel-system');
+  const [serviceNameInput, setServiceNameInput] = useState('vessel');
+  const [targetPortInput, setTargetPortInput] = useState('3900');
+  const [targetTypeInput, setTargetTypeInput] = useState<'internal' | 'host'>('host');
   const [loading, setLoading] = useState(false);
+
+  const handleSelectApp = (val: string) => {
+    setAppIdInput(val);
+    if (val === 'vessel-system') {
+      setServiceNameInput('vessel');
+      setTargetPortInput('3900');
+      setTargetTypeInput('host');
+    } else {
+      setServiceNameInput('web');
+      setTargetPortInput('3000');
+      setTargetTypeInput('internal');
+    }
+  };
+
+  // Set of appIds that already have an active domain binding
+  const boundAppIds = new Set(domains.map((d) => d.appId));
+
+  // Available options: filter out any app or system that already has a domain bound
+  const availableAppOptions = [
+    ...(!boundAppIds.has('vessel-system')
+      ? [
+          {
+            value: 'vessel-system',
+            label: '⚓ Vessel 管理控制台 (系统核心: 3900端口)',
+            badge: '系统核心',
+          },
+        ]
+      : []),
+    ...apps
+      .filter((a) => !boundAppIds.has(a.id))
+      .map((a) => ({
+        value: a.id,
+        label: a.name,
+        badge: a.id.slice(0, 8),
+      })),
+  ];
+
+  const handleOpenAdd = () => {
+    if (availableAppOptions.length === 0) {
+      toast.info('所有应用与控制台均已绑定独立域名路由。如需更换，请先解绑原域名。');
+      return;
+    }
+    const firstAvailable = availableAppOptions[0].value;
+    handleSelectApp(firstAvailable);
+    setIsAddOpen(true);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,8 +120,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 Caddy 智能反向代理与自动证书续订
               </h3>
               <p className="text-xs text-ink-muted mt-1.5 max-w-2xl leading-relaxed">
-                绑定您的公网域名并解析至当前服务器 IP。Vessel 驱动内置 Caddy 引擎自动通过 ACME 协议向
-                Let's Encrypt 或 ZeroSSL 申请安全 TLS 证书，并在到期前 30 天静默全自动续期，零人工干预。
+                绑定您的公网域名并解析至当前服务器 IP。支持反代任何 Docker Compose 容器，亦可直接为
+                <strong> Vessel 管理控制台自身</strong> 配置独立访问域名与 HTTPS。由内置 Caddy 引擎全自动签发与静默续期证书。
               </p>
             </div>
           </div>
@@ -82,10 +129,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
           <Button8State
             variant="primary"
             icon={<Plus className="w-4 h-4" weight="bold" />}
-            onClick={() => {
-              if (apps.length > 0 && !appIdInput) setAppIdInput(apps[0].id);
-              setIsAddOpen(true);
-            }}
+            onClick={handleOpenAdd}
           >
             绑定新域名
           </Button8State>
@@ -102,12 +146,13 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
 
         {domains.length === 0 ? (
           <div className="py-16 text-center text-ink-muted text-xs">
-            暂无已绑定的域名。点击右上角「绑定新域名」为应用配置 HTTPS 访问。
+            暂无已绑定的域名。点击右上角「绑定新域名」为应用或控制台配置 HTTPS 访问。
           </div>
         ) : (
           <div className="divide-y divide-line">
             {domains.map((d) => {
               const matchedApp = apps.find((a) => a.id === d.appId);
+              const isVesselSystem = d.appId === 'vessel-system';
               return (
                 <div
                   key={d.id}
@@ -129,12 +174,22 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs">
                       <div className="flex items-center gap-1.5">
                         <span className="text-ink-muted">所属应用:</span>
-                        <span className="text-ink dark:text-zinc-100 font-medium">{matchedApp?.name || d.appId}</span>
+                        {isVesselSystem ? (
+                          <span className="inline-flex items-center gap-1.5 text-accent font-semibold">
+                            <Anchor className="w-3.5 h-3.5" weight="bold" />
+                            <span>Vessel 管理控制台</span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-accent/10 text-accent font-mono">系统核心</span>
+                          </span>
+                        ) : (
+                          <span className="text-ink dark:text-zinc-100 font-medium">{matchedApp?.name || d.appId}</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-ink-muted">转发上游:</span>
                         <code className="font-mono text-[11.5px] text-ink dark:text-zinc-100 font-medium bg-paper-3/50 dark:bg-white/[0.05] px-1.5 py-0.5 rounded border border-line/40 dark:border-white/[0.08]">
-                          {d.targetType === 'internal' ? `${d.serviceName}:${d.targetPort} (容器内部)` : `127.0.0.1:${d.targetPort} (宿主机)`}
+                          {isVesselSystem
+                            ? '127.0.0.1:3900 (本机控制台)'
+                            : (d.targetType === 'internal' ? `${d.serviceName}:${d.targetPort} (容器内部)` : `127.0.0.1:${d.targetPort} (宿主机)`)}
                         </code>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -223,93 +278,103 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
             </label>
             <CustomSelect
               value={appIdInput}
-              onChange={(val) => setAppIdInput(val)}
-              options={apps.map((a) => ({
-                value: a.id,
-                label: a.name,
-                badge: a.id.slice(0, 8),
-              }))}
-              placeholder="选择目标应用..."
+              onChange={handleSelectApp}
+              options={availableAppOptions}
+              placeholder="选择未绑定域名的目标应用..."
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs uppercase text-ink-muted mb-1.5">
-                Compose 内部服务名
-              </label>
-              <input
-                type="text"
-                value={serviceNameInput}
-                onChange={(e) => setServiceNameInput(e.target.value)}
-                placeholder="例如: web, app, n8n"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
-              />
+          {appIdInput === 'vessel-system' ? (
+            <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/20 flex items-start gap-3 text-xs">
+              <Anchor className="w-4 h-4 text-accent shrink-0 mt-0.5" weight="bold" />
+              <div>
+                <p className="font-semibold text-accent">已锁定为 Vessel 管理控制台核心服务</p>
+                <p className="text-[11.5px] text-ink-muted mt-1 leading-relaxed">
+                  Caddy 将自动为此域名申请 SSL 证书，并配置反向代理至控制台的核心 Web / WebSocket 通道 (<code className="font-mono text-ink">127.0.0.1:3900</code>)。
+                </p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs uppercase text-ink-muted mb-1.5">
-                容器端口 *
-              </label>
-              <input
-                type="number"
-                required
-                value={targetPortInput}
-                onChange={(e) => setTargetPortInput(e.target.value)}
-                placeholder="例如: 3000, 5678, 80"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs uppercase text-ink-muted mb-1.5">
-              代理对接方式
-            </label>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <label
-                className={`p-3 rounded-lg border cursor-pointer flex flex-col gap-1 transition-all ${
-                  targetTypeInput === 'internal'
-                    ? 'bg-accent/10 border-accent text-ink font-medium shadow-subtle'
-                    : 'bg-paper-2 border-line text-ink-muted'
-                }`}
-              >
-                <div className="flex items-center gap-2">
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs uppercase text-ink-muted mb-1.5">
+                    Compose 内部服务名
+                  </label>
                   <input
-                    type="radio"
-                    name="targetType"
-                    checked={targetTypeInput === 'internal'}
-                    onChange={() => setTargetTypeInput('internal')}
+                    type="text"
+                    value={serviceNameInput}
+                    onChange={(e) => setServiceNameInput(e.target.value)}
+                    placeholder="例如: web, app, n8n"
+                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
                   />
-                  <strong className="text-ink">容器内部网络 (推荐)</strong>
                 </div>
-                <span className="text-[11px] text-ink-faint">
-                  直通 vessel-net 内部网络，宿主机无需暴露端口
-                </span>
-              </label>
 
-              <label
-                className={`p-3 rounded-lg border cursor-pointer flex flex-col gap-1 transition-all ${
-                  targetTypeInput === 'host'
-                    ? 'bg-accent/10 border-accent text-ink font-medium shadow-subtle'
-                    : 'bg-paper-2 border-line text-ink-muted'
-                }`}
-              >
-                <div className="flex items-center gap-2">
+                <div>
+                  <label className="block text-xs uppercase text-ink-muted mb-1.5">
+                    容器端口 *
+                  </label>
                   <input
-                    type="radio"
-                    name="targetType"
-                    checked={targetTypeInput === 'host'}
-                    onChange={() => setTargetTypeInput('host')}
+                    type="number"
+                    required
+                    value={targetPortInput}
+                    onChange={(e) => setTargetPortInput(e.target.value)}
+                    placeholder="例如: 3000, 5678, 80"
+                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-sm text-ink focus:border-accent focus:outline-none transition-colors"
                   />
-                  <strong className="text-ink">宿主机端口转发</strong>
                 </div>
-                <span className="text-[11px] text-ink-faint">
-                  代理至 127.0.0.1 映射端口
-                </span>
-              </label>
-            </div>
-          </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase text-ink-muted mb-1.5">
+                  代理对接方式
+                </label>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <label
+                    className={`p-3 rounded-lg border cursor-pointer flex flex-col gap-1 transition-all ${
+                      targetTypeInput === 'internal'
+                        ? 'bg-accent/10 border-accent text-ink font-medium shadow-subtle'
+                        : 'bg-paper-2 border-line text-ink-muted'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="targetType"
+                        checked={targetTypeInput === 'internal'}
+                        onChange={() => setTargetTypeInput('internal')}
+                      />
+                      <strong className="text-ink">容器内部网络 (推荐)</strong>
+                    </div>
+                    <span className="text-[11px] text-ink-faint">
+                      直通 vessel-net 内部网络，宿主机无需暴露端口
+                    </span>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-lg border cursor-pointer flex flex-col gap-1 transition-all ${
+                      targetTypeInput === 'host'
+                        ? 'bg-accent/10 border-accent text-ink font-medium shadow-subtle'
+                        : 'bg-paper-2 border-line text-ink-muted'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="targetType"
+                        checked={targetTypeInput === 'host'}
+                        onChange={() => setTargetTypeInput('host')}
+                      />
+                      <strong className="text-ink">宿主机端口转发</strong>
+                    </div>
+                    <span className="text-[11px] text-ink-faint">
+                      代理至 127.0.0.1 映射端口
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="pt-4 border-t border-line flex justify-end gap-2.5">
             <Button8State variant="ghost" type="button" onClick={() => setIsAddOpen(false)}>

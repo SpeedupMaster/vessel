@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import gsap from 'gsap';
+import { AuthContext, useAuthProvider, useAuth } from './hooks/useAuth.js';
 import { useData } from './hooks/useData.js';
 import { Sidebar, NavTab } from './components/layout/Sidebar.js';
 import { Header } from './components/layout/Header.js';
@@ -9,10 +10,54 @@ import { DomainsView } from './components/views/DomainsView.js';
 import { BackupsView } from './components/views/BackupsView.js';
 import { RegistriesView } from './components/views/RegistriesView.js';
 import { MaintenanceView } from './components/views/MaintenanceView.js';
+import { LoginView } from './components/views/LoginView.js';
+import { ChangePasswordModal } from './components/common/ChangePasswordModal.js';
 import { GlobalTooltip } from './components/common/Tooltip.js';
+import { ShieldWarning } from '@phosphor-icons/react';
 
-export function App() {
-  const [currentTab, setCurrentTab] = useState<NavTab>('overview');
+interface RouteState {
+  tab: NavTab;
+  isLogin: boolean;
+  appSubRoute: {
+    mode: 'list' | 'create' | 'detail';
+    appId?: string | null;
+  } | null;
+}
+
+function parsePath(pathname: string): RouteState {
+  const clean = pathname.replace(/\/+$/, '') || '/';
+  if (clean === '/login') {
+    return { tab: 'overview', isLogin: true, appSubRoute: null };
+  }
+  if (clean === '/apps/new' || clean === '/apps/create') {
+    return { tab: 'apps', isLogin: false, appSubRoute: { mode: 'create' } };
+  }
+  if (clean.startsWith('/apps/')) {
+    const appId = decodeURIComponent(clean.slice('/apps/'.length));
+    return { tab: 'apps', isLogin: false, appSubRoute: { mode: 'detail', appId } };
+  }
+  if (clean === '/apps') {
+    return { tab: 'apps', isLogin: false, appSubRoute: { mode: 'list' } };
+  }
+  if (clean === '/domains') {
+    return { tab: 'domains', isLogin: false, appSubRoute: null };
+  }
+  if (clean === '/backups') {
+    return { tab: 'backups', isLogin: false, appSubRoute: null };
+  }
+  if (clean === '/registries') {
+    return { tab: 'registries', isLogin: false, appSubRoute: null };
+  }
+  if (clean === '/maintenance') {
+    return { tab: 'maintenance', isLogin: false, appSubRoute: null };
+  }
+  return { tab: 'overview', isLogin: false, appSubRoute: null };
+}
+
+function MainConsole() {
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const [route, setRoute] = useState<RouteState>(() => parsePath(window.location.pathname));
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -24,7 +69,7 @@ export function App() {
     registries,
     maintenance,
     templates,
-    loading,
+    loading: dataLoading,
     logsMap,
     subscribeLogs,
     createApp,
@@ -50,7 +95,40 @@ export function App() {
     refreshAll,
   } = useData();
 
-  // GSAP tab switch transition
+  // Navigation dispatcher that updates URL path and state
+  const navigate = useCallback((newPath: string, replace = false) => {
+    if (replace) {
+      window.history.replaceState(null, '', newPath);
+    } else {
+      window.history.pushState(null, '', newPath);
+    }
+    setRoute(parsePath(newPath));
+  }, []);
+
+  // Listen to browser Back/Forward (popstate)
+  useEffect(() => {
+    const onPopState = () => {
+      setRoute(parsePath(window.location.pathname));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Normalize root URL to /overview
+  useEffect(() => {
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      window.history.replaceState(null, '', '/overview');
+    }
+  }, []);
+
+  // If already authenticated and currently on /login, redirect to /overview
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && route.isLogin) {
+      navigate('/overview', true);
+    }
+  }, [authLoading, isAuthenticated, route.isLogin, navigate]);
+
+  // Tab change animation
   useEffect(() => {
     if (mainContentRef.current) {
       gsap.fromTo(
@@ -59,13 +137,29 @@ export function App() {
         { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' }
       );
     }
-  }, [currentTab]);
+  }, [route.tab, route.appSubRoute?.mode]);
+
+  const handleSelectTab = (tab: NavTab) => {
+    navigate(`/${tab}`);
+  };
+
+  const handleNavigateSubRoute = (mode: 'list' | 'create' | 'detail', appId?: string | null) => {
+    if (mode === 'create') {
+      navigate('/apps/new');
+    } else if (mode === 'detail' && appId) {
+      navigate(`/apps/${encodeURIComponent(appId)}`);
+    } else {
+      navigate('/apps');
+    }
+  };
 
   const getTabTitle = () => {
-    switch (currentTab) {
+    switch (route.tab) {
       case 'overview':
         return '平台控制台概览';
       case 'apps':
+        if (route.appSubRoute?.mode === 'create') return '新建 Docker Compose 应用';
+        if (route.appSubRoute?.mode === 'detail') return 'Compose 应用编排详情';
         return 'Docker Compose 应用编排';
       case 'domains':
         return 'Caddy 域名绑定与证书';
@@ -78,7 +172,32 @@ export function App() {
     }
   };
 
-  if (loading) {
+  // Auth loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-paper flex items-center justify-center font-sans text-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
+          <span className="tracking-wider text-ink-muted">验证管理员会话中...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If not logged in, render sleek Login View
+  if (!isAuthenticated || route.isLogin) {
+    return (
+      <LoginView
+        onLoginSuccess={() => {
+          navigate('/overview', true);
+          refreshAll();
+        }}
+      />
+    );
+  }
+
+  // Data initializing state
+  if (dataLoading) {
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center font-sans text-xs">
         <div className="flex items-center gap-3">
@@ -92,7 +211,11 @@ export function App() {
   return (
     <div className="min-h-screen bg-paper text-ink flex overflow-hidden font-sans">
       {/* Side-Rail Navigation */}
-      <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} metrics={metrics} />
+      <Sidebar
+        currentTab={route.tab}
+        onSelectTab={handleSelectTab}
+        metrics={metrics}
+      />
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -100,34 +223,61 @@ export function App() {
         <Header
           title={getTabTitle()}
           metrics={metrics}
+          user={user}
           onRefresh={refreshAll}
           onQuickBackup={triggerSystemBackup}
+          onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+          onLogout={async () => {
+            await logout();
+            navigate('/login');
+          }}
         />
 
-        {/* Dynamic View Container - Spacious & Relaxed */}
+        {/* Security Alert Banner for Default Password */}
+        {user?.isDefaultPassword && (
+          <div className="bg-amber-500/10 border-b border-amber-500/25 px-6 py-2.5 flex items-center justify-between gap-4 text-xs font-sans animate-fade-in">
+            <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-300">
+              <ShieldWarning className="w-4 h-4 shrink-0 text-amber-500" weight="fill" />
+              <span>
+                <strong>安全提醒：</strong> 当前系统正在使用初始默认密码 (<code className="px-1.5 py-0.5 rounded bg-amber-500/15 font-mono text-amber-800 dark:text-amber-200">vessel2026</code>)。为防止公网未授权访问，建议尽快修改。
+              </span>
+            </div>
+            <button
+              onClick={() => setIsChangePasswordOpen(true)}
+              className="text-xs font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-amber-100 hover:underline shrink-0 cursor-pointer flex items-center gap-1"
+            >
+              <span>立即修改密码</span>
+              <span>&rarr;</span>
+            </button>
+          </div>
+        )}
+
+        {/* Dynamic View Container */}
         <main className="flex-1 overflow-y-auto p-6 md:p-10 lg:p-12">
           <div ref={mainContentRef} className="max-w-7xl mx-auto pb-16">
-            {currentTab === 'overview' && (
+            {route.tab === 'overview' && (
               <OverviewView
                 metrics={metrics}
                 apps={apps}
                 domains={domains}
                 r2Config={r2Config}
                 backups={backups}
-                onNavigate={setCurrentTab}
+                onNavigate={handleSelectTab}
                 onDeploy={deployApp}
                 onTriggerBackup={triggerSystemBackup}
                 onTriggerPrune={triggerPrune}
               />
             )}
 
-            {currentTab === 'apps' && (
+            {route.tab === 'apps' && (
               <AppsView
                 apps={apps}
                 templates={templates}
                 logsMap={logsMap}
                 domains={domains}
                 backups={backups}
+                subRoute={route.appSubRoute || { mode: 'list' }}
+                onNavigateSubRoute={handleNavigateSubRoute}
                 onCreateApp={createApp}
                 onUpdateApp={updateApp}
                 onDeleteApp={deleteApp}
@@ -144,7 +294,7 @@ export function App() {
               />
             )}
 
-            {currentTab === 'domains' && (
+            {route.tab === 'domains' && (
               <DomainsView
                 domains={domains}
                 apps={apps}
@@ -154,7 +304,7 @@ export function App() {
               />
             )}
 
-            {currentTab === 'backups' && (
+            {route.tab === 'backups' && (
               <BackupsView
                 r2Config={r2Config}
                 backups={backups}
@@ -164,7 +314,7 @@ export function App() {
               />
             )}
 
-            {currentTab === 'registries' && (
+            {route.tab === 'registries' && (
               <RegistriesView
                 registries={registries}
                 onSaveRegistry={saveRegistry}
@@ -172,7 +322,7 @@ export function App() {
               />
             )}
 
-            {currentTab === 'maintenance' && (
+            {route.tab === 'maintenance' && (
               <MaintenanceView
                 maintenance={maintenance}
                 apps={apps}
@@ -185,9 +335,25 @@ export function App() {
         </main>
       </div>
 
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
+
       {/* Modern Custom Tooltip Engine across the whole website */}
       <GlobalTooltip />
     </div>
+  );
+}
+
+export function App() {
+  const auth = useAuthProvider();
+
+  return (
+    <AuthContext.Provider value={auth}>
+      <MainConsole />
+    </AuthContext.Provider>
   );
 }
 

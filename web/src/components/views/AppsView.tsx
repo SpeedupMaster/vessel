@@ -22,6 +22,11 @@ interface AppsViewProps {
   logsMap: Record<string, string[]>;
   domains?: DomainItem[];
   backups?: BackupRecord[];
+  subRoute?: {
+    mode: 'list' | 'create' | 'detail';
+    appId?: string | null;
+  };
+  onNavigateSubRoute?: (mode: 'list' | 'create' | 'detail', appId?: string | null) => void;
   onCreateApp: (app: Partial<AppItem>) => Promise<any>;
   onUpdateApp: (id: string, updates: Partial<AppItem>) => Promise<any>;
   onDeleteApp: (id: string) => Promise<any>;
@@ -43,6 +48,8 @@ export const AppsView: React.FC<AppsViewProps> = ({
   logsMap,
   domains = [],
   backups = [],
+  subRoute,
+  onNavigateSubRoute,
   onCreateApp,
   onUpdateApp,
   onDeleteApp,
@@ -57,9 +64,21 @@ export const AppsView: React.FC<AppsViewProps> = ({
   onDeleteDomain,
   onRenewDomain,
 }) => {
-  const [viewMode, setViewMode] = useState<'list' | 'create' | 'detail'>('list');
-  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [internalMode, setInternalMode] = useState<'list' | 'create' | 'detail'>('list');
+  const [internalAppId, setInternalAppId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+
+  const viewMode = subRoute ? subRoute.mode : internalMode;
+  const selectedAppId = subRoute ? subRoute.appId : internalAppId;
+
+  const navigateTo = (mode: 'list' | 'create' | 'detail', appId: string | null = null) => {
+    if (onNavigateSubRoute) {
+      onNavigateSubRoute(mode, appId);
+    } else {
+      setInternalMode(mode);
+      setInternalAppId(appId);
+    }
+  };
 
   const selectedApp = apps.find((a) => a.id === selectedAppId) || null;
 
@@ -90,8 +109,16 @@ export const AppsView: React.FC<AppsViewProps> = ({
         logsMap={logsMap}
         domains={domains}
         backups={backups}
-        onBack={() => setViewMode('list')}
-        onCreateApp={onCreateApp}
+        onBack={() => navigateTo('list')}
+        onCreateApp={async (appData) => {
+          const created = await onCreateApp(appData);
+          if (created?.id) {
+            navigateTo('detail', created.id);
+          } else {
+            navigateTo('list');
+          }
+          return created;
+        }}
         onUpdateApp={onUpdateApp}
         onDeleteApp={onDeleteApp}
         onDeploy={onDeploy}
@@ -116,16 +143,12 @@ export const AppsView: React.FC<AppsViewProps> = ({
         logsMap={logsMap}
         domains={domains}
         backups={backups}
-        onBack={() => {
-          setViewMode('list');
-          setSelectedAppId(null);
-        }}
+        onBack={() => navigateTo('list')}
         onCreateApp={onCreateApp}
         onUpdateApp={onUpdateApp}
         onDeleteApp={async (id) => {
           await onDeleteApp(id);
-          setViewMode('list');
-          setSelectedAppId(null);
+          navigateTo('list');
         }}
         onDeploy={onDeploy}
         onStop={onStop}
@@ -170,7 +193,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
         <Button8State
           variant="primary"
           icon={<Plus className="w-4 h-4" weight="bold" />}
-          onClick={() => setViewMode('create')}
+          onClick={() => navigateTo('create')}
         >
           新建应用
         </Button8State>
@@ -194,7 +217,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                 variant="primary"
                 size="sm"
                 icon={<Plus className="w-4 h-4" weight="bold" />}
-                onClick={() => setViewMode('create')}
+                onClick={() => navigateTo('create')}
               >
                 新建应用
               </Button8State>
@@ -213,10 +236,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3
-                      onClick={() => {
-                        setSelectedAppId(app.id);
-                        setViewMode('detail');
-                      }}
+                      onClick={() => navigateTo('detail', app.id)}
                       className="font-semibold text-base text-ink tracking-tight hover:text-accent cursor-pointer transition-colors"
                     >
                       {app.name}
@@ -255,10 +275,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
               {/* Quick Actions Footer - 4% Ghost Divider */}
               <div className="mt-5 pt-3.5 border-t border-line/20 dark:border-white/[0.04] flex items-center justify-between gap-2">
                 <button
-                  onClick={() => {
-                    setSelectedAppId(app.id);
-                    setViewMode('detail');
-                  }}
+                  onClick={() => navigateTo('detail', app.id)}
                   className="text-xs font-medium text-ink-muted hover:text-accent flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-paper-3 transition-colors cursor-pointer"
                 >
                   <Code className="w-3.5 h-3.5" />

@@ -9,6 +9,16 @@ import {
   SystemMetrics,
   ComposeTemplate,
 } from '../types/index.js';
+import { getAuthHeaders } from './useAuth.js';
+
+export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const authHeaders = getAuthHeaders();
+  const headers = new Headers(init?.headers || {});
+  for (const [key, value] of Object.entries(authHeaders)) {
+    headers.set(key, value);
+  }
+  return fetch(input, { ...init, headers });
+};
 
 export function useData() {
   const [metrics, setMetrics] = useState<SystemMetrics>({
@@ -40,13 +50,13 @@ export function useData() {
   const fetchAll = useCallback(async () => {
     try {
       const [appsRes, domainsRes, r2Res, backupsRes, regRes, maintRes, tmplRes] = await Promise.all([
-        fetch('/api/apps').then((r) => r.json()),
-        fetch('/api/domains').then((r) => r.json()),
-        fetch('/api/r2/config').then((r) => r.json()),
-        fetch('/api/r2/backups').then((r) => r.json()),
-        fetch('/api/registries').then((r) => r.json()),
-        fetch('/api/maintenance/config').then((r) => r.json()),
-        fetch('/api/templates').then((r) => r.json()),
+        apiFetch('/api/apps').then((r) => r.json()),
+        apiFetch('/api/domains').then((r) => r.json()),
+        apiFetch('/api/r2/config').then((r) => r.json()),
+        apiFetch('/api/r2/backups').then((r) => r.json()),
+        apiFetch('/api/registries').then((r) => r.json()),
+        apiFetch('/api/maintenance/config').then((r) => r.json()),
+        apiFetch('/api/templates').then((r) => r.json()),
       ]);
 
       if (Array.isArray(appsRes)) setApps(appsRes);
@@ -109,7 +119,7 @@ export function useData() {
 
   // APP ACTIONS
   const createApp = async (app: Partial<AppItem> & { domainBinding?: any }) => {
-    const res = await fetch('/api/apps', {
+    const res = await apiFetch('/api/apps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(app),
@@ -121,7 +131,7 @@ export function useData() {
     const created = await res.json();
     setApps((prev) => [...prev, created]);
     if (app.domainBinding?.domain) {
-      fetch('/api/domains')
+      apiFetch('/api/domains')
         .then((r) => r.json())
         .then((doms) => {
           if (Array.isArray(doms)) setDomains(doms);
@@ -132,7 +142,7 @@ export function useData() {
   };
 
   const updateApp = async (id: string, updates: Partial<AppItem>) => {
-    const res = await fetch(`/api/apps/${id}`, {
+    const res = await apiFetch(`/api/apps/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -147,7 +157,7 @@ export function useData() {
   };
 
   const deleteApp = async (id: string) => {
-    const res = await fetch(`/api/apps/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/apps/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete app');
     setApps((prev) => prev.filter((a) => a.id !== id));
     setDomains((prev) => prev.filter((d) => d.appId !== id));
@@ -155,39 +165,39 @@ export function useData() {
 
   const deployApp = async (id: string) => {
     subscribeLogs(id);
-    const res = await fetch(`/api/apps/${id}/deploy`, { method: 'POST' });
+    const res = await apiFetch(`/api/apps/${id}/deploy`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to initiate deploy');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'deploying' } : a)));
   };
 
   const stopApp = async (id: string) => {
-    const res = await fetch(`/api/apps/${id}/stop`, { method: 'POST' });
+    const res = await apiFetch(`/api/apps/${id}/stop`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to stop app');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'stopped' } : a)));
   };
 
   const restartApp = async (id: string) => {
-    const res = await fetch(`/api/apps/${id}/restart`, { method: 'POST' });
+    const res = await apiFetch(`/api/apps/${id}/restart`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to restart app');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'running' } : a)));
   };
 
   const rebuildApp = async (id: string) => {
     subscribeLogs(id);
-    const res = await fetch(`/api/apps/${id}/rebuild`, { method: 'POST' });
+    const res = await apiFetch(`/api/apps/${id}/rebuild`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to rebuild app');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rebuilding' } : a)));
   };
 
   const freshVolumesApp = async (id: string) => {
     subscribeLogs(id);
-    const res = await fetch(`/api/apps/${id}/fresh-volumes`, { method: 'POST' });
+    const res = await apiFetch(`/api/apps/${id}/fresh-volumes`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to initiate fresh volumes reset');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rebuilding' } : a)));
   };
 
   const backupApp = async (id: string) => {
-    const res = await fetch(`/api/apps/${id}/backup`, { method: 'POST' });
+    const res = await apiFetch(`/api/apps/${id}/backup`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to backup app');
     if (data.record) {
@@ -198,7 +208,7 @@ export function useData() {
 
   // DOMAINS ACTIONS
   const createDomain = async (domainData: Partial<DomainItem>) => {
-    const res = await fetch('/api/domains', {
+    const res = await apiFetch('/api/domains', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(domainData),
@@ -213,13 +223,13 @@ export function useData() {
   };
 
   const deleteDomain = async (id: string) => {
-    const res = await fetch(`/api/domains/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/domains/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete domain');
     setDomains((prev) => prev.filter((d) => d.id !== id));
   };
 
   const renewDomain = async (id: string) => {
-    const res = await fetch(`/api/domains/${id}/renew`, { method: 'POST' });
+    const res = await apiFetch(`/api/domains/${id}/renew`, { method: 'POST' });
     const updated = await res.json();
     setDomains((prev) => prev.map((d) => (d.id === id ? updated : d)));
     return updated;
@@ -227,7 +237,7 @@ export function useData() {
 
   // R2 BACKUP ACTIONS
   const saveR2Config = async (config: Partial<R2Config>) => {
-    const res = await fetch('/api/r2/config', {
+    const res = await apiFetch('/api/r2/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
@@ -239,7 +249,7 @@ export function useData() {
   };
 
   const testR2Connection = async (config: Partial<R2Config>) => {
-    const res = await fetch('/api/r2/test', {
+    const res = await apiFetch('/api/r2/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
@@ -248,7 +258,7 @@ export function useData() {
   };
 
   const triggerSystemBackup = async () => {
-    const res = await fetch('/api/r2/backup-now', { method: 'POST' });
+    const res = await apiFetch('/api/r2/backup-now', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'System backup failed');
     if (data.record) {
@@ -259,7 +269,7 @@ export function useData() {
 
   // REGISTRIES ACTIONS
   const saveRegistry = async (reg: Partial<RegistryItem>) => {
-    const res = await fetch('/api/registries', {
+    const res = await apiFetch('/api/registries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(reg),
@@ -279,7 +289,7 @@ export function useData() {
   };
 
   const testRegistry = async (id: string) => {
-    const res = await fetch(`/api/registries/${id}/test`, { method: 'POST' });
+    const res = await apiFetch(`/api/registries/${id}/test`, { method: 'POST' });
     const data = await res.json();
     await fetchAll();
     return data;
@@ -287,7 +297,7 @@ export function useData() {
 
   // MAINTENANCE ACTIONS
   const saveMaintenance = async (cfg: Partial<MaintenanceConfig>) => {
-    const res = await fetch('/api/maintenance/config', {
+    const res = await apiFetch('/api/maintenance/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cfg),
@@ -298,14 +308,14 @@ export function useData() {
   };
 
   const triggerPrune = async () => {
-    const res = await fetch('/api/maintenance/prune', { method: 'POST' });
+    const res = await apiFetch('/api/maintenance/prune', { method: 'POST' });
     const data = await res.json();
     await fetchAll();
     return data;
   };
 
   const triggerCheckUpdates = async () => {
-    const res = await fetch('/api/maintenance/check-updates', { method: 'POST' });
+    const res = await apiFetch('/api/maintenance/check-updates', { method: 'POST' });
     const data = await res.json();
     if (data.apps) setApps(data.apps);
     return data;

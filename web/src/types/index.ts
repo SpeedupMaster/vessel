@@ -110,3 +110,8 @@ export interface ComposeTemplate {
   composeYaml: string;
   envContent: string;
 }
+
+export interface AuthUser {
+  username: string;
+  isDefaultPassword?: boolean;
+}

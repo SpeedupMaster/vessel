@@ -6,13 +6,14 @@ import { DomainItem } from '../types/index.js';
 export class CaddyService {
   private caddyApiUrl = process.env.CADDY_API || 'http://127.0.0.1:2019';
   private caddyfilePath = path.join(DATA_DIR, 'Caddyfile');
+  private caddyProcess: any = null;
 
   constructor() {
     this.syncCaddyfile();
   }
 
   /**
-   * Regenerate Caddyfile based on all active domains
+   * Regenerate Caddyfile based on all active domains and default reverse proxies
    */
   public syncCaddyfile(): string {
     const domains = db.get('domains') || [];
@@ -24,12 +25,25 @@ export class CaddyService {
   auto_https disable_redirects
 }
 
+# 默认基础反代：直接通过服务器 IP 访问 80 端口时，自动反向代理至 Vessel 控制台
+:80 {
+  reverse_proxy 127.0.0.1:3900 {
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+}
+
 `;
 
     for (const d of domains) {
-      const upstream = d.targetType === 'internal'
-        ? `${d.serviceName}:${d.targetPort}`
-        : `127.0.0.1:${d.targetPort}`;
+      // If appId is 'vessel-system', it proxies directly to Vessel console at 127.0.0.1:3900
+      const upstream = d.appId === 'vessel-system'
+        ? '127.0.0.1:3900'
+        : (d.targetType === 'internal'
+            ? `${d.serviceName}:${d.targetPort}`
+            : `127.0.0.1:${d.targetPort}`);
 
       content += `${d.domain} {
   reverse_proxy ${upstream} {
@@ -46,6 +60,55 @@ export class CaddyService {
     fs.writeFileSync(this.caddyfilePath, content, 'utf-8');
     this.reloadCaddyApi(content).catch(() => {});
     return content;
+  }
+
+  /**
+   * Ensure Caddy daemon is running in container / production environment
+   */
+  public async ensureDaemon(): Promise<void> {
+    try {
+      const res = await fetch(`${this.caddyApiUrl}/config/`, { signal: AbortSignal.timeout(1500) });
+      if (res.ok) {
+        console.log('[Vessel] Caddy daemon API is active and reachable.');
+        return;
+      }
+    } catch {}
+
+    try {
+      const { execSync, spawn } = await import('child_process');
+      const bin = process.platform === 'win32' ? 'caddy.exe' : 'caddy';
+      try {
+        execSync(`${bin} version`, { stdio: 'ignore' });
+      } catch {
+        console.log('[Vessel] Caddy binary not detected in PATH, running in simulation mode.');
+        return;
+      }
+
+      console.log(`[Vessel] Spawning Caddy reverse proxy daemon with config: ${this.caddyfilePath}`);
+      this.caddyProcess = spawn(bin, ['run', '--config', this.caddyfilePath, '--adapter', 'caddyfile'], {
+        stdio: 'inherit',
+      });
+
+      this.caddyProcess.on('error', (err: any) => {
+        console.warn('[Vessel] Caddy daemon launch error:', err.message);
+      });
+
+      this.caddyProcess.on('exit', (code: number) => {
+        console.log(`[Vessel] Caddy daemon exited with code ${code}`);
+        this.caddyProcess = null;
+      });
+    } catch (e: any) {
+      console.warn('[Vessel] Error checking Caddy daemon:', e.message);
+    }
+  }
+
+  public stopDaemon(): void {
+    if (this.caddyProcess) {
+      try {
+        this.caddyProcess.kill();
+      } catch {}
+      this.caddyProcess = null;
+    }
   }
 
   /**
