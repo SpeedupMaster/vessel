@@ -158,9 +158,9 @@ export const Header: React.FC<HeaderProps> = ({
                           setUserMenuOpen(false);
                           onOpenChangePassword();
                         }}
-                        className="w-full px-3.5 py-2 text-left text-xs text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center gap-2.5 transition-colors cursor-pointer"
+                        className="group w-full px-3.5 py-2 text-left text-xs text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center gap-2.5 transition-colors cursor-pointer"
                       >
-                        <Key className="w-3.5 h-3.5 text-accent" />
+                        <Key className="w-3.5 h-3.5 text-ink-muted group-hover:text-ink transition-colors" />
                         <span>修改密码</span>
                       </button>
                     )}
@@ -171,9 +171,9 @@ export const Header: React.FC<HeaderProps> = ({
                           setUserMenuOpen(false);
                           onLogout();
                         }}
-                        className="w-full px-3.5 py-2 text-left text-xs text-red-500 dark:text-red-400 hover:bg-red-500/10 flex items-center gap-2.5 transition-colors cursor-pointer"
+                        className="group w-full px-3.5 py-2 text-left text-xs text-ink-muted hover:text-rose-500 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/15 flex items-center gap-2.5 transition-colors cursor-pointer"
                       >
-                        <SignOut className="w-3.5 h-3.5" />
+                        <SignOut className="w-3.5 h-3.5 text-ink-muted group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-colors" />
                         <span>退出登录</span>
                       </button>
                     )}
