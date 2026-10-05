@@ -21,13 +21,13 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metrics }) => {
-  const navItems: { id: NavTab; label: string; icon: React.ReactNode; count?: number }[] = [
+  const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: '控制台概览', icon: <SquaresFour className="w-4 h-4" /> },
-    { id: 'apps', label: '应用与编排', icon: <HardDrives className="w-4 h-4" />, count: metrics.totalApps },
-    { id: 'domains', label: '域名与证书', icon: <Globe className="w-4 h-4" />, count: metrics.activeDomains },
+    { id: 'apps', label: '应用与编排', icon: <HardDrives className="w-4 h-4" /> },
+    { id: 'domains', label: '域名与证书', icon: <Globe className="w-4 h-4" /> },
     { id: 'registries', label: '私有镜像凭证', icon: <Package className="w-4 h-4" /> },
     { id: 'maintenance', label: '巡检与安全瘦身', icon: <Broom className="w-4 h-4" /> },
-    { id: 'backups', label: 'Cloudflare R2 备份', icon: <CloudArrowUp className="w-4 h-4" />, count: metrics.totalBackups },
+    { id: 'backups', label: 'Cloudflare R2 备份', icon: <CloudArrowUp className="w-4 h-4" /> },
   ];
 
   const isDockerOnline = metrics.dockerStatus === 'running';
@@ -69,18 +69,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, metri
                 <span className={clsx(active ? 'text-accent' : 'text-ink-muted')}>{item.icon}</span>
                 <span>{item.label}</span>
               </div>
-              {item.count !== undefined && item.count > 0 && (
-                <span
-                  className={clsx(
-                    'text-[11px] px-2 py-0.5 rounded-full font-mono font-medium transition-colors',
-                    active
-                      ? 'bg-accent/15 text-accent border border-accent/20'
-                      : 'bg-paper-3/90 dark:bg-white/[0.08] text-ink dark:text-zinc-100 border border-line/60 dark:border-white/[0.08]'
-                  )}
-                >
-                  {item.count}
-                </span>
-              )}
             </button>
           );
         })}
