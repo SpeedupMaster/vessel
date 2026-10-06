@@ -119,7 +119,10 @@ apiRouter.post('/apps', requireAuth, async (req: Request, res: Response) => {
     return res.status(400).json({ error: `Invalid Docker Compose YAML: ${err.message}` });
   }
 
-  const id = name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 32) + '-' + uuidv4().slice(0, 4);
+  const customId = req.body.id;
+  const id = (customId && typeof customId === 'string' && /^[a-z0-9_-]+$/i.test(customId))
+    ? customId.toLowerCase()
+    : name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 32) + '-' + uuidv4().slice(0, 4);
   const newApp: AppItem = {
     id,
     name,

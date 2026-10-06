@@ -287,10 +287,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       }
     }
 
-    const internalHost = 'database';
+    const internalHost = app?.id || (name ? name.toLowerCase().replace(/[^a-z0-9_-]/g, '-') : 'database');
 
     let internalUrl = envMap.INTERNAL_DATABASE_URL || envMap.INTERNAL_MONGO_URL || envMap.INTERNAL_REDIS_URL || envMap.INTERNAL_LIBSQL_URL || '';
-    if (!internalUrl) {
+    if (internalUrl) {
+      // Replace legacy placeholder/hardcoded 'database' host if present with actual internalHost (app.id)
+      internalUrl = internalUrl.replace(/@database(?=[:/])/g, `@${internalHost}`).replace(/:\/\/database(?=[:/])/g, `://${internalHost}`);
+    } else {
       if (engine === 'PostgreSQL') internalUrl = `postgresql://${user || 'postgres'}:${password}@${internalHost}:${port}/${dbName || 'postgres'}`;
       else if (engine === 'MySQL' || engine === 'MariaDB') internalUrl = `mysql://${user || 'root'}:${password}@${internalHost}:${port}/${dbName || 'app_db'}`;
       else if (engine === 'MongoDB') internalUrl = `mongodb://${user || 'mongo'}:${password}@${internalHost}:${port}/${dbName || 'app_db'}?authSource=admin`;
@@ -298,7 +301,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       else if (engine === 'libSQL') internalUrl = `http://${internalHost}:${port}`;
     }
 
-    const internalRootUrl = envMap.INTERNAL_DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@${internalHost}:${port}/${dbName || 'app_db'}` : '');
+    let internalRootUrl = envMap.INTERNAL_DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@${internalHost}:${port}/${dbName || 'app_db'}` : '');
+    if (internalRootUrl) {
+      internalRootUrl = internalRootUrl.replace(/@database(?=[:/])/g, `@${internalHost}`).replace(/:\/\/database(?=[:/])/g, `://${internalHost}`);
+    }
 
     let externalUrl = '';
     let rootUrl = '';
@@ -394,6 +400,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         } else {
           newEnv += `\n${portKey}=${trimmedPort}`;
         }
+      }
+
+      if (app?.id) {
+        newEnv = newEnv.replace(/@database(?=[:/])/g, `@${app.id}`).replace(/:\/\/database(?=[:/])/g, `://${app.id}`);
       }
 
       setComposeYaml(newYaml);

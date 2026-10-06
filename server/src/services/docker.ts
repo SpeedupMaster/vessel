@@ -50,7 +50,38 @@ export class DockerService {
     const composePath = path.join(appDir, 'docker-compose.yml');
     const envPath = path.join(appDir, '.env');
 
-    fs.writeFileSync(composePath, app.composeYaml, 'utf-8');
+    let finalYaml = app.composeYaml;
+    try {
+      const parsed = YAML.parse(finalYaml);
+      if (parsed?.services?.database) {
+        let modified = false;
+        if (!parsed.services.database.container_name) {
+          parsed.services.database.container_name = app.id;
+          modified = true;
+        }
+        if (!parsed.networks) {
+          parsed.networks = {
+            'vessel-net': { external: true },
+          };
+          modified = true;
+        } else if (!parsed.networks['vessel-net']) {
+          parsed.networks['vessel-net'] = { external: true };
+          modified = true;
+        }
+        if (!parsed.services.database.networks) {
+          parsed.services.database.networks = ['default', 'vessel-net'];
+          modified = true;
+        } else if (Array.isArray(parsed.services.database.networks) && !parsed.services.database.networks.includes('vessel-net')) {
+          parsed.services.database.networks.push('vessel-net');
+          modified = true;
+        }
+        if (modified) {
+          finalYaml = YAML.stringify(parsed);
+        }
+      }
+    } catch {}
+
+    fs.writeFileSync(composePath, finalYaml, 'utf-8');
     fs.writeFileSync(envPath, app.envContent || '', 'utf-8');
 
     return { appDir, composePath, envPath };
@@ -63,6 +94,7 @@ export class DockerService {
     app: AppItem,
     onLog?: (chunk: string) => void
   ): Promise<{ success: boolean; error?: string }> {
+    await this.ensureNetwork();
     const { composePath, appDir, envPath } = this.prepareAppFiles(app);
 
     return new Promise((resolve) => {
@@ -187,6 +219,7 @@ export class DockerService {
    * Pull latest images and rebuild if requested
    */
   public async pullAndRebuild(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
+    await this.ensureNetwork();
     const { composePath, appDir, envPath } = this.prepareAppFiles(app);
     return new Promise((resolve) => {
       onLog?.(`[vessel] Pulling updated images for ${app.name}...\n`);
@@ -221,6 +254,7 @@ export class DockerService {
    * Fresh volumes rebuild: docker compose down -v followed by docker compose up -d --build
    */
   public async freshVolumesRebuild(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
+    await this.ensureNetwork();
     const { composePath, appDir, envPath } = this.prepareAppFiles(app);
     return new Promise((resolve) => {
       onLog?.(`[vessel] ⚠️ Fresh Volumes triggered: destroying persistent volumes for ${app.name}...\n`);

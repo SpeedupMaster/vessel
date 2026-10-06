@@ -176,6 +176,9 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       return;
     }
 
+    // Generate stable app ID and internal hostname (e.g. postgres-db-xxxx)
+    const generatedId = name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 32) + '-' + Math.random().toString(36).slice(2, 6);
+
     // Assemble Docker Compose YAML and .env
     let composeYaml = '';
     let envContent = '';
@@ -185,6 +188,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
         composeYaml = `services:
   database:
     image: \${POSTGRES_IMAGE:-${imageToUse}}
+    container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
     environment:
       POSTGRES_DB: \${POSTGRES_DB:-${finalDbName}}
@@ -193,6 +197,13 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./data:/var/lib/postgresql/data
+    networks:
+      - default
+      - vessel-net
+
+networks:
+  vessel-net:
+    external: true
 `;
         envContent = `POSTGRES_IMAGE=${imageToUse}
 POSTGRES_DB=${finalDbName}
@@ -200,7 +211,7 @@ POSTGRES_USER=${finalDbUser}
 POSTGRES_PASSWORD=${dbPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${finalDbName}
+INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@${generatedId}:5432/${finalDbName}
 `;
         break;
 
@@ -208,6 +219,7 @@ INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${
         composeYaml = `services:
   database:
     image: \${MONGO_IMAGE:-${imageToUse}}
+    container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: \${MONGO_INITDB_DATABASE:-${finalDbName}}
@@ -215,6 +227,13 @@ INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${
       MONGO_INITDB_ROOT_PASSWORD: \${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - ./data:/data/db
+    networks:
+      - default
+      - vessel-net
+
+networks:
+  vessel-net:
+    external: true
 `;
         envContent = `MONGO_IMAGE=${imageToUse}
 MONGO_INITDB_DATABASE=${finalDbName}
@@ -222,7 +241,7 @@ MONGO_INITDB_ROOT_USERNAME=${finalDbUser}
 MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${finalDbName}?authSource=admin
+INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@${generatedId}:27017/${finalDbName}?authSource=admin
 `;
         break;
 
@@ -230,6 +249,7 @@ INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${final
         composeYaml = `services:
   database:
     image: \${MARIADB_IMAGE:-${imageToUse}}
+    container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
     environment:
       MARIADB_DATABASE: \${MARIADB_DATABASE:-${finalDbName}}
@@ -244,6 +264,13 @@ INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${final
       MYSQL_ROOT_HOST: "%"
     volumes:
       - ./data:/var/lib/mysql
+    networks:
+      - default
+      - vessel-net
+
+networks:
+  vessel-net:
+    external: true
 `;
         envContent = `MARIADB_IMAGE=${imageToUse}
 MARIADB_DATABASE=${finalDbName}
@@ -253,8 +280,8 @@ MARIADB_ROOT_PASSWORD=${dbRootPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
-INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
+INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@${generatedId}:3306/${finalDbName}
+INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${finalDbName}
 `;
         break;
 
@@ -262,6 +289,7 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalD
         composeYaml = `services:
   database:
     image: \${MYSQL_IMAGE:-${imageToUse}}
+    container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: \${MYSQL_DATABASE:-${finalDbName}}
@@ -271,6 +299,13 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalD
       MYSQL_ROOT_HOST: "%"
     volumes:
       - ./data:/var/lib/mysql
+    networks:
+      - default
+      - vessel-net
+
+networks:
+  vessel-net:
+    external: true
 `;
         envContent = `MYSQL_IMAGE=${imageToUse}
 MYSQL_DATABASE=${finalDbName}
@@ -279,8 +314,8 @@ MYSQL_PASSWORD=${dbPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
-INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
+INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@${generatedId}:3306/${finalDbName}
+INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${finalDbName}
 `;
         break;
 
@@ -288,16 +323,24 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalD
         composeYaml = `services:
   database:
     image: \${REDIS_IMAGE:-${imageToUse}}
+    container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
     command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
     volumes:
       - ./data:/data
+    networks:
+      - default
+      - vessel-net
+
+networks:
+  vessel-net:
+    external: true
 `;
         envContent = `REDIS_IMAGE=${imageToUse}
 REDIS_PASSWORD=${dbPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
+INTERNAL_REDIS_URL=redis://:${dbPassword}@${generatedId}:6379
 `;
         break;
 
@@ -305,6 +348,7 @@ INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
         composeYaml = `services:
   database:
     image: \${LIBSQL_IMAGE:-${imageToUse}}
+    container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
     environment:
       SQLD_AUTH_TOKEN: \${SQLD_AUTH_TOKEN}
@@ -312,18 +356,26 @@ INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
       SQLD_HTTP_LISTEN_ADDR: "0.0.0.0:8080"
     volumes:
       - ./data:/var/lib/sqld
+    networks:
+      - default
+      - vessel-net
+
+networks:
+  vessel-net:
+    external: true
 `;
         envContent = `LIBSQL_IMAGE=${imageToUse}
 SQLD_AUTH_TOKEN=${dbPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_LIBSQL_URL=http://database:8080
+INTERNAL_LIBSQL_URL=http://${generatedId}:8080
 `;
         break;
     }
 
     try {
       await onCreateDatabase({
+        id: generatedId,
         name: name.trim(),
         description: `Managed ${currentOption.label} Database Service`,
         composeYaml,
