@@ -118,6 +118,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   const [dbRootPassword, setDbRootPassword] = useState('');
   const [showRootPassword, setShowRootPassword] = useState(false);
   const [dockerImage, setDockerImage] = useState('');
+  const [enableExternalPort, setEnableExternalPort] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,6 +133,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       setDbName('');
       setDbUser('');
       setDockerImage('');
+      setEnableExternalPort(false);
       setError(null);
     }
   }, [selectedType, isOpen]);
@@ -186,9 +188,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   database:
     image: \${POSTGRES_IMAGE:-${imageToUse}}
     restart: unless-stopped
-    ports:
-      - "\${POSTGRES_PORT:-5432}:5432"
-    environment:
+${enableExternalPort ? '    ports:\n      - "${POSTGRES_PORT:-5432}:5432"\n' : ''}    environment:
       POSTGRES_DB: \${POSTGRES_DB:-${finalDbName}}
       POSTGRES_USER: \${POSTGRES_USER:-${finalDbUser}}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
@@ -200,10 +200,10 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
 POSTGRES_DB=${finalDbName}
 POSTGRES_USER=${finalDbUser}
 POSTGRES_PASSWORD=${dbPassword}
-POSTGRES_PORT=5432
-
-# Database Connection URLs
+${enableExternalPort ? `POSTGRES_PORT=5432
 DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@localhost:5432/${finalDbName}
+` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 集群内部连接串
 INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${finalDbName}
 `;
         break;
@@ -213,9 +213,7 @@ INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${
   database:
     image: \${MONGO_IMAGE:-${imageToUse}}
     restart: unless-stopped
-    ports:
-      - "\${MONGO_PORT:-27017}:27017"
-    environment:
+${enableExternalPort ? '    ports:\n      - "${MONGO_PORT:-27017}:27017"\n' : ''}    environment:
       MONGO_INITDB_DATABASE: \${MONGO_INITDB_DATABASE:-${finalDbName}}
       MONGO_INITDB_ROOT_USERNAME: \${MONGO_INITDB_ROOT_USERNAME:-${finalDbUser}}
       MONGO_INITDB_ROOT_PASSWORD: \${MONGO_INITDB_ROOT_PASSWORD}
@@ -226,10 +224,10 @@ INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${
 MONGO_INITDB_DATABASE=${finalDbName}
 MONGO_INITDB_ROOT_USERNAME=${finalDbUser}
 MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
-MONGO_PORT=27017
-
-# Database Connection URLs
+${enableExternalPort ? `MONGO_PORT=27017
 MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@localhost:27017/${finalDbName}?authSource=admin
+` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 集群内部连接串
 INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${finalDbName}?authSource=admin
 `;
         break;
@@ -239,9 +237,7 @@ INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${final
   database:
     image: \${MARIADB_IMAGE:-${imageToUse}}
     restart: unless-stopped
-    ports:
-      - "\${MARIADB_PORT:-3306}:3306"
-    environment:
+${enableExternalPort ? '    ports:\n      - "${MARIADB_PORT:-3306}:3306"\n' : ''}    environment:
       MARIADB_DATABASE: \${MARIADB_DATABASE:-${finalDbName}}
       MARIADB_USER: \${MARIADB_USER:-${finalDbUser}}
       MARIADB_PASSWORD: \${MARIADB_PASSWORD}
@@ -261,11 +257,11 @@ MARIADB_USER=${finalDbUser}
 MARIADB_PASSWORD=${dbPassword}
 MARIADB_ROOT_PASSWORD=${dbRootPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
-MARIADB_PORT=3306
-
-# Database Connection URLs
+${enableExternalPort ? `MARIADB_PORT=3306
 DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@localhost:3306/${finalDbName}
 DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@localhost:3306/${finalDbName}
+` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 集群内部连接串
 INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
 INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
 `;
@@ -276,9 +272,7 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalD
   database:
     image: \${MYSQL_IMAGE:-${imageToUse}}
     restart: unless-stopped
-    ports:
-      - "\${MYSQL_PORT:-3306}:3306"
-    environment:
+${enableExternalPort ? '    ports:\n      - "${MYSQL_PORT:-3306}:3306"\n' : ''}    environment:
       MYSQL_DATABASE: \${MYSQL_DATABASE:-${finalDbName}}
       MYSQL_USER: \${MYSQL_USER:-${finalDbUser}}
       MYSQL_PASSWORD: \${MYSQL_PASSWORD}
@@ -292,11 +286,11 @@ MYSQL_DATABASE=${finalDbName}
 MYSQL_USER=${finalDbUser}
 MYSQL_PASSWORD=${dbPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
-MYSQL_PORT=3306
-
-# Database Connection URLs
+${enableExternalPort ? `MYSQL_PORT=3306
 DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@localhost:3306/${finalDbName}
 DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@localhost:3306/${finalDbName}
+` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 集群内部连接串
 INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
 INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
 `;
@@ -307,18 +301,16 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalD
   database:
     image: \${REDIS_IMAGE:-${imageToUse}}
     restart: unless-stopped
-    ports:
-      - "\${REDIS_PORT:-6379}:6379"
-    command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
+${enableExternalPort ? '    ports:\n      - "${REDIS_PORT:-6379}:6379"\n' : ''}    command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
     volumes:
       - ./data:/data
 `;
         envContent = `REDIS_IMAGE=${imageToUse}
 REDIS_PASSWORD=${dbPassword}
-REDIS_PORT=6379
-
-# Database Connection URLs
+${enableExternalPort ? `REDIS_PORT=6379
 REDIS_URL=redis://:${dbPassword}@localhost:6379
+` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 集群内部连接串
 INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
 `;
         break;
@@ -328,9 +320,7 @@ INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
   database:
     image: \${LIBSQL_IMAGE:-${imageToUse}}
     restart: unless-stopped
-    ports:
-      - "\${LIBSQL_PORT:-8080}:8080"
-    environment:
+${enableExternalPort ? '    ports:\n      - "${LIBSQL_PORT:-8080}:8080"\n' : ''}    environment:
       SQLD_AUTH_TOKEN: \${SQLD_AUTH_TOKEN}
       SQLD_NODE: "primary"
       SQLD_HTTP_LISTEN_ADDR: "0.0.0.0:8080"
@@ -339,10 +329,10 @@ INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
 `;
         envContent = `LIBSQL_IMAGE=${imageToUse}
 SQLD_AUTH_TOKEN=${dbPassword}
-LIBSQL_PORT=8080
-
-# Database Connection URLs
+${enableExternalPort ? `LIBSQL_PORT=8080
 LIBSQL_URL=http://localhost:8080
+` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 集群内部连接串
 INTERNAL_LIBSQL_URL=http://database:8080
 `;
         break;
@@ -368,8 +358,8 @@ INTERNAL_LIBSQL_URL=http://database:8080
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Databases"
-      subtitle="Select a database"
+      title="创建数据库"
+      subtitle="选择官方数据库引擎"
       maxWidth="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pt-1 font-sans text-xs">
@@ -397,7 +387,7 @@ INTERNAL_LIBSQL_URL=http://database:8080
 
         {/* Form Fields Section */}
         <div className="space-y-4 pt-2 border-t border-line/60">
-          <h4 className="text-sm font-semibold text-ink tracking-tight">Fill the next fields.</h4>
+          <h4 className="text-sm font-semibold text-ink tracking-tight">填写基础配置</h4>
 
           {error && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs">
@@ -407,12 +397,12 @@ INTERNAL_LIBSQL_URL=http://database:8080
 
           {/* Name Field */}
           <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Name</label>
+            <label className="block text-xs font-medium text-ink mb-1.5">实例名称 (Name)</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Name"
+              placeholder="例如 my-postgres"
               className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
             />
           </div>
@@ -420,12 +410,12 @@ INTERNAL_LIBSQL_URL=http://database:8080
           {/* Database Name (if applicable) */}
           {currentOption.hasUserAndDb && (
             <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">Database Name</label>
+              <label className="block text-xs font-medium text-ink mb-1.5">初始数据库名称 (Database Name)</label>
               <input
                 type="text"
                 value={dbName}
                 onChange={(e) => setDbName(e.target.value)}
-                placeholder="Database Name"
+                placeholder="例如 app_db"
                 className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
               />
             </div>
@@ -434,12 +424,12 @@ INTERNAL_LIBSQL_URL=http://database:8080
           {/* Database User (if applicable) */}
           {currentOption.hasUserAndDb && (
             <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">Database User</label>
+              <label className="block text-xs font-medium text-ink mb-1.5">数据库用户名 (Database User)</label>
               <input
                 type="text"
                 value={dbUser}
                 onChange={(e) => setDbUser(e.target.value)}
-                placeholder={`Default ${currentOption.defaultUser}`}
+                placeholder={`默认 ${currentOption.defaultUser}`}
                 className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
               />
             </div>
@@ -447,13 +437,13 @@ INTERNAL_LIBSQL_URL=http://database:8080
 
           {/* Database Password */}
           <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Database Password</label>
+            <label className="block text-xs font-medium text-ink mb-1.5">数据库密码 (Database Password)</label>
             <div className="relative flex items-center">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={dbPassword}
                 onChange={(e) => setDbPassword(e.target.value)}
-                placeholder="Database Password"
+                placeholder="请输入或点击右侧生成密码"
                 className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
               />
               <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
@@ -480,13 +470,13 @@ INTERNAL_LIBSQL_URL=http://database:8080
           {/* Database Root password (for MariaDB & MySQL) */}
           {currentOption.hasRootPassword && (
             <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">Database Root password</label>
+              <label className="block text-xs font-medium text-ink mb-1.5">Root 管理员密码 (Root Password)</label>
               <div className="relative flex items-center">
                 <input
                   type={showRootPassword ? 'text' : 'password'}
                   value={dbRootPassword}
                   onChange={(e) => setDbRootPassword(e.target.value)}
-                  placeholder="Database Root password"
+                  placeholder="请输入或点击右侧生成 Root 密码"
                   className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
                 />
                 <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
@@ -513,14 +503,33 @@ INTERNAL_LIBSQL_URL=http://database:8080
 
           {/* Docker image */}
           <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Docker image</label>
+            <label className="block text-xs font-medium text-ink mb-1.5">Docker 镜像标签 (Docker Image)</label>
             <input
               type="text"
               value={dockerImage}
               onChange={(e) => setDockerImage(e.target.value)}
-              placeholder={`Default ${currentOption.defaultImage}`}
+              placeholder={`默认 ${currentOption.defaultImage}`}
               className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono transition-colors"
             />
+          </div>
+
+          {/* External Connection Toggle (Default OFF) */}
+          <div className="p-3 bg-paper-2/70 dark:bg-white/[0.02] rounded-xl border border-line flex items-center justify-between gap-3">
+            <div>
+              <div className="font-semibold text-xs text-ink">开启外部网络连接 (向宿主机暴露端口)</div>
+              <p className="text-[11px] text-ink-muted mt-0.5">
+                默认关闭（推荐）。关闭后数据库仅可在容器内部网络中互联互通，安全性更高。创建后可在「外部凭据」中随时调整。
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={enableExternalPort}
+                onChange={(e) => setEnableExternalPort(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer dark:bg-stone-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent"></div>
+            </label>
           </div>
         </div>
 
@@ -542,10 +551,10 @@ INTERNAL_LIBSQL_URL=http://database:8080
             {isSubmitting ? (
               <>
                 <CircleNotch className="w-3.5 h-3.5 animate-spin" />
-                <span>Creating...</span>
+                <span>创建中...</span>
               </>
             ) : (
-              <span>Create</span>
+              <span>创建数据库</span>
             )}
           </button>
         </div>

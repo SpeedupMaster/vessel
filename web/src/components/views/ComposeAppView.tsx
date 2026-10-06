@@ -168,6 +168,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   // Database credentials parsed from envContent for managed database apps
   const [showDbPassword, setShowDbPassword] = useState(false);
   const [showDbRootPassword, setShowDbRootPassword] = useState(false);
+  const [showDbInternalUrl, setShowDbInternalUrl] = useState(false);
+  const [showDbExternalUrl, setShowDbExternalUrl] = useState(false);
+  const [showDbInternalRootUrl, setShowDbInternalRootUrl] = useState(false);
+  const [showDbExternalRootUrl, setShowDbExternalRootUrl] = useState(false);
+  const [externalPortInput, setExternalPortInput] = useState('');
+  const [isSavingExternalPort, setIsSavingExternalPort] = useState(false);
   const [copiedDbField, setCopiedDbField] = useState<string | null>(null);
 
   const handleCopyDbField = (text: string, fieldKey: string) => {
@@ -241,26 +247,64 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       engine === 'libSQL' ? '8080' : '5432'
     );
 
-    let externalUrl = envMap.DATABASE_URL || envMap.MONGO_URL || envMap.REDIS_URL || envMap.LIBSQL_URL || '';
-    if (!externalUrl) {
-      if (engine === 'PostgreSQL') externalUrl = `postgresql://${user || 'postgres'}:${password}@localhost:${port}/${dbName || 'postgres'}`;
-      else if (engine === 'MySQL' || engine === 'MariaDB') externalUrl = `mysql://${user || 'root'}:${password}@localhost:${port}/${dbName || 'app_db'}`;
-      else if (engine === 'MongoDB') externalUrl = `mongodb://${user || 'mongo'}:${password}@localhost:${port}/${dbName || 'app_db'}?authSource=admin`;
-      else if (engine === 'Redis') externalUrl = `redis://default:${password}@localhost:${port}`;
-      else if (engine === 'libSQL') externalUrl = `http://localhost:${port}`;
+    // Detect external mapped port from composeYaml
+    let detectedExternalPort = '';
+    try {
+      const parsed = YAML.parse(yaml);
+      const srv = parsed?.services?.database || (parsed?.services && Object.values(parsed.services)[0]) as any;
+      if (srv?.ports && Array.isArray(srv.ports) && srv.ports.length > 0) {
+        const rawPort = String(srv.ports[0]);
+        if (rawPort.includes(':')) {
+          const parts = rawPort.split(':');
+          let hostPart = parts[parts.length - 2]?.trim();
+          if (hostPart.startsWith('${') && hostPart.endsWith('}')) {
+            const varName = hostPart.slice(2, -1);
+            detectedExternalPort = envMap[varName] || '';
+          } else {
+            detectedExternalPort = hostPart || '';
+          }
+        } else {
+          detectedExternalPort = rawPort;
+        }
+      }
+    } catch {
+      const portMatch = yaml.match(/ports:\s*\n\s*-\s*["']?(\d+|\$\{[^}]+\}):(\d+)/);
+      if (portMatch) {
+        const hostPart = portMatch[1];
+        if (hostPart.startsWith('${') && hostPart.endsWith('}')) {
+          detectedExternalPort = envMap[hostPart.slice(2, -1)] || '';
+        } else {
+          detectedExternalPort = hostPart;
+        }
+      }
     }
+
+    const internalHost = 'database';
 
     let internalUrl = envMap.INTERNAL_DATABASE_URL || envMap.INTERNAL_MONGO_URL || envMap.INTERNAL_REDIS_URL || envMap.INTERNAL_LIBSQL_URL || '';
     if (!internalUrl) {
-      if (engine === 'PostgreSQL') internalUrl = `postgresql://${user || 'postgres'}:${password}@database:${port}/${dbName || 'postgres'}`;
-      else if (engine === 'MySQL' || engine === 'MariaDB') internalUrl = `mysql://${user || 'root'}:${password}@database:${port}/${dbName || 'app_db'}`;
-      else if (engine === 'MongoDB') internalUrl = `mongodb://${user || 'mongo'}:${password}@database:${port}/${dbName || 'app_db'}?authSource=admin`;
-      else if (engine === 'Redis') internalUrl = `redis://default:${password}@database:${port}`;
-      else if (engine === 'libSQL') internalUrl = `http://database:${port}`;
+      if (engine === 'PostgreSQL') internalUrl = `postgresql://${user || 'postgres'}:${password}@${internalHost}:${port}/${dbName || 'postgres'}`;
+      else if (engine === 'MySQL' || engine === 'MariaDB') internalUrl = `mysql://${user || 'root'}:${password}@${internalHost}:${port}/${dbName || 'app_db'}`;
+      else if (engine === 'MongoDB') internalUrl = `mongodb://${user || 'mongo'}:${password}@${internalHost}:${port}/${dbName || 'app_db'}?authSource=admin`;
+      else if (engine === 'Redis') internalUrl = `redis://default:${password}@${internalHost}:${port}`;
+      else if (engine === 'libSQL') internalUrl = `http://${internalHost}:${port}`;
     }
 
-    const rootUrl = envMap.DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@localhost:${port}/${dbName || 'app_db'}` : '');
-    const internalRootUrl = envMap.INTERNAL_DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@database:${port}/${dbName || 'app_db'}` : '');
+    const internalRootUrl = envMap.INTERNAL_DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@${internalHost}:${port}/${dbName || 'app_db'}` : '');
+
+    let externalUrl = '';
+    let rootUrl = '';
+    if (detectedExternalPort) {
+      externalUrl = envMap.DATABASE_URL || envMap.MONGO_URL || envMap.REDIS_URL || envMap.LIBSQL_URL || '';
+      if (!externalUrl) {
+        if (engine === 'PostgreSQL') externalUrl = `postgresql://${user || 'postgres'}:${password}@localhost:${detectedExternalPort}/${dbName || 'postgres'}`;
+        else if (engine === 'MySQL' || engine === 'MariaDB') externalUrl = `mysql://${user || 'root'}:${password}@localhost:${detectedExternalPort}/${dbName || 'app_db'}`;
+        else if (engine === 'MongoDB') externalUrl = `mongodb://${user || 'mongo'}:${password}@localhost:${detectedExternalPort}/${dbName || 'app_db'}?authSource=admin`;
+        else if (engine === 'Redis') externalUrl = `redis://default:${password}@localhost:${detectedExternalPort}`;
+        else if (engine === 'libSQL') externalUrl = `http://localhost:${detectedExternalPort}`;
+      }
+      rootUrl = envMap.DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@localhost:${detectedExternalPort}/${dbName || 'app_db'}` : '');
+    }
 
     return {
       engine,
@@ -269,12 +313,97 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       password,
       rootPassword,
       port,
+      internalHost,
+      detectedExternalPort,
       externalUrl,
       internalUrl,
       rootUrl,
       internalRootUrl,
     };
   }, [isDb, app, envContent, composeYaml, name]);
+
+  useEffect(() => {
+    if (dbInfo) {
+      setExternalPortInput(dbInfo.detectedExternalPort || '');
+    }
+  }, [dbInfo?.detectedExternalPort]);
+
+  const handleSaveExternalPort = async () => {
+    if (!app) return;
+    const trimmedPort = externalPortInput.trim();
+    if (trimmedPort && !/^\d+$/.test(trimmedPort)) {
+      toast.error('外部端口必须为有效数字端口 (1-65535)');
+      return;
+    }
+    const portNum = trimmedPort ? parseInt(trimmedPort, 10) : 0;
+    if (trimmedPort && (portNum < 1 || portNum > 65535)) {
+      toast.error('外部端口必须在 1 到 65535 范围内');
+      return;
+    }
+
+    setIsSavingExternalPort(true);
+    try {
+      const containerPort = dbInfo?.port || '5432';
+      let newYaml = composeYaml || app.composeYaml || '';
+      let newEnv = envContent || app.envContent || '';
+
+      try {
+        const doc = YAML.parseDocument(newYaml);
+        const services = doc.get('services') as any;
+        if (services) {
+          const dbService = services.get('database') || (services.items && services.items[0]?.value);
+          if (dbService) {
+            if (trimmedPort) {
+              dbService.set('ports', [`${trimmedPort}:${containerPort}`]);
+            } else {
+              dbService.delete('ports');
+            }
+            newYaml = doc.toString();
+          }
+        }
+      } catch {
+        if (trimmedPort) {
+          if (/ports:\s*\n(\s*-\s*["']?[^\n]+["']?\s*\n?)+/m.test(newYaml)) {
+            newYaml = newYaml.replace(/ports:\s*\n(\s*-\s*["']?[^\n]+["']?\s*\n?)+/m, `ports:\n      - "${trimmedPort}:${containerPort}"\n`);
+          } else {
+            newYaml = newYaml.replace(/(services:\s*\n\s*database:\s*\n)/, `$1    ports:\n      - "${trimmedPort}:${containerPort}"\n`);
+          }
+        } else {
+          newYaml = newYaml.replace(/\n\s*ports:\s*\n(\s*-\s*["']?[^\n]+["']?\s*\n?)+/g, '\n');
+        }
+      }
+
+      if (trimmedPort) {
+        const portKey = dbInfo?.engine === 'PostgreSQL' ? 'POSTGRES_PORT'
+          : dbInfo?.engine === 'MySQL' ? 'MYSQL_PORT'
+          : dbInfo?.engine === 'MariaDB' ? 'MARIADB_PORT'
+          : dbInfo?.engine === 'MongoDB' ? 'MONGO_PORT'
+          : dbInfo?.engine === 'Redis' ? 'REDIS_PORT'
+          : dbInfo?.engine === 'libSQL' ? 'LIBSQL_PORT' : 'DB_PORT';
+
+        if (new RegExp(`^${portKey}=`, 'm').test(newEnv)) {
+          newEnv = newEnv.replace(new RegExp(`^${portKey}=.*$`, 'm'), `${portKey}=${trimmedPort}`);
+        } else {
+          newEnv += `\n${portKey}=${trimmedPort}`;
+        }
+      }
+
+      setComposeYaml(newYaml);
+      setEnvContent(newEnv);
+
+      await onUpdateApp(app.id, {
+        composeYaml: newYaml,
+        envContent: newEnv,
+      });
+
+      toast.success(trimmedPort ? `外部端口已设置为 ${trimmedPort}，正在重新部署...` : '外部网络连接已关闭，正在重新部署...');
+      await onDeploy(app.id);
+    } catch (err: any) {
+      toast.error(`保存外部端口失败: ${err.message || '未知错误'}`);
+    } finally {
+      setIsSavingExternalPort(false);
+    }
+  };
 
   const dbOption = useMemo(() => {
     if (!isDb) return null;
@@ -963,12 +1092,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         <div className="flex items-center gap-1 p-1 bg-stone-100/90 dark:bg-white/[0.04] rounded-xl border border-line/40 w-fit overflow-x-auto scrollbar-none -mt-2">
           {(['general', 'environment', 'logs', 'monitoring', 'backups', 'advanced'] as TabKey[]).map((tabKey) => {
             const labels: Record<string, string> = {
-              general: 'General',
-              environment: 'Environment',
-              logs: 'Logs',
-              monitoring: 'Monitoring',
-              backups: 'Backups',
-              advanced: 'Advanced',
+              general: '常规',
+              environment: '环境变量',
+              logs: '日志',
+              monitoring: '监控',
+              backups: '备份',
+              advanced: '高级设置',
             };
             const isActive = activeTab === tabKey;
             return (
@@ -1634,10 +1763,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           ) : (
             /* ================= EDIT MODE: UNIFIED WORKSPACE ================= */
             <div className="space-y-6">
-              {/* Deploy Settings Card for Database (Dokploy 1:1 Figure 2) */}
+              {/* 部署设置 (Dokploy 1:1 Figure 3) */}
               {isDb && (
                 <div className="rounded-2xl border border-line/60 bg-paper dark:bg-[#121216] p-6 shadow-subtle space-y-4">
-                  <h3 className="text-base font-semibold text-ink tracking-tight">Deploy Settings</h3>
+                  <h3 className="text-base font-semibold text-ink tracking-tight">部署设置</h3>
 
                   <div className="flex flex-wrap items-center gap-3">
                     {/* Deploy Button */}
@@ -1657,7 +1786,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                           <path d="M12 9v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
                         </svg>
                       )}
-                      <span>{app?.status === 'deploying' || app?.status === 'rebuilding' ? 'Deploying...' : 'Deploy'}</span>
+                      <span>{app?.status === 'deploying' || app?.status === 'rebuilding' ? '部署中...' : '部署'}</span>
                     </button>
 
                     {/* Reload Button */}
@@ -1668,7 +1797,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-ink border border-line/40 transition-colors disabled:opacity-50 cursor-pointer"
                     >
                       <ArrowsClockwise className="w-3.5 h-3.5" />
-                      <span>Reload</span>
+                      <span>重载</span>
                     </button>
 
                     {/* Stop Button */}
@@ -1682,7 +1811,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         <circle cx="12" cy="12" r="10"/>
                         <path d="m4.93 4.93 14.14 14.14"/>
                       </svg>
-                      <span>Stop</span>
+                      <span>停止</span>
                     </button>
 
                     {/* Open Terminal Button */}
@@ -1692,231 +1821,326 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-ink border border-line/40 transition-colors cursor-pointer"
                     >
                       <span className="font-mono font-bold text-xs">&gt;_</span>
-                      <span>Open Terminal</span>
+                      <span>打开终端</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* DATABASE CREDENTIALS & CONNECTION PANEL (Dokploy style) */}
+              {/* 内部凭据 (Dokploy 1:1 Figure 3) */}
               {dbInfo && (
-                <div className="rounded-xl border border-line/80 bg-paper-2/70 dark:bg-[#111115] overflow-hidden shadow-subtle font-sans">
-                  <div className="px-5 py-3.5 bg-paper-3/40 dark:bg-white/[0.02] border-b border-line/30 dark:border-white/[0.06] flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                        <Database className="w-4 h-4" weight="bold" />
-                      </div>
+                <div className="rounded-2xl border border-line/60 bg-paper dark:bg-[#121216] p-6 shadow-subtle space-y-5">
+                  <h3 className="text-base font-semibold text-ink tracking-tight">内部凭据</h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Left Column */}
+                    <div className="space-y-4">
+                      {/* User */}
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-xs sm:text-sm text-ink tracking-tight">数据库连接与访问凭据</h3>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            {dbInfo.engine}
-                          </span>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          用户名
+                        </label>
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                          <span className="truncate">{dbInfo.user || '-'}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyDbField(dbInfo.user, 'user')}
+                            className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer ml-2 flex-shrink-0"
+                            title="复制用户名"
+                          >
+                            {copiedDbField === 'user' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
                         </div>
-                        <p className="text-[11px] text-ink-muted">
-                          所有配置已作为环境变量写入并生效，支持一键复制凭据与直接连接
-                        </p>
                       </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('environment')}
-                      className="text-[11px] text-accent hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>前往修改 .env</span>
-                      <ArrowSquareOut className="w-3 h-3" />
-                    </button>
-                  </div>
 
-                  <div className="p-5 space-y-4">
-                    {/* Connection Strings */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {/* External Connection URL */}
-                      {dbInfo.externalUrl && (
-                        <div className="p-3 rounded-lg bg-paper border border-line/70">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[11px] font-medium text-ink-muted flex items-center gap-1">
-                              <Globe className="w-3 h-3 text-accent" />
-                              外部连接串 (Client / Tools URL)
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyDbField(dbInfo.externalUrl!, 'ext-url')}
-                              className="text-[11px] text-accent hover:text-accent-hover font-medium flex items-center gap-1 cursor-pointer"
-                            >
-                              {copiedDbField === 'ext-url' ? (
-                                <>
-                                  <Check className="w-3 h-3 text-emerald-500" />
-                                  <span className="text-emerald-500">已复制</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>复制</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                          <div className="font-mono text-xs text-ink bg-paper-2/60 dark:bg-black/30 px-2.5 py-1.5 rounded border border-line/40 truncate select-all">
-                            {dbInfo.externalUrl}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Internal Connection URL */}
-                      {dbInfo.internalUrl && (
-                        <div className="p-3 rounded-lg bg-paper border border-line/70">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[11px] font-medium text-ink-muted flex items-center gap-1">
-                              <Stack className="w-3 h-3 text-emerald-500" />
-                              容器内网络连接串 (Internal Service URL)
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyDbField(dbInfo.internalUrl!, 'int-url')}
-                              className="text-[11px] text-accent hover:text-accent-hover font-medium flex items-center gap-1 cursor-pointer"
-                            >
-                              {copiedDbField === 'int-url' ? (
-                                <>
-                                  <Check className="w-3 h-3 text-emerald-500" />
-                                  <span className="text-emerald-500">已复制</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>复制</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                          <div className="font-mono text-xs text-ink bg-paper-2/60 dark:bg-black/30 px-2.5 py-1.5 rounded border border-line/40 truncate select-all">
-                            {dbInfo.internalUrl}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Detailed Credentials Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
-                      {/* Database Name */}
-                      {dbInfo.dbName && (
-                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold">
-                            Database Name
-                          </div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-xs text-ink font-semibold truncate">{dbInfo.dbName}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyDbField(dbInfo.dbName!, 'dbname')}
-                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
-                              title="复制数据库名"
-                            >
-                              {copiedDbField === 'dbname' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Database User */}
-                      {dbInfo.user && (
-                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold">
-                            User
-                          </div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-xs text-ink font-semibold truncate">{dbInfo.user}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyDbField(dbInfo.user!, 'dbuser')}
-                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
-                              title="复制用户名"
-                            >
-                              {copiedDbField === 'dbuser' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Database Password */}
-                      {dbInfo.password && (
-                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold flex items-center justify-between">
-                            <span>Password</span>
+                      {/* Password */}
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          密码
+                        </label>
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                          <span className="truncate">
+                            {showDbPassword ? dbInfo.password : '••••••••••••••••'}
+                          </span>
+                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                             <button
                               type="button"
                               onClick={() => setShowDbPassword(!showDbPassword)}
-                              className="text-ink-muted hover:text-ink cursor-pointer"
+                              className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
                               title={showDbPassword ? '隐藏' : '显示'}
                             >
-                              {showDbPassword ? <EyeSlash className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              {showDbPassword ? <EyeSlash className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                             </button>
-                          </div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-xs text-ink truncate">
-                              {showDbPassword ? dbInfo.password : '••••••••••••••••'}
-                            </span>
                             <button
                               type="button"
-                              onClick={() => handleCopyDbField(dbInfo.password!, 'dbpass')}
-                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
+                              onClick={() => handleCopyDbField(dbInfo.password, 'password')}
+                              className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
                               title="复制密码"
                             >
-                              {copiedDbField === 'dbpass' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                              {copiedDbField === 'password' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                           </div>
                         </div>
-                      )}
+                      </div>
 
-                      {/* Database Root Password (if applicable) */}
-                      {dbInfo.rootPassword && (
-                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold flex items-center justify-between">
-                            <span className="text-amber-600 dark:text-amber-400">Root Password</span>
-                            <button
-                              type="button"
-                              onClick={() => setShowDbRootPassword(!showDbRootPassword)}
-                              className="text-ink-muted hover:text-ink cursor-pointer"
-                              title={showDbRootPassword ? '隐藏' : '显示'}
-                            >
-                              {showDbRootPassword ? <EyeSlash className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                            </button>
-                          </div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-xs text-ink truncate">
+                      {/* Internal Host */}
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          内部主机
+                        </label>
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                          <span className="truncate">{dbInfo.internalHost}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyDbField(dbInfo.internalHost, 'internalHost')}
+                            className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer ml-2 flex-shrink-0"
+                            title="复制内部主机"
+                          >
+                            {copiedDbField === 'internalHost' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Root Password (if applicable) */}
+                      {dbInfo.rootPassword ? (
+                        <div>
+                          <label className="block text-xs font-semibold text-ink mb-1.5">
+                            Root 密码
+                          </label>
+                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                            <span className="truncate">
                               {showDbRootPassword ? dbInfo.rootPassword : '••••••••••••••••'}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyDbField(dbInfo.rootPassword!, 'dbrootpass')}
-                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
-                              title="复制 Root 密码"
-                            >
-                              {copiedDbField === 'dbrootpass' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                            </button>
+                            <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setShowDbRootPassword(!showDbRootPassword)}
+                                className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                title={showDbRootPassword ? '隐藏' : '显示'}
+                              >
+                                {showDbRootPassword ? <EyeSlash className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyDbField(dbInfo.rootPassword, 'rootPassword')}
+                                className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                title="复制 Root 密码"
+                              >
+                                {copiedDbField === 'rootPassword' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      )}
+                      ) : null}
+                    </div>
 
-                      {/* Port */}
-                      {dbInfo.port && (
-                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold">
-                            Port
-                          </div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-xs text-ink font-semibold">{dbInfo.port}</span>
+                    {/* Right Column */}
+                    <div className="space-y-4">
+                      {/* Database Name */}
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          数据库名称
+                        </label>
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                          <span className="truncate">{dbInfo.dbName || '-'}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyDbField(dbInfo.dbName, 'dbName')}
+                            className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer ml-2 flex-shrink-0"
+                            title="复制数据库名称"
+                          >
+                            {copiedDbField === 'dbName' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Internal Port (Container) */}
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          内部端口 (容器)
+                        </label>
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                          <span className="truncate">{dbInfo.port}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyDbField(dbInfo.port, 'port')}
+                            className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer ml-2 flex-shrink-0"
+                            title="复制端口"
+                          >
+                            {copiedDbField === 'port' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Internal Connection URL */}
+                      <div>
+                        <label className="block text-xs font-semibold text-ink mb-1.5">
+                          内部连接字符串
+                        </label>
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                          <span className="truncate select-all">
+                            {showDbInternalUrl ? dbInfo.internalUrl : '••••••••••••••••••••••••••••••••••••••••••••'}
+                          </span>
+                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                             <button
                               type="button"
-                              onClick={() => handleCopyDbField(dbInfo.port!, 'dbport')}
-                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
-                              title="复制端口"
+                              onClick={() => setShowDbInternalUrl(!showDbInternalUrl)}
+                              className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                              title={showDbInternalUrl ? '隐藏' : '显示'}
                             >
-                              {copiedDbField === 'dbport' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                              {showDbInternalUrl ? <EyeSlash className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.internalUrl, 'internalUrl')}
+                              className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                              title="复制内部连接字符串"
+                            >
+                              {copiedDbField === 'internalUrl' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Internal Root Connection URL (if applicable) */}
+                      {dbInfo.rootPassword && dbInfo.internalRootUrl ? (
+                        <div>
+                          <label className="block text-xs font-semibold text-ink mb-1.5">
+                            内部 Root 连接字符串
+                          </label>
+                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                            <span className="truncate select-all">
+                              {showDbInternalRootUrl ? dbInfo.internalRootUrl : '••••••••••••••••••••••••••••••••••••••••••••'}
+                            </span>
+                            <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setShowDbInternalRootUrl(!showDbInternalRootUrl)}
+                                className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                title={showDbInternalRootUrl ? '隐藏' : '显示'}
+                              >
+                                {showDbInternalRootUrl ? <EyeSlash className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyDbField(dbInfo.internalRootUrl, 'internalRootUrl')}
+                                className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                title="复制内部 Root 连接字符串"
+                              >
+                                {copiedDbField === 'internalRootUrl' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 外部凭据 (Dokploy 1:1 Figure 3) */}
+              {dbInfo && (
+                <div className="rounded-2xl border border-line/60 bg-paper dark:bg-[#121216] p-6 shadow-subtle space-y-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-ink tracking-tight">外部凭据</h3>
+                    <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+                      为了使数据库可以通过互联网或宿主机外部网络访问，您必须设置一个端口，并确保该端口未被其他应用或数据库占用。默认关闭外部连接以保证数据安全。
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-ink mb-1.5">
+                        外部端口 (互联网)
+                      </label>
+                      <input
+                        type="text"
+                        value={externalPortInput}
+                        onChange={(e) => setExternalPortInput(e.target.value)}
+                        placeholder="例如: 5432 (留空则保持关闭)"
+                        className="w-full bg-stone-50/50 dark:bg-white/[0.03] border border-line/60 rounded-xl px-4 py-2.5 text-xs text-ink font-mono focus:border-accent focus:bg-paper focus:outline-none transition-colors"
+                      />
+                    </div>
+
+                    {dbInfo.detectedExternalPort ? (
+                      <div className="space-y-3 pt-1">
+                        <div>
+                          <label className="block text-xs font-semibold text-ink mb-1.5">
+                            外部连接字符串
+                          </label>
+                          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                            <span className="truncate select-all">
+                              {showDbExternalUrl ? dbInfo.externalUrl : '••••••••••••••••••••••••••••••••••••••••••••'}
+                            </span>
+                            <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setShowDbExternalUrl(!showDbExternalUrl)}
+                                className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                title={showDbExternalUrl ? '隐藏' : '显示'}
+                              >
+                                {showDbExternalUrl ? <EyeSlash className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyDbField(dbInfo.externalUrl, 'externalUrl')}
+                                className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                title="复制外部连接字符串"
+                              >
+                                {copiedDbField === 'externalUrl' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {dbInfo.rootPassword && dbInfo.rootUrl ? (
+                          <div>
+                            <label className="block text-xs font-semibold text-ink mb-1.5">
+                              外部 Root 连接字符串
+                            </label>
+                            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-line/60 bg-stone-50/70 dark:bg-white/[0.03] text-xs font-mono text-ink">
+                              <span className="truncate select-all">
+                                {showDbExternalRootUrl ? dbInfo.rootUrl : '••••••••••••••••••••••••••••••••••••••••••••'}
+                              </span>
+                              <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDbExternalRootUrl(!showDbExternalRootUrl)}
+                                  className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                  title={showDbExternalRootUrl ? '隐藏' : '显示'}
+                                >
+                                  {showDbExternalRootUrl ? <EyeSlash className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyDbField(dbInfo.rootUrl, 'externalRootUrl')}
+                                  className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                                  title="复制外部 Root 连接字符串"
+                                >
+                                  {copiedDbField === 'externalRootUrl' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-xl bg-stone-50/70 dark:bg-white/[0.02] border border-line/50 flex items-center gap-2.5 text-xs text-ink-muted">
+                        <span className="text-base">🔒</span>
+                        <span>外部网络连接当前已关闭（默认仅限容器内部网络安全互通）。如需宿主机客户端直连，请在上方输入端口并保存。</span>
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSaveExternalPort}
+                        disabled={isSavingExternalPort}
+                        className="px-5 py-2 rounded-lg text-xs font-medium bg-black text-white hover:bg-stone-800 dark:bg-white dark:text-black dark:hover:bg-stone-200 transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                      >
+                        {isSavingExternalPort && <CircleNotch className="w-3.5 h-3.5 animate-spin" />}
+                        <span>{isSavingExternalPort ? '保存中...' : '保存'}</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2607,7 +2831,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       {activeTab === 'monitoring' && mode === 'edit' && app && (
         <div className="space-y-6">
           <div>
-            <h3 className="font-semibold text-sm text-ink tracking-tight">Monitoring & Telemetry</h3>
+            <h3 className="font-semibold text-sm text-ink tracking-tight">运行监控与遥测</h3>
             <p className="text-xs text-ink-muted mt-1 leading-relaxed">
               实时监控此数据库容器实例的运行状态、健康检查、端口网络与数据卷持久化
             </p>
@@ -2618,7 +2842,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             {/* Status Card */}
             <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
               <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
-                Container State
+                容器运行状态
               </div>
               <div className="flex items-center gap-2">
                 <span
@@ -2629,50 +2853,52 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   }`}
                 />
                 <span className="text-base font-semibold text-ink capitalize">
-                  {app?.status || 'Unknown'}
+                  {app?.status === 'running' ? '运行中' : app?.status || '未知'}
                 </span>
               </div>
               <p className="text-[11px] text-ink-muted">
-                {app?.containers?.[0]?.status || (app?.status === 'running' ? 'Active and responding' : 'Container is not running')}
+                {app?.containers?.[0]?.status || (app?.status === 'running' ? '正常运行且响应' : '容器未在运行')}
               </p>
             </div>
 
             {/* Port Card */}
             <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
               <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
-                Exposed Port
+                外部暴露端口
               </div>
               <div className="text-base font-semibold font-mono text-ink">
-                {dbInfo?.port || '5432'}
+                {dbInfo?.detectedExternalPort || '未映射'}
               </div>
               <p className="text-[11px] text-ink-muted">
-                0.0.0.0:{dbInfo?.port || '5432'} (Host)
+                {dbInfo?.detectedExternalPort
+                  ? `0.0.0.0:${dbInfo.detectedExternalPort} (宿主机映射)`
+                  : '外部网络连接已关闭 (仅限容器内网)'}
               </p>
             </div>
 
             {/* Engine Image Card */}
             <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
               <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
-                Engine & Image
+                数据库引擎与镜像
               </div>
               <div className="text-base font-semibold text-ink truncate">
-                {dbInfo?.engine || 'Database'}
+                {dbInfo?.engine || '数据库'}
               </div>
               <p className="text-[11px] font-mono text-ink-muted truncate">
-                {app?.containers?.[0]?.image || 'Official Docker Image'}
+                {app?.containers?.[0]?.image || '官方 Docker 镜像'}
               </p>
             </div>
 
             {/* Restart Policy Card */}
             <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
               <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
-                Restart Policy
+                重启策略
               </div>
               <div className="text-base font-semibold text-ink">
                 unless-stopped
               </div>
               <p className="text-[11px] text-ink-muted">
-                Auto-restart on system failure
+                故障或系统重启时自动恢复
               </p>
             </div>
           </div>
@@ -2683,7 +2909,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <div className="flex items-center gap-2">
                 <Stack className="w-4 h-4 text-accent" />
                 <h4 className="font-semibold text-xs sm:text-sm text-ink tracking-tight">
-                  容器运行详情 (Container Inspection)
+                  容器运行详情
                 </h4>
               </div>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-paper-3 dark:bg-white/[0.06] text-ink-muted border border-line/60">
@@ -2693,23 +2919,23 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
             <div className="divide-y divide-line/30 dark:divide-white/[0.06] text-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
-                <span className="text-ink-muted">Container Name</span>
+                <span className="text-ink-muted">容器名称</span>
                 <span className="font-mono text-ink font-semibold">{app?.containers?.[0]?.name || app?.name || 'database'}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
-                <span className="text-ink-muted">Container ID</span>
+                <span className="text-ink-muted">容器 ID</span>
                 <span className="font-mono text-ink">{app?.containers?.[0]?.id ? app.containers[0].id.slice(0, 12) : '未生成'}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
-                <span className="text-ink-muted">Data Volume Mount</span>
-                <span className="font-mono text-ink">./data &rarr; Persistent Storage</span>
+                <span className="text-ink-muted">持久化数据卷挂载</span>
+                <span className="font-mono text-ink">./data &rarr; 持久化数据存储</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
-                <span className="text-ink-muted">Internal Network</span>
-                <span className="font-mono text-ink">vessel-network (Bridge)</span>
+                <span className="text-ink-muted">内部虚拟网络</span>
+                <span className="font-mono text-ink">vessel-network (Bridge 桥接)</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
-                <span className="text-ink-muted">Last Deployed At</span>
+                <span className="text-ink-muted">最近部署时间</span>
                 <span className="font-mono text-ink-muted">{app?.lastDeployedAt || app?.updatedAt || '从未部署'}</span>
               </div>
             </div>
