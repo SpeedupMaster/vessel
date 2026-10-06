@@ -44,6 +44,7 @@ import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { CodeEditorWithLines } from '../common/CodeEditorWithLines.js';
 import { Modal } from '../common/Modal.js';
+import { DatabaseTerminalModal } from '../common/DatabaseTerminalModal.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { LogsPanel } from './LogsPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
@@ -175,6 +176,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [externalPortInput, setExternalPortInput] = useState('');
   const [isSavingExternalPort, setIsSavingExternalPort] = useState(false);
   const [copiedDbField, setCopiedDbField] = useState<string | null>(null);
+  const [showTerminalModal, setShowTerminalModal] = useState(false);
 
   const handleCopyDbField = (text: string, fieldKey: string) => {
     if (!text) return;
@@ -1817,7 +1819,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     {/* Open Terminal Button */}
                     <button
                       type="button"
-                      onClick={() => setActiveTab('logs')}
+                      onClick={() => setShowTerminalModal(true)}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-ink border border-line/40 transition-colors cursor-pointer"
                     >
                       <span className="font-mono font-bold text-xs">&gt;_</span>
@@ -3661,6 +3663,15 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Database Command Terminal Modal */}
+      {showTerminalModal && app && (
+        <DatabaseTerminalModal
+          isOpen={showTerminalModal}
+          onClose={() => setShowTerminalModal(false)}
+          app={app}
+        />
       )}
     </div>
   );

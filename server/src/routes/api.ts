@@ -325,6 +325,20 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
   }
 });
 
+apiRouter.post('/apps/:id/exec', requireAuth, async (req: Request, res: Response) => {
+  const apps = db.get('apps') || [];
+  const app = apps.find((a) => a.id === req.params.id);
+  if (!app) return res.status(404).json({ error: 'App not found' });
+
+  const { command, mode, service } = req.body;
+  if (typeof command !== 'string') {
+    return res.status(400).json({ error: 'Command string is required' });
+  }
+
+  const result = await dockerService.execInApp(app, { command, mode, service });
+  res.json(result);
+});
+
 // ======================= TEMPLATES =======================
 const PRESET_TEMPLATES = [
   {
