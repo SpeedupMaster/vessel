@@ -119,18 +119,18 @@ export const Tooltip: React.FC<TooltipProps> = ({
             }}
             className="fixed z-[99999] pointer-events-none select-none animate-tooltip-in"
           >
-            <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-neutral-900/95 dark:bg-neutral-800/95 dark:text-neutral-100 rounded-md shadow-floating border border-neutral-700/60 dark:border-neutral-700 whitespace-nowrap tracking-tight backdrop-blur-sm">
+            <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-neutral-900/95 dark:bg-neutral-800/95 dark:text-neutral-100 rounded-lg shadow-xl whitespace-nowrap tracking-tight backdrop-blur-sm">
               {content}
               {/* Arrow Indicator */}
               <div
-                className={`absolute w-1.5 h-1.5 bg-neutral-900/95 dark:bg-neutral-800/95 transform rotate-45 border-neutral-700/60 dark:border-neutral-700 ${
+                className={`absolute w-1.5 h-1.5 bg-neutral-900/95 dark:bg-neutral-800/95 transform rotate-45 ${
                   coords.side === 'top'
-                    ? 'bottom-[-3px] left-1/2 -translate-x-1/2 border-r border-b'
+                    ? 'bottom-[-3px] left-1/2 -translate-x-1/2'
                     : coords.side === 'bottom'
-                    ? 'top-[-3px] left-1/2 -translate-x-1/2 border-l border-t'
+                    ? 'top-[-3px] left-1/2 -translate-x-1/2'
                     : coords.side === 'left'
-                    ? 'right-[-3px] top-1/2 -translate-y-1/2 border-t border-r'
-                    : 'left-[-3px] top-1/2 -translate-y-1/2 border-b border-l'
+                    ? 'right-[-3px] top-1/2 -translate-y-1/2'
+                    : 'left-[-3px] top-1/2 -translate-y-1/2'
                 }`}
               />
             </div>
@@ -304,18 +304,18 @@ export const GlobalTooltip: React.FC = () => {
       }}
       className="fixed z-[99999] pointer-events-none select-none transition-all duration-150 ease-out animate-tooltip-in"
     >
-      <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-neutral-900/95 dark:bg-neutral-800/95 dark:text-neutral-100 rounded-md shadow-floating border border-neutral-700/60 dark:border-neutral-700 whitespace-nowrap tracking-tight backdrop-blur-sm">
+      <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-neutral-900/95 dark:bg-neutral-800/95 dark:text-neutral-100 rounded-lg shadow-xl whitespace-nowrap tracking-tight backdrop-blur-sm">
         {tooltipState.text}
         {/* Arrow Indicator */}
         <div
-          className={`absolute w-1.5 h-1.5 bg-neutral-900/95 dark:bg-neutral-800/95 transform rotate-45 border-neutral-700/60 dark:border-neutral-700 ${
+          className={`absolute w-1.5 h-1.5 bg-neutral-900/95 dark:bg-neutral-800/95 transform rotate-45 ${
             tooltipState.side === 'top'
-              ? 'bottom-[-3px] left-1/2 -translate-x-1/2 border-r border-b'
+              ? 'bottom-[-3px] left-1/2 -translate-x-1/2'
               : tooltipState.side === 'bottom'
-              ? 'top-[-3px] left-1/2 -translate-x-1/2 border-l border-t'
+              ? 'top-[-3px] left-1/2 -translate-x-1/2'
               : tooltipState.side === 'left'
-              ? 'right-[-3px] top-1/2 -translate-y-1/2 border-t border-r'
-              : 'left-[-3px] top-1/2 -translate-y-1/2 border-b border-l'
+              ? 'right-[-3px] top-1/2 -translate-y-1/2'
+              : 'left-[-3px] top-1/2 -translate-y-1/2'
           }`}
         />
       </div>

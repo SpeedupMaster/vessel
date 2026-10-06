@@ -18,7 +18,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
         onClick={(e) => toggleTheme(e)}
         data-tooltip={`切换主题 (当前: ${theme === 'system' ? '跟随系统' : theme === 'dark' ? '深色' : '浅色'})`}
         className={clsx(
-          'p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-transform duration-150 cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 active:scale-90 group',
+          'p-2 rounded-xl text-ink-muted hover:text-ink bg-paper-3 hover:bg-paper-4 transition-transform duration-150 cursor-pointer outline-none focus:outline-none active:scale-90 group',
           className
         )}
       >
@@ -75,7 +75,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
       role="group"
       aria-label="主题切换"
       className={clsx(
-        'inline-flex items-center p-0.5 bg-paper-3/90 dark:bg-neutral-900 border border-line rounded-lg transition-colors select-none',
+        'inline-flex items-center p-1 bg-paper-3 rounded-xl transition-colors select-none',
         className
       )}
     >
@@ -88,10 +88,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
             onClick={(e) => setTheme(opt.id, e)}
             data-tooltip={opt.label}
             className={clsx(
-              'relative min-w-[36px] min-h-[36px] p-2 rounded-[6px] text-xs transition-transform duration-150 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 border active:scale-95',
+              'relative min-w-[34px] min-h-[34px] p-2 rounded-lg text-xs transition-all duration-150 flex items-center justify-center cursor-pointer outline-none active:scale-95',
               isActive
-                ? 'bg-white dark:bg-neutral-800 text-ink shadow-subtle border-line/60 dark:border-white/10 font-medium'
-                : 'text-ink-faint hover:text-ink-muted hover:bg-paper-2/40 border-transparent'
+                ? 'bg-paper-4 text-ink shadow-sm font-medium'
+                : 'text-ink-muted hover:text-ink hover:bg-paper-4/50'
             )}
           >
             {opt.icon(isActive)}

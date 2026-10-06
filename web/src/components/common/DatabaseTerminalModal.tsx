@@ -350,13 +350,13 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
       {/* Terminal Window Panel */}
       <div
         ref={panelRef}
-        className="relative w-full max-w-5xl h-[680px] max-h-[92vh] bg-[#0c0d12] border border-zinc-800/90 rounded-2xl shadow-2xl z-10 flex flex-col overflow-hidden text-zinc-200 font-sans"
+        className="relative w-full max-w-5xl h-[680px] max-h-[92vh] bg-[#0c0d12] rounded-3xl shadow-2xl z-10 flex flex-col overflow-hidden text-zinc-200 font-sans"
       >
         {/* Terminal Header */}
-        <div className="px-4 py-2.5 bg-[#12131a] border-b border-zinc-800/80 flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="px-5 py-3.5 bg-[#12131a] flex items-center justify-between gap-3 flex-shrink-0">
           {/* Left: Window Title & Meta */}
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-zinc-800/90 flex items-center justify-center text-zinc-300 font-mono text-xs font-bold">
+            <div className="w-6 h-6 rounded-md bg-zinc-800 flex items-center justify-center text-zinc-300 font-mono text-xs font-bold">
               &gt;_
             </div>
 
@@ -370,15 +370,15 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 ml-1">
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-zinc-800/80 text-zinc-300 border border-zinc-700/50">
+              <span className="px-2 py-0.5 rounded-lg text-[11px] font-mono bg-zinc-800 text-zinc-300">
                 {dbInfo.name}
               </span>
 
               <span
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-mono font-medium ${
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-mono font-medium ${
                   isRunning
-                    ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-800/40'
-                    : 'bg-zinc-800/80 text-zinc-400 border border-zinc-700/50'
+                    ? 'bg-emerald-950/50 text-emerald-400'
+                    : 'bg-zinc-800 text-zinc-400'
                 }`}
               >
                 <span
@@ -394,14 +394,14 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
           {/* Right: Controls & Mode Switch */}
           <div className="flex items-center gap-2">
             {/* Mode Segmented Switcher */}
-            <div className="flex items-center p-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-medium font-mono">
+            <div className="flex items-center p-1 rounded-xl bg-zinc-900 text-[11px] font-medium font-mono">
               <button
                 type="button"
                 onClick={() => {
                   setMode('db');
                   inputRef.current?.focus();
                 }}
-                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   mode === 'db'
                     ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -416,7 +416,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                   setMode('shell');
                   inputRef.current?.focus();
                 }}
-                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   mode === 'shell'
                     ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -432,7 +432,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowQuickMenu(!showQuickMenu)}
-                className="px-2.5 py-1 text-xs font-mono font-medium text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-xs font-mono font-medium text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="选择并执行快捷预设指令"
               >
                 <span>快捷指令</span>
@@ -440,8 +440,8 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
               </button>
 
               {showQuickMenu && (
-                <div className="absolute right-0 mt-1.5 w-72 bg-[#161720] border border-zinc-700/80 rounded-xl shadow-2xl py-1.5 z-30 font-mono text-xs">
-                  <div className="px-3 py-1.5 text-[10px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800/80 mb-1">
+                <div className="absolute right-0 mt-1.5 w-72 bg-[#161720] rounded-2xl shadow-2xl p-1.5 z-30 font-mono text-xs">
+                  <div className="px-3 py-1.5 text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
                     {mode === 'db' ? `${dbInfo.name} 预设指令` : '容器系统指令'}
                   </div>
                   {quickCommands.map((item, idx) => (
@@ -449,7 +449,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                       key={idx}
                       type="button"
                       onClick={() => handleExecute(item.cmd)}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-800/80 flex flex-col gap-0.5 transition-colors cursor-pointer group"
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-800/80 rounded-lg flex flex-col gap-0.5 transition-colors cursor-pointer group"
                     >
                       <div className="text-zinc-200 group-hover:text-white font-medium text-xs">
                         {item.label}
@@ -502,10 +502,10 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
         {/* Terminal Screen Body */}
         <div
           onClick={() => inputRef.current?.focus()}
-          className="flex-1 bg-[#090a0f] p-4 sm:p-5 font-mono text-xs sm:text-[13px] leading-relaxed overflow-y-auto space-y-2 select-text cursor-text"
+          className="flex-1 bg-[#090a0f] p-4 sm:p-5 font-mono text-xs sm:text-[13px] leading-relaxed overflow-y-auto space-y-2 select-text cursor-text no-scrollbar"
         >
           {/* CLI Welcome Banner */}
-          <div className="text-zinc-500 text-xs leading-relaxed space-y-0.5 pb-2 border-b border-zinc-900/80">
+          <div className="text-zinc-500 text-xs leading-relaxed space-y-0.5 pb-2">
             <div className="text-zinc-400 font-medium">
               Vessel Terminal 1.0 — {dbInfo.name} ({mode === 'db' ? `Interactive ${dbInfo.defaultCli}` : '/bin/sh'})
             </div>
@@ -563,7 +563,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
         </div>
 
         {/* Terminal Input Bar */}
-        <div className="px-4 py-2.5 bg-[#101117] border-t border-zinc-800/80 flex items-center gap-2 flex-shrink-0">
+        <div className="px-5 py-3.5 bg-[#101117] flex items-center gap-2 flex-shrink-0">
           <span
             className={`font-mono text-xs font-bold select-none ${
               mode === 'db' ? 'text-emerald-400' : 'text-cyan-400'

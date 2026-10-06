@@ -24,6 +24,7 @@ export default {
         accent: {
           DEFAULT: 'var(--color-accent)',
           hover: 'var(--color-accent-hover)',
+          contrast: 'var(--color-accent-contrast)',
           muted: 'var(--color-accent-muted)',
           glow: 'var(--color-accent-glow)',
         },

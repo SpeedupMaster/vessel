@@ -223,10 +223,10 @@ export const AppsView: React.FC<AppsViewProps> = ({
   return (
     <div ref={containerRef} className="space-y-8">
       {/* Top Action Bar - Sticky on scroll with blur background */}
-      <div className="sticky -top-4 sm:-top-6 md:-top-8 lg:-top-10 z-20 -mx-4 sm:-mx-6 md:-mx-8 lg:-mx-10 px-4 sm:px-6 md:px-8 lg:px-10 py-3 bg-paper/90 backdrop-blur-md border-b border-line/40 transition-all shadow-sm">
+      <div className="sticky -top-4 sm:-top-6 md:-top-8 lg:-top-10 z-20 -mx-4 sm:-mx-6 md:-mx-8 lg:-mx-10 px-4 sm:px-6 md:px-8 lg:px-10 py-3 bg-paper/80 backdrop-blur-md transition-all">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="relative flex-1 max-w-md">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-faint">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink-faint">
               <MagnifyingGlass className="w-4 h-4" />
             </div>
             <input
@@ -234,7 +234,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索受管应用 (名称 / ID)..."
-              className="w-full min-h-[44px] bg-paper-2 border border-line rounded-lg pl-9 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent font-sans transition-colors shadow-subtle"
+              className="w-full min-h-[44px] bg-paper-2 rounded-xl pl-10 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-ink font-sans transition-colors"
             />
             {search && (
               <button
@@ -253,29 +253,29 @@ export const AppsView: React.FC<AppsViewProps> = ({
             <button
               type="button"
               onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
-              className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2 shadow-subtle cursor-pointer transition-all active:translate-y-px"
+              className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-y-px shadow-sm"
             >
               <Plus className="w-4 h-4" weight="bold" />
               <span>新建应用</span>
               <CaretDown className={`hidden md:inline-block w-3 h-3 transition-transform duration-200 ${isCreateMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Desktop Dropdown Popover (Dokploy style, hidden on mobile) */}
+            {/* Desktop Dropdown Popover */}
             {isCreateMenuOpen && (
-              <div className="hidden md:block absolute right-0 mt-2 w-64 rounded-xl bg-paper border border-line shadow-xl py-1.5 z-30 animate-fade-in font-sans">
+              <div className="hidden md:block absolute right-0 mt-2 w-64 rounded-2xl bg-paper-2 shadow-2xl p-1.5 z-30 animate-fade-in font-sans">
                 <button
                   type="button"
                   onClick={() => {
                     setIsCreateMenuOpen(false);
                     navigateTo('create');
                   }}
-                  className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-2 flex items-center gap-3 transition-colors cursor-pointer group"
+                  className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-3 rounded-xl flex items-center gap-3 transition-colors cursor-pointer group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-paper-3 text-ink flex items-center justify-center shrink-0">
                     <Stack className="w-4 h-4" weight="bold" />
                   </div>
                   <div>
-                    <div className="font-semibold text-ink group-hover:text-accent transition-colors">Compose 应用</div>
+                    <div className="font-semibold text-ink group-hover:text-ink-muted transition-colors">Compose 应用</div>
                     <div className="text-[11px] text-ink-muted">Docker Compose 自定义编排</div>
                   </div>
                 </button>
@@ -286,13 +286,13 @@ export const AppsView: React.FC<AppsViewProps> = ({
                     setIsCreateMenuOpen(false);
                     setIsDatabaseModalOpen(true);
                   }}
-                  className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-2 flex items-center gap-3 transition-colors cursor-pointer group"
+                  className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-3 rounded-xl flex items-center gap-3 transition-colors cursor-pointer group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
                     <Database className="w-4 h-4" weight="bold" />
                   </div>
                   <div>
-                    <div className="font-semibold text-ink group-hover:text-accent transition-colors">Database 数据库</div>
+                    <div className="font-semibold text-ink group-hover:text-ink-muted transition-colors">Database 数据库</div>
                     <div className="text-[11px] text-ink-muted">PostgreSQL, MySQL, Redis 等</div>
                   </div>
                 </button>
@@ -302,7 +302,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
         </div>
       </div>
 
-      {/* Mobile Action Sheet (dokploy style: Compose & Database Bottom Sheet) */}
+      {/* Mobile Action Sheet */}
       {typeof document !== 'undefined' &&
         isCreateMenuOpen &&
         createPortal(
@@ -312,14 +312,14 @@ export const AppsView: React.FC<AppsViewProps> = ({
           >
             <div
               ref={actionSheetRef}
-              className="w-full bg-paper rounded-t-2xl border-t border-line shadow-2xl p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
+              className="w-full bg-paper-2 rounded-t-3xl shadow-2xl p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag Handle Indicator */}
               <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-1 shrink-0" />
 
               {/* Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-line/40">
+              <div className="flex items-center justify-between pb-2">
                 <div>
                   <h3 className="text-sm font-semibold text-ink">新建受管应用</h3>
                   <p className="text-[11px] text-ink-muted">选择要创建的服务类型</p>
@@ -334,7 +334,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                 </button>
               </div>
 
-              {/* Action Sheet Options (Height >= 56px each) */}
+              {/* Action Sheet Options */}
               <div className="space-y-2.5">
                 <button
                   type="button"
@@ -343,9 +343,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
                     setIsCreateMenuOpen(false);
                     navigateTo('create');
                   }}
-                  className="w-full min-h-[56px] p-3 rounded-xl bg-paper-2 hover:bg-paper-3 border border-line flex items-center gap-3.5 transition-all text-left cursor-pointer active:scale-[0.99]"
+                  className="w-full min-h-[56px] p-3.5 rounded-2xl bg-paper-3/50 hover:bg-paper-3 flex items-center gap-3.5 transition-all text-left cursor-pointer active:scale-[0.99]"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-paper-3 text-ink flex items-center justify-center shrink-0">
                     <Stack className="w-5 h-5" weight="bold" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -362,9 +362,9 @@ export const AppsView: React.FC<AppsViewProps> = ({
                     setIsCreateMenuOpen(false);
                     setIsDatabaseModalOpen(true);
                   }}
-                  className="w-full min-h-[56px] p-3 rounded-xl bg-paper-2 hover:bg-paper-3 border border-line flex items-center gap-3.5 transition-all text-left cursor-pointer active:scale-[0.99]"
+                  className="w-full min-h-[56px] p-3.5 rounded-2xl bg-paper-3/50 hover:bg-paper-3 flex items-center gap-3.5 transition-all text-left cursor-pointer active:scale-[0.99]"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
                     <Database className="w-5 h-5" weight="bold" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -379,7 +379,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreateMenuOpen(false)}
-                className="w-full min-h-[48px] rounded-xl bg-paper-2 hover:bg-paper-3 text-ink text-sm font-semibold flex items-center justify-center transition-colors cursor-pointer mt-1"
+                className="w-full min-h-[48px] rounded-2xl bg-paper-3 hover:bg-paper-4 text-ink text-sm font-semibold flex items-center justify-center transition-colors cursor-pointer mt-1"
               >
                 取消
               </button>
@@ -427,14 +427,14 @@ export const AppsView: React.FC<AppsViewProps> = ({
             <div
               key={app.id}
               onClick={() => navigateTo('detail', app.id)}
-              className="card-vessel p-4 sm:p-6 lg:p-7 flex flex-col justify-between hover:border-ink-muted/30 dark:hover:border-white/20 transition-all shadow-subtle hover:shadow-card group cursor-pointer active:scale-[0.995]"
+              className="card-vessel p-5 sm:p-6 lg:p-7 flex flex-col justify-between hover:bg-paper-3 transition-colors group cursor-pointer active:scale-[0.995]"
             >
               <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3
-                      className="font-semibold text-base text-ink tracking-tight group-hover:text-accent transition-colors"
+                      className="font-semibold text-base text-ink tracking-tight transition-colors"
                     >
                       {app.name}
                     </h3>
@@ -445,7 +445,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Content Group (Description + Image Metadata, NO harsh divider) */}
+                {/* Content Group */}
                 <div className="space-y-2.5">
                   {app.description && (
                     <p className="text-xs text-ink-muted line-clamp-2 leading-relaxed">
@@ -462,7 +462,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                       </span>
                     </div>
                     {app.updateAvailable && (
-                      <span className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-full font-medium flex-shrink-0">
+                      <span className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full font-medium flex-shrink-0">
                         <Sparkle className="w-3 h-3 text-amber-500" weight="bold" />
                         可升级
                       </span>
@@ -471,14 +471,14 @@ export const AppsView: React.FC<AppsViewProps> = ({
                 </div>
               </div>
 
-              {/* Quick Actions Footer - 4% Ghost Divider */}
-              <div className="mt-5 pt-3.5 border-t border-line/20 dark:border-white/[0.04] flex items-center justify-between gap-2">
+              {/* Quick Actions Footer */}
+              <div className="mt-5 pt-3 flex items-center justify-between gap-2">
                 <div
-                  className="text-xs font-medium text-ink-muted group-hover:text-accent flex items-center gap-1.5 py-1 px-1 rounded-lg transition-colors select-none"
+                  className="text-xs font-medium text-ink-muted group-hover:text-ink flex items-center gap-1.5 py-1 transition-colors select-none"
                 >
                   <Code className="w-3.5 h-3.5" />
                   <span>配置与终端</span>
-                  <CaretRight className="w-3 h-3 text-ink-faint group-hover:text-accent group-hover:translate-x-0.5 transition-transform" />
+                  <CaretRight className="w-3 h-3 text-ink-faint group-hover:text-ink group-hover:translate-x-0.5 transition-transform" />
                 </div>
 
                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -492,7 +492,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                         }}
                         data-tooltip="重启应用"
                         aria-label="重启应用"
-                        className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line/60 transition-colors cursor-pointer shadow-subtle flex items-center justify-center"
+                        className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-ink-muted hover:text-ink bg-paper-3/40 hover:bg-paper-4 transition-colors cursor-pointer flex items-center justify-center"
                       >
                         <ArrowsClockwise className="w-3.5 h-3.5" />
                       </button>
@@ -504,7 +504,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                         }}
                         data-tooltip="停止容器"
                         aria-label="停止容器"
-                        className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg text-ink-muted hover:text-white hover:bg-rose-600 hover:border-rose-600 border border-line/60 transition-all cursor-pointer shadow-subtle flex items-center justify-center"
+                        className="min-w-[36px] min-h-[36px] p-2 rounded-xl text-ink-muted hover:text-rose-500 bg-paper-3/40 hover:bg-rose-500/15 transition-all cursor-pointer flex items-center justify-center"
                       >
                         <Stop className="w-3.5 h-3.5" />
                       </button>
@@ -514,16 +514,16 @@ export const AppsView: React.FC<AppsViewProps> = ({
                       type="button"
                       disabled={deployingId === app.id}
                       onClick={(e) => handleDeployApp(e, app.id)}
-                      className="min-h-[40px] sm:min-h-[32px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-paper-2 hover:bg-accent text-ink hover:text-white border border-line hover:border-accent transition-all shadow-subtle cursor-pointer active:translate-y-px group/btn disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 transition-all cursor-pointer active:translate-y-px disabled:cursor-not-allowed"
                     >
                       {deployingId === app.id ? (
                         <>
-                          <CircleNotch className="w-3.5 h-3.5 animate-spin text-accent group-hover/btn:text-white" />
+                          <CircleNotch className="w-3.5 h-3.5 animate-spin" />
                           <span>启动中...</span>
                         </>
                       ) : (
                         <>
-                          <Play className="w-3 h-3 text-ink-muted group-hover/btn:text-white transition-colors" weight="fill" />
+                          <Play className="w-3.5 h-3.5" weight="fill" />
                           <span>启动</span>
                         </>
                       )}

@@ -97,7 +97,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
       {/* Page Header (De-boxed, modern SaaS standard with compressed mobile footprint) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle mt-0.5">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-2 flex items-center justify-center text-ink flex-shrink-0 mt-0.5">
             <Package className="w-5 h-5 text-accent" weight="bold" />
           </div>
           <div className="min-w-0 flex-1">
@@ -105,7 +105,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
               <h2 className="font-semibold text-base sm:text-lg text-ink tracking-tight font-sans">
                 私有镜像凭证中心 (GHCR & Docker Hub)
               </h2>
-              <span className="text-[11px] px-2 py-0.2 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted font-mono">
                 {registries.filter((r) => r.status === 'connected').length} / {registries.length} 已连接
               </span>
             </div>
@@ -131,7 +131,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
 
             {/* Collapsible Guidance Box */}
             {isTipsExpanded && (
-              <div className="mt-2.5 p-3 rounded-xl bg-paper-2/80 dark:bg-white/[0.03] border border-line/80 dark:border-white/[0.08] text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
+              <div className="mt-2.5 p-4 rounded-2xl bg-paper-2 text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
                 <div className="flex items-center gap-1.5 font-medium text-ink">
                   <Info className="w-3.5 h-3.5 text-accent flex-shrink-0" weight="fill" />
                   <span>自动化鉴权注入机制</span>
@@ -158,12 +158,12 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
           return (
             <div
               key={reg.id}
-              className="card-vessel p-5 sm:p-7 flex flex-col justify-between space-y-5 shadow-subtle"
+              className="card-vessel p-5 sm:p-7 flex flex-col justify-between space-y-5"
             >
               <div>
-                <div className="flex items-center justify-between pb-4 border-b border-line/50 dark:border-white/[0.06]">
+                <div className="flex items-center justify-between pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-paper-2 dark:bg-white/[0.05] border border-line/40 dark:border-white/[0.06] flex items-center justify-center text-ink shadow-subtle">
+                    <div className="w-8 h-8 rounded-xl bg-paper-3 flex items-center justify-center text-ink">
                       {isGHCR ? (
                         <GithubLogo className="w-4 h-4" weight="bold" />
                       ) : (
@@ -197,7 +197,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                       value={currentUsername}
                       onChange={(e) => handleInputChange(reg.id, 'username', e.target.value)}
                       placeholder={isGHCR ? '例如: your-github-id' : '例如: docker-username'}
-                      className="w-full min-h-[42px] bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink focus:border-accent focus:outline-none transition-colors shadow-subtle disabled:opacity-60"
+                      className="w-full min-h-[42px] bg-paper-3 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink focus:outline-none focus:ring-1 focus:ring-ink transition-all disabled:opacity-60"
                     />
                   </div>
 
@@ -239,7 +239,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                             ? 'ghp_xxxxxxxxxxxx'
                             : 'dckr_pat_... 或 密码'
                         }
-                        className="w-full min-h-[42px] bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:border-accent focus:outline-none transition-colors shadow-subtle disabled:opacity-60"
+                        className="w-full min-h-[42px] bg-paper-3 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-all disabled:opacity-60"
                       />
 
                       {/* Actions: Clear (X) + Toggle Visibility (Eye) */}
@@ -250,7 +250,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                             tabIndex={-1}
                             onClick={() => handleClearToken(reg.id)}
                             aria-label="清空内容"
-                            className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-2 rounded-md transition-colors cursor-pointer"
+                            className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-4 rounded-lg transition-colors cursor-pointer"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -260,7 +260,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                           tabIndex={-1}
                           onClick={() => toggleShowToken(reg.id)}
                           aria-label={showToken ? '隐藏令牌' : '显示令牌'}
-                          className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-2 rounded-md transition-colors cursor-pointer"
+                          className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-4 rounded-lg transition-colors cursor-pointer"
                         >
                           {showToken ? (
                             <EyeSlash className="w-4 h-4 text-accent" />
@@ -283,10 +283,10 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                 {/* Feedback banner */}
                 {feedback && (
                   <div
-                    className={`mt-4 p-3 rounded-lg text-xs flex items-center gap-2.5 ${
+                    className={`mt-4 p-3 rounded-xl text-xs flex items-center gap-2.5 ${
                       feedback.success
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                        : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                     }`}
                   >
                     {feedback.success ? (
@@ -300,14 +300,14 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
               </div>
 
               {/* Full-width submit button filling card padding */}
-              <div className="pt-4 border-t border-line/50 dark:border-white/[0.06]">
+              <div className="pt-2">
                 <Button8State
                   variant="primary"
                   size="md"
                   state={isLoading ? 'loading' : 'default'}
                   disabled={isLoading}
                   onClick={() => handleSaveAndTest(reg)}
-                  className="w-full min-h-[44px] text-xs font-semibold shadow-subtle active:scale-[0.99] transition-transform"
+                  className="w-full min-h-[44px] text-xs font-semibold active:scale-[0.99] transition-transform"
                 >
                   {isLoading ? '正在验证鉴权...' : '保存并验证登录'}
                 </Button8State>
@@ -318,7 +318,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
       </div>
 
       {/* Usage Guide */}
-      <div className="card-vessel p-6 sm:p-7 shadow-subtle">
+      <div className="card-vessel p-6 sm:p-7">
         <div className="flex items-center gap-2 mb-2">
           <Info className="w-4 h-4 text-accent" weight="bold" />
           <h4 className="text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-semibold tracking-wider">
@@ -326,9 +326,9 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
           </h4>
         </div>
         <p className="text-xs text-ink-muted leading-relaxed">
-          绑定成功后，在任何应用的 <code className="text-accent font-mono bg-accent/10 px-1.5 py-0.5 rounded text-[11px]">docker-compose.yml</code> 中直接填写私有镜像路径即可拉取，无需在 compose 中声明认证：
+          绑定成功后，在任何应用的 <code className="text-ink font-mono bg-paper-3 px-1.5 py-0.5 rounded-md text-[11px]">docker-compose.yml</code> 中直接填写私有镜像路径即可拉取，无需在 compose 中声明认证：
         </p>
-        <pre className="mt-3.5 p-4 bg-paper-2/70 dark:bg-[#0d1117] border border-line/60 dark:border-white/[0.08] rounded-xl text-xs font-mono text-emerald-600 dark:text-emerald-400 leading-relaxed overflow-x-auto shadow-subtle">
+        <pre className="mt-3.5 p-4 bg-paper-2 rounded-2xl text-xs font-mono text-emerald-600 dark:text-emerald-400 leading-relaxed overflow-x-auto">
 {`services:
   my-private-service:
     image: ghcr.io/<your-username>/<your-repo>:latest

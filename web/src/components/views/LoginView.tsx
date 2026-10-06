@@ -86,11 +86,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       <div className="absolute bottom-1/4 left-1/3 w-[300px] h-[250px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Main Container: Mobile full-bleed flush, Desktop floating card */}
-      <div className="w-full max-w-md bg-transparent sm:bg-paper-2/90 sm:backdrop-blur-xl sm:border sm:border-line sm:rounded-2xl sm:shadow-2xl sm:p-8 p-1 relative z-10">
+      <div className="w-full max-w-md bg-transparent sm:bg-paper-2 sm:rounded-3xl sm:shadow-2xl sm:p-8 p-1 relative z-10">
         {/* Brand Header */}
         <div className="text-center mb-7 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-paper-2 sm:bg-paper-3 border border-line text-accent shadow-subtle mb-3.5 sm:mb-4">
-            <Anchor className="w-7 h-7 animate-pulse" weight="duotone" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-paper-3 text-accent mb-3.5 sm:mb-4">
+            <Anchor className="w-7 h-7" weight="duotone" />
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink font-sans">VESSEL 控制台</h1>
           <p className="text-xs text-ink-muted mt-1.5 leading-relaxed">
@@ -100,7 +100,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         {/* Error Notification */}
         {error && (
-          <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-600 dark:text-red-400 text-xs animate-shake">
+          <div className="mb-5 p-3.5 rounded-xl bg-rose-500/10 flex items-center gap-3 text-rose-500 text-xs animate-shake">
             <WarningCircle className="w-4 h-4 shrink-0" weight="fill" />
             <div className="flex-1 font-medium">{error}</div>
           </div>
@@ -129,7 +129,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 placeholder="admin"
                 disabled={loading}
                 autoFocus
-                className="w-full pl-10 pr-3.5 py-3 min-h-[48px] rounded-xl bg-paper border border-line text-base sm:text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all disabled:opacity-50 shadow-subtle"
+                className="w-full pl-10 pr-3.5 py-3 min-h-[48px] rounded-xl bg-paper-3 focus:bg-paper-4 text-base sm:text-xs text-ink placeholder-ink-faint focus:outline-none transition-colors disabled:opacity-50"
               />
             </div>
           </div>
@@ -151,7 +151,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 disabled={loading}
-                className="w-full pl-10 pr-12 py-3 min-h-[48px] rounded-xl bg-paper border border-line text-base sm:text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all disabled:opacity-50 font-mono shadow-subtle"
+                className="w-full pl-10 pr-12 py-3 min-h-[48px] rounded-xl bg-paper-3 focus:bg-paper-4 text-base sm:text-xs text-ink placeholder-ink-faint focus:outline-none transition-colors disabled:opacity-50 font-mono"
               />
               <button
                 type="button"
@@ -177,7 +177,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               state={loading ? 'loading' : 'default'}
               disabled={loading}
               icon={<SignIn className="w-4 h-4" weight="bold" />}
-              className="w-full min-h-[48px] py-3 justify-center text-sm font-semibold rounded-xl shadow-md"
+              className="w-full min-h-[48px] py-3 justify-center text-sm font-semibold rounded-xl"
             >
               {loading ? '正在验证身份...' : '登录管理控制台'}
             </Button8State>
@@ -186,28 +186,28 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         {/* Default Account Hint Box - ONLY visible on localhost when password is still default */}
         {isLocalhost && isDefaultPassword && (
-          <div className="mt-6 pt-5 border-t border-line/60">
-            <div className="p-3.5 rounded-xl bg-paper border border-line/70 flex items-start justify-between gap-3 text-xs shadow-subtle">
+          <div className="mt-6 pt-2">
+            <div className="p-3.5 rounded-2xl bg-paper-3 flex items-start justify-between gap-3 text-xs">
               <div className="flex items-start gap-2.5 min-w-0">
                 <Key className="w-4 h-4 text-accent shrink-0 mt-0.5" weight="duotone" />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-ink font-semibold">初始默认凭证</p>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono">
                       本地调试可见 · 公网自动隐藏
                     </span>
                   </div>
-                  <p className="text-[11px] text-ink-muted mt-1 truncate">
-                    账号: <code className="px-1 py-0.5 rounded bg-paper-2 font-mono text-ink">admin</code>
+                  <p className="text-[11px] text-ink-muted mt-1.5 truncate">
+                    账号: <code className="px-1.5 py-0.5 rounded-md bg-paper-4 font-mono text-ink">admin</code>
                     <span className="mx-1.5 opacity-40">|</span>
-                    密码: <code className="px-1 py-0.5 rounded bg-paper-2 font-mono text-ink">vessel2026</code>
+                    密码: <code className="px-1.5 py-0.5 rounded-md bg-paper-4 font-mono text-ink">vessel2026</code>
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleFillDefault}
-                className="min-h-[44px] min-w-[44px] -my-2 -mr-2 px-3 flex items-center justify-center text-xs font-semibold text-accent hover:underline shrink-0 cursor-pointer active:scale-95 transition-transform"
+                className="min-h-[44px] min-w-[44px] -my-2 -mr-2 px-3 flex items-center justify-center text-xs font-semibold text-accent hover:opacity-80 shrink-0 cursor-pointer active:scale-95 transition-transform"
               >
                 一键填入
               </button>

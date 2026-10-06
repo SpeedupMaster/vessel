@@ -1,11 +1,11 @@
-/* Vessel Design Tokens · Linear / Vercel Minimalist Standard
- * Dual-theme: Light (#ffffff) & Dark (#09090b)
- * Typography: Geist (Sans) + Geist Mono / JetBrains Mono (Code) + PingFang / YaHei (Chinese)
- * Accent: Electric Precision Blue (#2563eb / #3b82f6)
+/* Vessel Design Tokens · Vercel / Linear Minimalist Standard
+ * Dual-theme: Light (#ffffff) & Dark (#050507)
+ * Philosophy: Border-free subtle surface hierarchy + Monochrome precision
+ * Semantic telemetry lights (Emerald, Amber, Crimson) preserved for system health
  */
 
 :root {
-  /* Surface hierarchy - Clean Light */
+  /* Surface hierarchy - Clean Light with subtle natural steps */
   --color-paper: #ffffff;
   --color-paper-2: #f8fafc;
   --color-paper-3: #f1f5f9;
@@ -16,16 +16,17 @@
   --color-ink-muted: #64748b;
   --color-ink-faint: #94a3b8;
 
-  /* Hairlines & Structural Dividers */
-  --color-line: #e2e8f0;
-  --color-line-subtle: #f1f5f9;
-  --color-focus: #2563eb;
+  /* Micro hairline & borders - ultra-subtle, borderless feel */
+  --color-line: rgba(0, 0, 0, 0.05);
+  --color-line-subtle: rgba(0, 0, 0, 0.02);
+  --color-focus: #09090b;
 
-  /* Primary Accent: Crisp Electric Blue */
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --color-accent-muted: #eff6ff;
-  --color-accent-glow: rgba(37, 99, 235, 0.12);
+  /* Primary Accent: Vercel Monochrome (Black on Light) */
+  --color-accent: #09090b;
+  --color-accent-hover: #27272a;
+  --color-accent-contrast: #ffffff;
+  --color-accent-muted: rgba(0, 0, 0, 0.05);
+  --color-accent-glow: rgba(0, 0, 0, 0.08);
 
   /* Semantic Telemetry States (Light Mode) */
   --color-emerald: #059669;
@@ -40,45 +41,47 @@
   --color-crimson-bg: #fef2f2;
   --color-crimson-border: #fecaca;
 
-  --color-blue: #2563eb;
-  --color-blue-bg: #eff6ff;
-  --color-blue-border: #bfdbfe;
+  --color-blue: #09090b;
+  --color-blue-bg: #f1f5f9;
+  --color-blue-border: #e2e8f0;
 
-  /* Typography Stacks - 100% Unified */
+  /* Typography Stacks */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-display: var(--font-sans);
   --font-body: var(--font-sans);
   --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
 
   /* Spacing & Radii */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 9999px;
 }
 
 html.dark {
-  /* Surface hierarchy - Deep Charcoal Dark */
-  --color-paper: #09090b;
-  --color-paper-2: #121215;
-  --color-paper-3: #18181b;
-  --color-paper-4: #27272a;
+  /* Surface hierarchy - Deep Obsidian Dark (#050507 -> #0f0f12 -> #18181d) */
+  --color-paper: #050507;
+  --color-paper-2: #0f0f12;
+  --color-paper-3: #18181d;
+  --color-paper-4: #222228;
 
   /* Ink / Typography */
   --color-ink: #f4f4f5;
   --color-ink-muted: #a1a1aa;
   --color-ink-faint: #52525b;
 
-  /* Hairlines & Structural Dividers */
-  --color-line: #27272a;
-  --color-line-subtle: #1f1f23;
-  --color-focus: #3b82f6;
+  /* Micro hairline & borders - ultra-subtle, borderless feel */
+  --color-line: rgba(255, 255, 255, 0.05);
+  --color-line-subtle: rgba(255, 255, 255, 0.02);
+  --color-focus: #ffffff;
 
-  /* Primary Accent: Electric Linear Blue */
-  --color-accent: #3b82f6;
-  --color-accent-hover: #60a5fa;
-  --color-accent-muted: rgba(59, 130, 246, 0.12);
-  --color-accent-glow: rgba(59, 130, 246, 0.2);
+  /* Primary Accent: Vercel Monochrome (Crisp White on Dark) */
+  --color-accent: #ffffff;
+  --color-accent-hover: #e4e4e7;
+  --color-accent-contrast: #000000;
+  --color-accent-muted: rgba(255, 255, 255, 0.08);
+  --color-accent-glow: rgba(255, 255, 255, 0.15);
 
   /* Semantic Telemetry States (Dark Mode) */
   --color-emerald: #10b981;
@@ -93,7 +96,7 @@ html.dark {
   --color-crimson-bg: rgba(239, 68, 68, 0.12);
   --color-crimson-border: rgba(239, 68, 68, 0.25);
 
-  --color-blue: #60a5fa;
-  --color-blue-bg: rgba(59, 130, 246, 0.12);
-  --color-blue-border: rgba(59, 130, 246, 0.25);
+  --color-blue: #ffffff;
+  --color-blue-bg: rgba(255, 255, 255, 0.08);
+  --color-blue-border: rgba(255, 255, 255, 0.12);
 }

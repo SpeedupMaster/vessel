@@ -79,12 +79,12 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal / Bottom Sheet Panel */}
       <div
         ref={panelRef}
-        className={`relative w-full ${maxWidth} bg-paper border-t sm:border border-line rounded-t-2xl sm:rounded-2xl shadow-floating p-5 sm:p-7 z-10 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-7`}
+        className={`relative w-full ${maxWidth} bg-paper-2 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-7 z-10 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-7`}
       >
         {/* Mobile Grab Handle */}
         <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto -mt-1.5 mb-3 sm:hidden shrink-0" />
 
-        <div className="flex items-start justify-between pb-3.5 sm:pb-4 border-b border-line shrink-0">
+        <div className="flex items-start justify-between pb-3 sm:pb-4 shrink-0">
           <div className="min-w-0 pr-3">
             <h3 className="text-base sm:text-lg font-semibold text-ink font-sans tracking-tight truncate sm:whitespace-normal">{title}</h3>
             {subtitle && <p className="text-xs text-ink-muted mt-0.5 truncate sm:whitespace-normal">{subtitle}</p>}
@@ -92,7 +92,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             onClick={onClose}
             aria-label="关闭"
-            className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 text-ink-muted hover:text-ink p-1.5 sm:p-1 rounded-lg hover:bg-paper-3 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+            className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 text-ink-muted hover:text-ink p-1.5 sm:p-1 rounded-xl hover:bg-paper-3 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

@@ -206,7 +206,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 className={`order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-5 py-2.5 sm:py-2 font-medium text-xs rounded-xl sm:rounded-lg transition-all shadow-subtle active:scale-[0.98] sm:active:scale-100 flex items-center justify-center gap-2 cursor-pointer ${
                   confirmState.options.variant === 'danger'
                     ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
-                    : 'bg-accent hover:bg-accent-hover text-white'
+                    : 'bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100'
                 }`}
                 autoFocus
               >

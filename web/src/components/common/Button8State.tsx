@@ -36,13 +36,13 @@ export const Button8State: React.FC<Button8StateProps> = ({
   const getVariantClasses = () => {
     switch (variant) {
       case 'secondary':
-        return 'bg-paper-2 text-ink border border-line hover:border-paper-4 hover:bg-paper-3 focus-visible:ring-accent active:bg-paper-4 shadow-subtle';
+        return 'bg-paper-3 text-ink hover:bg-paper-4 active:bg-paper-4/80 focus-visible:ring-focus disabled:bg-paper-2 disabled:text-ink-muted';
       case 'danger':
-        return 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60 dark:hover:bg-rose-900/50 focus-visible:ring-rose-500 shadow-subtle';
+        return 'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 focus-visible:ring-rose-500 disabled:bg-rose-100 disabled:text-rose-500 dark:disabled:bg-rose-950/40 dark:disabled:text-rose-400';
       case 'ghost':
-        return 'bg-transparent text-ink-muted hover:text-ink hover:bg-paper-3 focus-visible:ring-accent active:bg-paper-4';
+        return 'bg-transparent text-ink-muted hover:text-ink hover:bg-paper-3 focus-visible:ring-focus active:bg-paper-4 disabled:text-ink-muted/60';
       default:
-        return 'bg-accent text-white font-medium hover:bg-accent-hover active:translate-y-px focus-visible:ring-accent shadow-subtle';
+        return 'bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 font-semibold shadow-sm focus-visible:ring-focus';
     }
   };
 
@@ -50,21 +50,22 @@ export const Button8State: React.FC<Button8StateProps> = ({
     <button
       disabled={isDisabled}
       data-state={state}
+      data-variant={variant}
       className={clsx(
-        'relative inline-flex items-center justify-center rounded-lg transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-paper',
+        'relative inline-flex items-center justify-center rounded-xl transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-paper',
         getSizeClasses(),
         getVariantClasses(),
-        isDisabled && 'opacity-50 cursor-not-allowed hover:bg-auto active:translate-y-0',
+        isDisabled && 'cursor-not-allowed hover:bg-auto active:translate-y-0',
         state === 'loading' && 'cursor-wait',
         className
       )}
       {...props}
     >
-      {state === 'loading' && <CircleNotch className="animate-spin w-4 h-4" />}
+      {state === 'loading' && <CircleNotch className="animate-spin w-4 h-4 text-current" />}
       {state === 'success' && <Check className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />}
       {state === 'error' && <Warning className="w-4 h-4 text-rose-500 dark:text-rose-400" />}
       {state === 'default' && icon}
-      <span>{children}</span>
+      <span className="text-current">{children}</span>
     </button>
   );
 };

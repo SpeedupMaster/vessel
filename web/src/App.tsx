@@ -247,14 +247,14 @@ function MainConsole() {
           <div ref={mainContentRef} className="max-w-7xl mx-auto pb-16">
             {/* Inset Dismissible Security Banner */}
             {user?.isDefaultPassword && !isPasswordWarningDismissed && (
-              <div className="mb-5 sm:mb-6 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3.5 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-sans animate-fade-in shadow-subtle">
+              <div className="mb-6 rounded-2xl bg-amber-500/10 p-4 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-sans animate-fade-in">
                 <div className="flex items-start sm:items-center gap-2.5 text-amber-800 dark:text-amber-200 min-w-0">
                   <ShieldWarning className="w-4 h-4 shrink-0 text-amber-500 mt-0.5 sm:mt-0" weight="fill" />
                   <span className="leading-relaxed break-words">
-                    <strong>安全提醒：</strong> 当前系统正在使用初始默认密码 (<code className="px-1.5 py-0.5 rounded bg-amber-500/15 font-mono text-amber-900 dark:text-amber-100">vessel2026</code>)。为防止公网未授权访问，建议尽快修改。
+                    <strong>安全提醒：</strong> 当前系统正在使用初始默认密码 (<code className="px-1.5 py-0.5 rounded-md bg-amber-500/15 font-mono text-amber-900 dark:text-amber-100">vessel2026</code>)。为防止公网未授权访问，建议尽快修改。
                   </span>
                 </div>
-                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-amber-500/15">
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0">
                   <button
                     onClick={() => setIsChangePasswordOpen(true)}
                     className="min-h-[40px] sm:min-h-0 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
@@ -268,7 +268,7 @@ function MainConsole() {
                       sessionStorage.setItem('vessel_dismiss_password_warning', '1');
                     }}
                     title="忽略本次提醒"
-                    className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-1.5 rounded-md text-amber-700/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-200 hover:bg-amber-500/15 transition-colors cursor-pointer flex items-center justify-center"
+                    className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-1.5 rounded-lg text-amber-700/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-200 hover:bg-amber-500/15 transition-colors cursor-pointer flex items-center justify-center"
                   >
                     <X className="w-3.5 h-3.5" weight="bold" />
                   </button>

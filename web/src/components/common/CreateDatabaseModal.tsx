@@ -437,23 +437,23 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
     >
       {/* Modal / Full-screen Container: 100% full-screen on mobile, centered dialog on desktop */}
       <div
-        className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-xl bg-paper sm:rounded-2xl sm:border sm:border-line sm:shadow-floating flex flex-col overflow-hidden"
+        className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-xl bg-paper sm:bg-paper-2 sm:rounded-3xl sm:shadow-2xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Top Header */}
-        <div className="sticky top-0 z-10 bg-paper px-4 sm:px-6 py-3.5 border-b border-line flex items-center justify-between shrink-0">
+        <div className="sticky top-0 z-10 bg-paper sm:bg-paper-2 px-6 py-4 flex items-center justify-between shrink-0">
           <div>
             <h3 id="create-db-title" className="text-base sm:text-lg font-semibold text-ink tracking-tight font-sans">创建受管数据库</h3>
-            <p className="text-[11px] sm:text-xs text-ink-muted">选择官方数据库引擎并配置连接参数</p>
+            <p className="text-[11px] sm:text-xs text-ink-muted mt-0.5">选择官方数据库引擎并配置连接参数</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
             aria-label="关闭窗口"
-            className="min-w-[44px] min-h-[44px] -mr-2 p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
           >
-            <X className="w-5 h-5" weight="bold" />
+            <X className="w-4 h-4" weight="bold" />
           </button>
         </div>
 
@@ -461,11 +461,11 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           <div
             ref={scrollBodyRef}
-            className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-6 no-scrollbar pb-24 sm:pb-6"
+            className="flex-1 overflow-y-auto px-6 py-4 space-y-6 no-scrollbar pb-24 sm:pb-6"
           >
             {/* Database Selection Grid (2 cols on mobile, 3 cols on desktop) */}
             <div role="radiogroup" aria-label="数据库引擎选择" className="space-y-2">
-              <label className="block text-xs font-semibold text-ink">选择官方数据库引擎</label>
+              <label className="block text-xs font-semibold text-ink-muted">选择官方数据库引擎</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 {DATABASE_OPTIONS.map((db) => {
                   const isSelected = selectedType === db.type;
@@ -476,10 +476,10 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                       role="radio"
                       aria-checked={isSelected}
                       onClick={() => handleSelectType(db.type)}
-                      className={`flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-xl border text-center transition-all cursor-pointer select-none active:scale-[0.98] ${
+                      className={`flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl text-center transition-all cursor-pointer select-none active:scale-[0.98] ${
                         isSelected
-                          ? 'border-accent dark:border-accent bg-paper dark:bg-white/[0.04] shadow-sm ring-2 ring-accent'
-                          : 'border-line hover:border-line-hover bg-paper-2 dark:bg-[#16161b]'
+                          ? 'bg-paper-4 shadow-sm ring-2 ring-accent'
+                          : 'bg-paper-3 hover:bg-paper-4/60'
                       }`}
                     >
                       <div className="mb-2 flex items-center justify-center">{db.icon}</div>
@@ -491,18 +491,18 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
             </div>
 
             {/* Form Fields Section */}
-            <div ref={formSectionRef} className="space-y-4 pt-3 border-t border-line/60">
+            <div ref={formSectionRef} className="space-y-4 pt-2">
               <h4 className="text-xs sm:text-sm font-semibold text-ink tracking-tight">填写基础配置</h4>
 
               {error && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs leading-relaxed">
+                <div className="p-3.5 bg-rose-500/10 text-rose-500 rounded-xl text-xs leading-relaxed">
                   {error}
                 </div>
               )}
 
               {/* Name Field */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">实例名称 (Name)</label>
+                <label className="block text-xs font-semibold text-ink-muted mb-1.5">实例名称 (Name)</label>
                 <input
                   ref={nameInputRef}
                   type="text"
@@ -512,14 +512,14 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
+                  className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
                 />
               </div>
 
               {/* Database Name (if applicable) */}
               {currentOption.hasUserAndDb && (
                 <div>
-                  <label className="block text-xs font-medium text-ink mb-1.5">初始数据库名称 (Database Name)</label>
+                  <label className="block text-xs font-semibold text-ink-muted mb-1.5">初始数据库名称 (Database Name)</label>
                   <input
                     type="text"
                     value={dbName}
@@ -528,7 +528,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
+                    className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
                   />
                 </div>
               )}
@@ -536,7 +536,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
               {/* Database User (if applicable) */}
               {currentOption.hasUserAndDb && (
                 <div>
-                  <label className="block text-xs font-medium text-ink mb-1.5">数据库用户名 (Database User)</label>
+                  <label className="block text-xs font-semibold text-ink-muted mb-1.5">数据库用户名 (Database User)</label>
                   <input
                     type="text"
                     value={dbUser}
@@ -545,14 +545,14 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
+                    className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
                   />
                 </div>
               )}
 
               {/* Database Password */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">数据库密码 (Database Password)</label>
+                <label className="block text-xs font-semibold text-ink-muted mb-1.5">数据库密码 (Database Password)</label>
                 <div className="relative flex items-center">
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -560,13 +560,13 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                     onChange={(e) => setDbPassword(e.target.value)}
                     placeholder="请输入或点击右侧生成密码"
                     autoComplete="new-password"
-                    className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:outline-none transition-colors"
                   />
                   <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
                     <button
                       type="button"
                       onClick={handleGeneratePassword}
-                      className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                      className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-4 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                       title="重新随机生成安全密码"
                       aria-label="生成随机密码"
                     >
@@ -575,7 +575,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                      className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-4 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                       title={showPassword ? '隐藏密码' : '显示密码'}
                       aria-label={showPassword ? '隐藏密码' : '显示密码'}
                     >
@@ -588,7 +588,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
               {/* Database Root password (for MariaDB & MySQL) */}
               {currentOption.hasRootPassword && (
                 <div>
-                  <label className="block text-xs font-medium text-ink mb-1.5">Root 管理员密码 (Root Password)</label>
+                  <label className="block text-xs font-semibold text-ink-muted mb-1.5">Root 管理员密码 (Root Password)</label>
                   <div className="relative flex items-center">
                     <input
                       type={showRootPassword ? 'text' : 'password'}
@@ -596,13 +596,13 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                       onChange={(e) => setDbRootPassword(e.target.value)}
                       placeholder="请输入或点击右侧生成 Root 密码"
                       autoComplete="new-password"
-                      className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                      className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:outline-none transition-colors"
                     />
                     <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
                       <button
                         type="button"
                         onClick={handleGenerateRootPassword}
-                        className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                        className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-4 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                         title="重新随机生成 Root 密码"
                         aria-label="生成随机 Root 密码"
                       >
@@ -611,7 +611,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                       <button
                         type="button"
                         onClick={() => setShowRootPassword(!showRootPassword)}
-                        className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                        className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-4 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                         title={showRootPassword ? '隐藏密码' : '显示密码'}
                         aria-label={showRootPassword ? '隐藏密码' : '显示密码'}
                       >
@@ -624,7 +624,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
 
               {/* Docker image */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Docker 镜像标签 (Docker Image)</label>
+                <label className="block text-xs font-semibold text-ink-muted mb-1.5">Docker 镜像标签 (Docker Image)</label>
                 <input
                   type="text"
                   value={dockerImage}
@@ -633,20 +633,20 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono transition-colors"
+                  className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none font-mono transition-colors"
                 />
               </div>
             </div>
           </div>
 
           {/* Sticky Bottom Action Bar: Mobile Sticky Full-Width / Desktop Dual Buttons */}
-          <div className="sticky bottom-0 z-10 bg-paper px-4 sm:px-6 py-3.5 sm:py-4 border-t border-line pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between sm:justify-end gap-3 shrink-0 shadow-subtle">
-            {/* Desktop Cancel Button (Hidden on Mobile, where top X handles cancel) */}
+          <div className="sticky bottom-0 z-10 bg-paper sm:bg-paper-2 px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between sm:justify-end gap-3 shrink-0">
+            {/* Desktop Cancel Button */}
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="hidden sm:inline-flex px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
+              className="hidden sm:inline-flex px-4 py-2 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer"
             >
               取消
             </button>
@@ -655,7 +655,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:w-auto min-h-[48px] sm:min-h-[36px] px-6 py-2.5 sm:py-2 bg-accent hover:bg-accent-hover text-white text-sm sm:text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:translate-y-px"
+              className="w-full sm:w-auto min-h-[44px] sm:min-h-[36px] px-6 py-2.5 sm:py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 text-sm sm:text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed active:translate-y-px"
             >
               {isSubmitting ? (
                 <>

@@ -129,7 +129,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
     <div
       className={clsx(
         'relative flex text-ink font-mono text-xs overflow-hidden transition-colors',
-        borderless ? 'border-0 rounded-none bg-transparent' : 'rounded-lg border border-line bg-paper',
+        borderless ? 'rounded-none bg-transparent' : 'rounded-2xl bg-paper-3',
         className
       )}
       style={{ minHeight, maxHeight }}
@@ -140,7 +140,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
         aria-hidden="true"
         className={clsx(
           'select-none py-3 px-3 text-ink-muted text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem]',
-          borderless ? 'bg-paper-3/20 border-r border-line/50' : 'bg-paper-2 border-r border-line'
+          borderless ? 'bg-paper-3/20' : 'bg-paper-2'
         )}
       >
         {Array.from({ length: lineCount }).map((_, idx) => (

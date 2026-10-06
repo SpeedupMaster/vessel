@@ -50,21 +50,21 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, pul
       case 'running':
       case 'active':
       case 'connected':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/50';
+        return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
       case 'deploying':
       case 'rebuilding':
       case 'issuing':
-        return 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800/50';
+        return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
       case 'stopped':
       case 'unverified':
-        return 'bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-900/60 dark:text-zinc-400 dark:border-zinc-800';
+        return 'bg-paper-3 text-ink-muted';
       case 'error':
       case 'expired':
-        return 'bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-800/50';
+        return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
       case 'accent':
-        return 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-700/50';
+        return 'bg-paper-3 text-ink font-semibold';
       default:
-        return 'bg-paper-3 text-ink-muted border-line';
+        return 'bg-paper-3 text-ink-muted';
     }
   };
 
@@ -77,7 +77,7 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, pul
       case 'deploying':
       case 'rebuilding':
       case 'issuing':
-        return 'bg-blue-500 dark:bg-blue-400';
+        return 'bg-amber-500 dark:bg-amber-400';
       case 'error':
       case 'expired':
         return 'bg-rose-500 dark:bg-rose-400';
@@ -97,7 +97,7 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, pul
   return (
     <span
       className={clsx(
-        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-medium border transition-colors',
+        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-medium transition-colors',
         getStyles(),
         className
       )}

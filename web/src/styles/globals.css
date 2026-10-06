@@ -153,23 +153,62 @@ input::-moz-selection, textarea::-moz-selection {
   }
 }
 
-/* Vessel Button Utilities */
+/* Vessel Button & Accent Contrast Utilities */
+.bg-accent {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+}
+
+html.dark .bg-accent,
+.dark .bg-accent {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+
+.text-accent-contrast {
+  color: #ffffff !important;
+}
+
+html.dark .text-accent-contrast,
+.dark .text-accent-contrast {
+  color: #09090b !important;
+}
+
+/* Ensure icons, SVGs and child spans inside bg-accent inherit contrast color */
+.bg-accent *,
+.text-accent-contrast * {
+  color: inherit;
+}
+
+/* Primary Button Global Rules */
 .btn-vessel-primary {
-  background-color: var(--color-accent);
+  background-color: #09090b;
   color: #ffffff;
-  font-weight: 500;
+  font-weight: 600;
+  border: none;
   border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+html.dark .btn-vessel-primary,
+.dark .btn-vessel-primary {
+  background-color: #ffffff;
+  color: #09090b;
 }
 
 .btn-vessel-primary:hover, .btn-vessel-primary.is-hover {
-  background-color: var(--color-accent-hover);
+  background-color: #27272a;
+}
+
+html.dark .btn-vessel-primary:hover,
+.dark .btn-vessel-primary:hover {
+  background-color: #e4e4e7;
 }
 
 .btn-vessel-primary:focus-visible, .btn-vessel-primary.is-focus {
@@ -181,10 +220,55 @@ input::-moz-selection, textarea::-moz-selection {
   transform: translateY(1px);
 }
 
-.btn-vessel-primary:disabled, .btn-vessel-primary[data-state="disabled"] {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
+/* Disabled states for primary / accent buttons */
+.btn-vessel-primary:disabled,
+.btn-vessel-primary[data-state="disabled"],
+button:disabled.bg-accent,
+button[disabled].bg-accent,
+button[data-state="disabled"].bg-accent {
+  background-color: #e4e4e7 !important;
+  color: #71717a !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.btn-vessel-primary:disabled *,
+.btn-vessel-primary[data-state="disabled"] *,
+button:disabled.bg-accent *,
+button[disabled].bg-accent *,
+button[data-state="disabled"].bg-accent * {
+  color: inherit !important;
+}
+
+html.dark .btn-vessel-primary:disabled,
+html.dark .btn-vessel-primary[data-state="disabled"],
+html.dark button:disabled.bg-accent,
+html.dark button[disabled].bg-accent,
+html.dark button[data-state="disabled"].bg-accent,
+.dark .btn-vessel-primary:disabled,
+.dark .btn-vessel-primary[data-state="disabled"],
+.dark button:disabled.bg-accent,
+.dark button[disabled].bg-accent,
+.dark button[data-state="disabled"].bg-accent {
+  background-color: #27272a !important;
+  color: #a1a1aa !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+html.dark .btn-vessel-primary:disabled *,
+html.dark .btn-vessel-primary[data-state="disabled"] *,
+html.dark button:disabled.bg-accent *,
+html.dark button[disabled].bg-accent *,
+html.dark button[data-state="disabled"].bg-accent *,
+.dark .btn-vessel-primary:disabled *,
+.dark .btn-vessel-primary[data-state="disabled"] *,
+.dark button:disabled.bg-accent *,
+.dark button[disabled].bg-accent *,
+.dark button[data-state="disabled"].bg-accent * {
+  color: inherit !important;
 }
 
 .btn-vessel-primary[data-state="loading"] {
@@ -192,23 +276,39 @@ input::-moz-selection, textarea::-moz-selection {
   cursor: wait;
 }
 
+/* Switch Toggle Safety: Ensure thumb always contrasts against active track */
+[role="switch"] {
+  touch-action: manipulation;
+}
+
+[role="switch"].bg-accent > span,
+[role="switch"].bg-accent > div {
+  background-color: #ffffff;
+}
+
+html.dark [role="switch"].bg-accent > span,
+html.dark [role="switch"].bg-accent > div,
+.dark [role="switch"].bg-accent > span,
+.dark [role="switch"].bg-accent > div {
+  background-color: #09090b !important;
+}
+
 .btn-vessel-ghost {
-  background-color: transparent;
-  color: var(--color-ink-muted);
-  border: 1px solid var(--color-line);
+  background-color: var(--color-paper-3);
+  color: var(--color-ink);
+  border: none;
   border-radius: var(--radius-md);
   padding: 0.5rem 0.875rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-vessel-ghost:hover, .btn-vessel-ghost.is-hover {
-  background-color: var(--color-paper-3);
+  background-color: var(--color-paper-4);
   color: var(--color-ink);
-  border-color: var(--color-paper-4);
 }
 
 .btn-vessel-ghost:focus-visible, .btn-vessel-ghost.is-focus {
@@ -228,13 +328,15 @@ input::-moz-selection, textarea::-moz-selection {
 /* Card & Surface Utilities */
 .card-vessel {
   background-color: var(--color-paper-2);
-  border: 1px solid var(--color-line);
+  border: none !important;
   border-radius: var(--radius-lg);
-  transition: border-color 0.15s ease, background-color 0.2s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+  transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-vessel:hover {
-  border-color: var(--color-paper-4);
+  background-color: var(--color-paper-3);
 }
 
 @keyframes tooltipIn {
@@ -392,5 +494,52 @@ html.dark .token.key {
 html.dark .token.regex,
 html.dark .token.important {
   color: #d2a8ff;
+}
+
+/* ================= UNIFIED INPUT BASE & FOCUS DISCIPLINE ================= */
+
+/* 1. Global: Suppress native browser number input spin buttons */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
+
+/* 2. Global: Reset default browser blue focus rings and unify focus outline */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+textarea,
+select {
+  outline: none !important;
+}
+
+/* Default light mode focus ring: 1px crisp Ink Black (#09090b) */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 1px #09090b !important;
+}
+
+/* Default dark mode focus ring: 1px crisp Ink White (#f4f4f5) */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):focus,
+html.dark textarea:focus,
+html.dark select:focus,
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):focus,
+.dark textarea:focus,
+.dark select:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 1px #f4f4f5 !important;
+}
+
+/* Error state focus override */
+input.focus\:ring-rose-500:focus,
+input.ring-rose-500:focus,
+input[aria-invalid="true"]:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 1px #f43f5e !important;
 }
 

@@ -81,21 +81,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         aria-modal="true"
         aria-label="导航菜单"
         className={clsx(
-          'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-paper-2 border-r border-line flex flex-col h-screen select-none transition-transform duration-250 ease-out',
+          'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-paper-2 flex flex-col h-screen select-none transition-transform duration-250 ease-out',
           'md:static md:translate-x-0 md:w-64 md:flex-shrink-0 md:z-auto',
           isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
         )}
       >
-        {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-line flex-shrink-0">
+        {/* Brand Header - Seamless borderless */}
+        <div className="h-16 flex items-center justify-between px-5 sm:px-6 flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-paper-3 border border-line flex items-center justify-center text-accent shadow-subtle">
+            <div className="w-8 h-8 rounded-xl bg-paper-3 flex items-center justify-center text-ink">
               <Anchor className="w-4 h-4" weight="bold" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-sm tracking-tight text-ink font-sans">VESSEL</span>
-                <span className="text-[10px] px-1.5 py-0.2 bg-paper-3 text-ink-muted border border-line rounded">
+                <span className="text-[10px] px-1.5 py-0.5 bg-paper-3 text-ink-muted rounded-md font-medium">
                   v1.0
                 </span>
               </div>
@@ -103,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          {/* Close button on mobile - pushed to the far right, >=44x44px touch target */}
+          {/* Close button on mobile */}
           <button
             type="button"
             onClick={onClose}
@@ -114,8 +114,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Navigation List - Touch-optimized with >=44px height */}
-        <nav className="flex-1 py-4 sm:py-6 px-3.5 space-y-1.5 overflow-y-auto no-scrollbar">
+        {/* Navigation List - Airy spacing without hard borders */}
+        <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto no-scrollbar">
           {navItems.map((item) => {
             const active = currentTab === item.id;
             return (
@@ -123,14 +123,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 className={clsx(
-                  'w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm border font-sans select-none cursor-pointer transition-colors',
+                  'w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-sans select-none cursor-pointer transition-all duration-150',
                   active
-                    ? 'bg-paper dark:bg-paper-3 text-ink font-medium border-line shadow-subtle'
-                    : 'border-transparent text-ink-muted hover:text-ink hover:bg-paper-3/60 font-normal'
+                    ? 'bg-paper-3 text-ink font-semibold'
+                    : 'text-ink-muted hover:text-ink hover:bg-paper-3/50 font-normal'
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <span className={clsx(active ? 'text-accent' : 'text-ink-muted')}>{item.icon}</span>
+                  <span className={clsx(active ? 'text-ink' : 'text-ink-muted')}>{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
               </button>
@@ -138,8 +138,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Daemon & Telemetry Status Footer - iOS Safe Area & Clean 50% Metrics */}
-        <div className="p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] border-t border-line bg-paper/40 flex-shrink-0 space-y-3 font-sans text-xs">
+        {/* Daemon & Telemetry Status Footer - Frameless card container */}
+        <div className="m-3 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-paper-3/40 rounded-2xl flex-shrink-0 space-y-3 font-sans text-xs">
           {/* Docker Status */}
           <div className="flex items-center justify-between">
             <span className="text-ink-muted text-[11px]">Docker 引擎</span>
@@ -155,14 +155,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     'relative inline-flex rounded-full h-2 w-2',
                     isDockerOnline
                       ? 'bg-emerald-500'
-                      : 'bg-[#ff6b6b] shadow-[0_0_8px_rgba(255,107,107,0.6)]'
+                      : 'bg-rose-500'
                   )}
                 />
               </span>
               <span
                 className={clsx(
                   'text-[11px] font-semibold tracking-wide',
-                  isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-[#ff6b6b]'
+                  isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
                 )}
               >
                 {isDockerOnline ? '已连接' : '离线'}
@@ -176,23 +176,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-ink font-mono font-medium">{metrics.runningContainers}</span>
           </div>
 
-          {/* Telemetry (50% width each, well-aligned two-row cards) */}
-          <div className="pt-2.5 border-t border-line/50 grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-paper-3/60 dark:bg-white/[0.04] rounded-lg p-2.5 flex flex-col justify-between border border-line/40">
+          {/* Telemetry (Subtle Surface micro-cards without borders) */}
+          <div className="pt-1 grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-paper-2 rounded-xl p-2.5 flex flex-col justify-between">
               <div className="flex items-center gap-1.5 text-ink-muted text-[11px]">
-                <Cpu className="w-3.5 h-3.5 text-accent" />
+                <Cpu className="w-3.5 h-3.5 text-ink-muted" />
                 <span>CPU 负载</span>
               </div>
-              <div className="mt-1.5 font-mono text-xs font-semibold text-ink">
+              <div className="mt-1 font-mono text-xs font-semibold text-ink">
                 <RollingCounter value={metrics.cpuUsage} suffix="%" />
               </div>
             </div>
-            <div className="bg-paper-3/60 dark:bg-white/[0.04] rounded-lg p-2.5 flex flex-col justify-between border border-line/40">
+            <div className="bg-paper-2 rounded-xl p-2.5 flex flex-col justify-between">
               <div className="flex items-center gap-1.5 text-ink-muted text-[11px]">
-                <Memory className="w-3.5 h-3.5 text-accent" />
+                <Memory className="w-3.5 h-3.5 text-ink-muted" />
                 <span>RAM 内存</span>
               </div>
-              <div className="mt-1.5 font-mono text-xs font-semibold text-ink flex items-baseline gap-0.5">
+              <div className="mt-1 font-mono text-xs font-semibold text-ink flex items-baseline gap-0.5">
                 <RollingCounter value={memUsedGb} precision={1} />
                 <span className="text-ink-faint text-[10px]">/{memTotalGb.toFixed(0)}G</span>
               </div>

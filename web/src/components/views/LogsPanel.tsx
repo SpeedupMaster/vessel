@@ -252,7 +252,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
       {!isFullscreen && (
         <div className="space-y-2">
           {/* Row 1: Full-width Search Bar */}
-          <div className="relative w-full flex items-center rounded-xl border border-line bg-paper shadow-subtle focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 transition-all">
+          <div className="relative w-full flex items-center rounded-2xl bg-paper-2 focus-within:bg-paper-3 transition-colors">
             <div className="pl-3.5 pr-2 flex items-center text-ink-muted/70 pointer-events-none shrink-0">
               <MagnifyingGlass className="w-4 h-4" weight="bold" />
             </div>
@@ -270,7 +270,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 aria-label="清空搜索"
                 className="pr-3 pl-1 text-ink-faint hover:text-ink transition-colors cursor-pointer flex items-center shrink-0 min-h-[40px]"
               >
-                <div className="w-5 h-5 rounded-full bg-paper-3 hover:bg-line flex items-center justify-center transition-colors">
+                <div className="w-5 h-5 rounded-full bg-paper-3 hover:bg-paper-4 flex items-center justify-center transition-colors">
                   <X className="w-3 h-3 text-ink-muted" weight="bold" />
                 </div>
               </button>
@@ -288,10 +288,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 setActiveSheet('service');
               }}
               className={clsx(
-                "min-h-[32px] px-3 py-1 rounded-full border text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
+                "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 selectedService !== 'all'
-                  ? "bg-accent/10 border-accent/40 text-accent font-semibold shadow-xs"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line shadow-subtle"
+                  ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
               )}
             >
               <span>
@@ -312,10 +312,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 setActiveSheet('limit');
               }}
               className={clsx(
-                "min-h-[32px] px-3 py-1 rounded-full border text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
+                "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 limit !== 100
-                  ? "bg-accent/10 border-accent/40 text-accent font-semibold shadow-xs"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line shadow-subtle"
+                  ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
               )}
             >
               <span>行数: {limit} 行</span>
@@ -331,10 +331,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 setActiveSheet('time');
               }}
               className={clsx(
-                "min-h-[32px] px-3 py-1 rounded-full border text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
+                "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 timeRange !== 'all'
-                  ? "bg-accent/10 border-accent/40 text-accent font-semibold shadow-xs"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line shadow-subtle"
+                  ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
               )}
             >
               <span>
@@ -359,10 +359,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 setActiveSheet('level');
               }}
               className={clsx(
-                "min-h-[32px] px-3 py-1 rounded-full border text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
+                "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 logType !== 'all'
-                  ? "bg-accent/10 border-accent/40 text-accent font-semibold shadow-xs"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line shadow-subtle"
+                  ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
               )}
             >
               <span>
@@ -392,7 +392,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                   setLogType('all');
                   setSearch('');
                 }}
-                className="min-h-[32px] px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-900/60 bg-rose-50/60 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-medium transition-colors cursor-pointer shrink-0 select-none flex items-center gap-1 active:scale-95"
+                className="min-h-[32px] px-2.5 py-1 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium transition-colors cursor-pointer shrink-0 select-none flex items-center gap-1 active:scale-95"
               >
                 <X className="w-3 h-3" />
                 <span>重置条件</span>
@@ -408,11 +408,11 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
           "bg-[#09090b] dark:bg-black overflow-hidden flex flex-col transition-all",
           isFullscreen
             ? "fixed inset-0 z-50 rounded-none border-0 w-screen h-[100dvh]"
-            : "rounded-xl border border-line/80 shadow-subtle min-h-[460px] max-h-[calc(100vh-320px)] sm:max-h-[calc(100vh-280px)] flex-1"
+            : "rounded-2xl shadow-lg min-h-[460px] max-h-[calc(100vh-320px)] sm:max-h-[calc(100vh-280px)] flex-1"
         )}
       >
         {/* Terminal Dark Integrated Toolbar (Mac / Hacker Style) */}
-        <div className="bg-[#161b22] dark:bg-[#121214] border-b border-white/[0.08] px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 select-none">
+        <div className="bg-[#161b22] dark:bg-[#121214] px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 select-none">
           {/* Left: Terminal status indicators & meta */}
           <div className="flex items-center gap-2.5 min-w-0">
             {/* Status dot */}
@@ -460,12 +460,12 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
               disabled={!isRunning}
               data-tooltip={!isRunning ? '应用未运行，暂无实时日志流' : isPaused ? '点击恢复自动滚屏' : '点击暂停滚屏'}
               className={clsx(
-                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg border transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
+                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
                 !isRunning
-                  ? "bg-zinc-800/50 text-zinc-500 border-zinc-700/50 cursor-not-allowed opacity-50"
+                  ? "bg-zinc-800/50 text-zinc-500 cursor-not-allowed opacity-50"
                   : isPaused
-                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm font-semibold"
-                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 border-white/10"
+                  ? "bg-amber-500/20 text-amber-300 shadow-sm font-semibold"
+                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
               )}
             >
               {isPaused ? <Play className="w-3.5 h-3.5 text-amber-300" weight="fill" /> : <Pause className="w-3.5 h-3.5" />}
@@ -478,10 +478,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
               onClick={handleCopy}
               data-tooltip="复制当前日志"
               className={clsx(
-                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg border transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
+                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
                 copied
-                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold"
-                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 border-white/10"
+                  ? "bg-emerald-500/20 text-emerald-300 font-semibold"
+                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
               )}
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" weight="bold" /> : <Copy className="w-3.5 h-3.5" />}
@@ -496,7 +496,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 handleDownload();
               }}
               data-tooltip="下载日志文本"
-              className="min-h-[30px] px-2.5 py-1 bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 border border-white/10 text-xs font-medium rounded-lg transition-colors flex items-center gap-1 cursor-pointer select-none active:scale-95"
+              className="min-h-[30px] px-2.5 py-1 bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 text-xs font-medium rounded-lg transition-colors flex items-center gap-1 cursor-pointer select-none active:scale-95"
             >
               <DownloadSimple className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">下载</span>
@@ -508,15 +508,15 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
               onClick={toggleFullscreen}
               data-tooltip={isFullscreen ? '退出全屏 (Esc)' : '全屏日志模式'}
               className={clsx(
-                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg border transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
+                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
                 isFullscreen
-                  ? "bg-accent text-white border-accent shadow-sm font-semibold"
-                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 border-white/10"
+                  ? "bg-accent text-accent-contrast shadow-sm font-semibold"
+                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
               )}
             >
               {isFullscreen ? (
                 <>
-                  <ArrowsInSimple className="w-3.5 h-3.5 text-white" weight="bold" />
+                  <ArrowsInSimple className="w-3.5 h-3.5" weight="bold" />
                   <span>退出全屏</span>
                 </>
               ) : (
@@ -608,7 +608,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
         </div>
 
         {/* Terminal Bottom Weak Status Bar */}
-        <div className="px-4 py-2 bg-black/50 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-zinc-500 font-mono select-none shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+        <div className="px-4 py-2 bg-black/50 flex items-center justify-between text-[11px] text-zinc-500 font-mono select-none shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
           <div className="flex items-center gap-2 truncate pr-2">
             <span className="truncate">
               服务: {selectedService === 'all' ? '所有服务聚合' : selectedService}
@@ -633,14 +633,14 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
           }}
         >
           <div
-            className="w-full sm:max-w-md bg-paper rounded-t-2xl sm:rounded-2xl border-t sm:border border-line shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
+            className="w-full sm:max-w-md bg-paper-2 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Grab Handle */}
             <div className="w-10 h-1 bg-ink/20 rounded-full mx-auto my-2.5 sm:hidden shrink-0" />
 
             {/* Header */}
-            <div className="px-4 sm:px-5 py-3 border-b border-line flex items-center justify-between shrink-0">
+            <div className="px-4 sm:px-5 py-3 flex items-center justify-between shrink-0">
               <div>
                 <h4 className="text-sm font-semibold text-ink">
                   {activeSheet === 'service' && '选择过滤容器'}
@@ -677,16 +677,16 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                       setActiveSheet(null);
                     }}
                     className={clsx(
-                      "w-full min-h-[48px] p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer select-none",
+                      "w-full min-h-[48px] p-3 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer select-none",
                       selectedService === 'all'
-                        ? "border-accent bg-accent/5 dark:bg-accent/10 ring-1 ring-accent"
-                        : "border-line bg-paper hover:bg-paper-2"
+                        ? "bg-paper-4/80 shadow-sm"
+                        : "bg-paper-3 hover:bg-paper-4/40"
                     )}
                   >
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-ink">全部容器服务</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-paper-3 text-ink-muted font-mono">
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-paper-4 text-ink-muted font-mono">
                           {containerList.length} 个实例
                         </span>
                       </div>
@@ -707,10 +707,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                           setActiveSheet(null);
                         }}
                         className={clsx(
-                          "w-full min-h-[48px] p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer select-none",
+                          "w-full min-h-[48px] p-3 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer select-none",
                           isSelected
-                            ? "border-accent bg-accent/5 dark:bg-accent/10 ring-1 ring-accent"
-                            : "border-line bg-paper hover:bg-paper-2"
+                            ? "bg-paper-4/80 shadow-sm"
+                            : "bg-paper-3 hover:bg-paper-4/40"
                         )}
                       >
                         <div className="min-w-0 pr-2">
@@ -720,8 +720,8 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                               className={clsx(
                                 "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
                                 c.state === 'running'
-                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                  : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                  : "bg-paper-4 text-ink-muted"
                               )}
                             >
                               {c.state}
@@ -751,10 +751,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                         setActiveSheet(null);
                       }}
                       className={clsx(
-                        "w-full min-h-[48px] p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer select-none",
+                        "w-full min-h-[48px] p-3 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer select-none",
                         isSelected
-                          ? "border-accent bg-accent/5 dark:bg-accent/10 ring-1 ring-accent"
-                          : "border-line bg-paper hover:bg-paper-2"
+                          ? "bg-paper-4/80 shadow-sm"
+                          : "bg-paper-3 hover:bg-paper-4/40"
                       )}
                     >
                       <div>
@@ -791,10 +791,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                         setActiveSheet(null);
                       }}
                       className={clsx(
-                        "w-full min-h-[48px] p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer select-none",
+                        "w-full min-h-[48px] p-3 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer select-none",
                         isSelected
-                          ? "border-accent bg-accent/5 dark:bg-accent/10 ring-1 ring-accent"
-                          : "border-line bg-paper hover:bg-paper-2"
+                          ? "bg-paper-4/80 shadow-sm"
+                          : "bg-paper-3 hover:bg-paper-4/40"
                       )}
                     >
                       <div>
@@ -831,10 +831,10 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                         setActiveSheet(null);
                       }}
                       className={clsx(
-                        "w-full min-h-[48px] p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer select-none",
+                        "w-full min-h-[48px] p-3 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer select-none",
                         isSelected
-                          ? "border-accent bg-accent/5 dark:bg-accent/10 ring-1 ring-accent"
-                          : "border-line bg-paper hover:bg-paper-2"
+                          ? "bg-paper-4/80 shadow-sm"
+                          : "bg-paper-3 hover:bg-paper-4/40"
                       )}
                     >
                       <div>
@@ -845,12 +845,12 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                               className={clsx(
                                 "text-[10px] px-1.5 py-0.2 rounded font-sans font-medium",
                                 lvl.val === 'error'
-                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
+                                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                                   : lvl.val === 'warn'
-                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                                   : lvl.val === 'info'
-                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
-                                  : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
+                                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                  : "bg-purple-500/10 text-purple-600 dark:text-purple-400"
                               )}
                             >
                               {lvl.badge}
@@ -867,11 +867,11 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
             </div>
 
             {/* Bottom Close Button for Mobile */}
-            <div className="p-3 border-t border-line pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:hidden bg-paper">
+            <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:hidden bg-paper-2">
               <button
                 type="button"
                 onClick={() => setActiveSheet(null)}
-                className="w-full min-h-[44px] bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-xl border border-line transition-colors cursor-pointer"
+                className="w-full min-h-[44px] bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer"
               >
                 关闭
               </button>

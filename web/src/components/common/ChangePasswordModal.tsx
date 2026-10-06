@@ -136,22 +136,22 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       {/* Modal / Bottom Sheet Container */}
       <div
         className={clsx(
-          'w-full max-h-[92vh] flex flex-col bg-paper-2 border-line shadow-2xl transition-all overflow-hidden',
-          'rounded-t-2xl md:rounded-2xl border-t md:border md:max-w-md md:w-full md:max-h-[85vh]'
+          'w-full max-h-[92vh] flex flex-col bg-paper-2 shadow-2xl transition-all overflow-hidden',
+          'rounded-t-3xl md:rounded-3xl md:max-w-md md:w-full md:max-h-[85vh]'
         )}
       >
         {/* Mobile Drag Indicator */}
-        <div className="md:hidden w-10 h-1 bg-ink-muted/25 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+        <div className="md:hidden w-10 h-1 bg-ink-muted/20 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
 
         {/* Header */}
-        <div className="bg-paper-2 px-5 py-3.5 border-b border-line flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-paper-3 border border-line flex items-center justify-center text-accent shadow-subtle shrink-0">
+        <div className="bg-paper-2 px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-paper-3 flex items-center justify-center text-accent shrink-0">
               <Key className="w-4 h-4" weight="bold" />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-ink leading-tight">修改管理员密码</h2>
-              <p className="text-[11px] text-ink-muted">更新当前账号的登录访问凭证</p>
+              <p className="text-[11px] text-ink-muted mt-0.5">更新当前账号的登录访问凭证</p>
             </div>
           </div>
           {/* Close Button with >=44px Touch Target */}
@@ -160,7 +160,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             onClick={handleAttemptClose}
             disabled={loading}
             aria-label="关闭弹窗"
-            className="min-w-[40px] min-h-[40px] -mr-1.5 p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
           >
             <X className="w-4 h-4" weight="bold" />
           </button>
@@ -168,10 +168,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
         {/* Scrollable Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 no-scrollbar">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 no-scrollbar">
             {/* Success Alert */}
             {success && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 text-xs animate-fade-in">
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 text-xs animate-fade-in">
                 <CheckCircle className="w-4 h-4 shrink-0" weight="fill" />
                 <span className="font-medium">密码已成功修改！已自动刷新凭证。</span>
               </div>
@@ -179,7 +179,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
             {/* Error Alert */}
             {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2.5 text-red-600 dark:text-red-400 text-xs animate-fade-in">
+              <div className="p-3.5 rounded-xl bg-rose-500/10 flex items-center gap-2.5 text-rose-500 text-xs animate-fade-in">
                 <WarningCircle className="w-4 h-4 shrink-0" weight="fill" />
                 <span className="font-medium">{error}</span>
               </div>
@@ -187,7 +187,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
             {/* Current Password Field */}
             <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 当前密码
               </label>
               <div className="relative">
@@ -210,10 +210,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isCurrentEmpty}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl bg-paper border text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-1 font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder-ink-faint focus:outline-none font-mono transition-colors',
                     isCurrentEmpty
-                      ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20'
-                      : 'border-line focus:border-accent focus:ring-accent'
+                      ? 'bg-rose-500/10'
+                      : 'bg-paper-3 focus:bg-paper-4'
                   )}
                 />
                 <button
@@ -236,7 +236,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             {/* New Password Field */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-ink">
+                <label className="text-xs font-semibold text-ink-muted">
                   新密码
                 </label>
                 <span className="text-[11px] text-ink-muted">至少 6 位字符</span>
@@ -261,10 +261,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isNewEmpty || isNewTooShort}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl bg-paper border text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-1 font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder-ink-faint focus:outline-none font-mono transition-colors',
                     isNewEmpty || isNewTooShort
-                      ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20'
-                      : 'border-line focus:border-accent focus:ring-accent'
+                      ? 'bg-rose-500/10'
+                      : 'bg-paper-3 focus:bg-paper-4'
                   )}
                 />
                 <button
@@ -292,7 +292,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
             {/* Confirm Password Field (Equipped with Eye Toggle) */}
             <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">
+              <label className="block text-xs font-semibold text-ink-muted mb-1.5">
                 确认新密码
               </label>
               <div className="relative">
@@ -315,10 +315,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isConfirmEmpty || isConfirmMismatch}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl bg-paper border text-xs text-ink placeholder-ink-faint focus:outline-none focus:ring-1 font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder-ink-faint focus:outline-none font-mono transition-colors',
                     isConfirmEmpty || isConfirmMismatch
-                      ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20'
-                      : 'border-line focus:border-accent focus:ring-accent'
+                      ? 'bg-rose-500/10'
+                      : 'bg-paper-3 focus:bg-paper-4'
                   )}
                 />
                 <button
@@ -346,14 +346,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           </div>
 
           {/* Sticky Bottom Actions - Always visible above virtual keyboard */}
-          <div className="sticky bottom-0 z-10 bg-paper-2 px-5 py-3.5 border-t border-line flex items-center justify-end gap-3 shrink-0 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
+          <div className="sticky bottom-0 z-10 bg-paper-2 px-6 py-4 flex items-center justify-end gap-3 shrink-0 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
             <Button8State
               type="button"
               variant="secondary"
               size="md"
               onClick={handleAttemptClose}
               disabled={loading || success}
-              className="min-h-[44px] px-4"
+              className="min-h-[40px] px-4 rounded-xl"
             >
               取消
             </Button8State>
@@ -364,7 +364,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               state={loading ? 'loading' : 'default'}
               disabled={!isFormValid || loading || success}
               icon={<Key className="w-4 h-4" weight="bold" />}
-              className="min-h-[44px] px-5 font-semibold"
+              className="min-h-[40px] px-5 rounded-xl"
             >
               {loading ? '提交中...' : '确认修改'}
             </Button8State>
@@ -375,7 +375,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       {/* Discard Confirmation Action Modal (Prevents accidental loss of input) */}
       {showDiscardConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="w-full max-w-xs bg-paper-2 border border-line rounded-xl shadow-2xl p-4.5 space-y-3.5 overflow-hidden">
+          <div className="w-full max-w-xs bg-paper-2 rounded-2xl shadow-2xl p-5 space-y-3.5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
                 <Warning className="w-4 h-4" weight="bold" />
@@ -391,14 +391,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDiscardConfirm(false)}
-                className="min-h-[38px] px-3 text-xs font-medium rounded-lg text-ink hover:bg-paper-3 transition-colors cursor-pointer"
+                className="min-h-[36px] px-3 text-xs font-medium rounded-xl text-ink bg-paper-3 hover:bg-paper-4 transition-colors cursor-pointer"
               >
                 继续编辑
               </button>
               <button
                 type="button"
                 onClick={handleFinalClose}
-                className="min-h-[38px] px-3.5 text-xs font-semibold rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition-colors cursor-pointer"
+                className="min-h-[36px] px-3.5 text-xs font-semibold rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition-colors cursor-pointer"
               >
                 放弃修改
               </button>

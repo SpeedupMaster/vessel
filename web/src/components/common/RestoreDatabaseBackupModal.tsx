@@ -158,14 +158,14 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
       <form onSubmit={handleSubmit} className="space-y-5 pt-1 text-xs">
         {/* Source Selection Tabs */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-ink">备份源模式</label>
-          <div className="grid grid-cols-2 gap-2 p-1 bg-paper-2 rounded-xl border border-line">
+          <label className="block text-xs font-semibold text-ink-muted">备份源模式</label>
+          <div className="grid grid-cols-2 gap-2 p-1.5 bg-paper-3 rounded-2xl">
             <button
               type="button"
               onClick={() => setSourceType('existing')}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 sourceType === 'existing'
-                  ? 'bg-paper shadow-sm text-ink border border-line/60 font-semibold'
+                  ? 'bg-paper-2 shadow-sm text-ink font-semibold'
                   : 'text-ink-muted hover:text-ink'
               }`}
             >
@@ -175,9 +175,9 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             <button
               type="button"
               onClick={() => setSourceType('upload')}
-              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 sourceType === 'upload'
-                  ? 'bg-paper shadow-sm text-ink border border-line/60 font-semibold'
+                  ? 'bg-paper-2 shadow-sm text-ink font-semibold'
                   : 'text-ink-muted hover:text-ink'
               }`}
             >
@@ -190,29 +190,29 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         {/* TAB 1: Existing Backup Records */}
         {sourceType === 'existing' && (
           <div className="space-y-3">
-            <label className="block text-xs font-semibold text-ink">选择历史备份归档</label>
+            <label className="block text-xs font-semibold text-ink-muted">选择历史备份归档</label>
             {appBackups.length === 0 ? (
-              <div className="p-4 rounded-xl border border-dashed border-line text-center text-ink-muted bg-paper-2/40 space-y-2">
+              <div className="p-4 rounded-2xl text-center text-ink-muted bg-paper-3 space-y-2">
                 <p>暂无此数据库的历史备份快照。</p>
                 <button
                   type="button"
                   onClick={() => setSourceType('upload')}
-                  className="text-accent hover:underline font-medium text-xs cursor-pointer inline-flex items-center gap-1"
+                  className="text-accent hover:opacity-80 font-medium text-xs cursor-pointer inline-flex items-center gap-1"
                 >
                   <UploadSimple className="w-3.5 h-3.5" />
                   <span>切换至「上传本地文件」导入</span>
                 </button>
               </div>
             ) : (
-              <div className="max-h-52 overflow-y-auto space-y-2 pr-1 divide-y-0">
+              <div className="max-h-52 overflow-y-auto space-y-2 pr-1 divide-y-0 no-scrollbar">
                 {appBackups.map((b) => (
                   <div
                     key={b.id}
                     onClick={() => setSelectedRecordId(b.id)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    className={`p-3.5 rounded-2xl transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       selectedRecordId === b.id
-                        ? 'border-accent bg-accent/5 ring-1 ring-accent/20'
-                        : 'border-line hover:border-line/80 hover:bg-paper-2/60 bg-paper'
+                        ? 'bg-paper-4 ring-2 ring-accent'
+                        : 'bg-paper-3 hover:bg-paper-4/60'
                     }`}
                   >
                     <div className="min-w-0 flex-1 space-y-1">
@@ -227,7 +227,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                         <span>•</span>
                         <span>{new Date(b.createdAt).toLocaleString()}</span>
                         {b.databaseName && (
-                          <span className="ml-1 px-1.5 py-0.2 rounded bg-paper-3 text-ink-muted font-mono">
+                          <span className="ml-1 px-1.5 py-0.5 rounded-md bg-paper-4 text-ink-muted font-mono">
                             {b.databaseName === 'all' ? '全部库' : b.databaseName}
                           </span>
                         )}
@@ -252,7 +252,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         {/* TAB 2: Upload Local File */}
         {sourceType === 'upload' && (
           <div className="space-y-2">
-            <label className="block text-xs font-semibold text-ink">选择本地 SQL 或归档文件</label>
+            <label className="block text-xs font-semibold text-ink-muted">选择本地 SQL 或归档文件</label>
             <input
               ref={fileInputRef}
               type="file"
@@ -269,13 +269,13 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center space-y-2 ${
+                className={`p-6 rounded-2xl transition-all cursor-pointer text-center space-y-2 ${
                   isDragging
-                    ? 'border-accent bg-accent/5'
-                    : 'border-line/70 hover:border-accent hover:bg-paper-2/50 bg-paper-2/30'
+                    ? 'bg-paper-4 ring-2 ring-accent'
+                    : 'bg-paper-3 hover:bg-paper-4/60'
                 }`}
               >
-                <div className="w-10 h-10 rounded-xl bg-paper-3 text-ink-muted flex items-center justify-center mx-auto shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-paper-4 text-ink-muted flex items-center justify-center mx-auto shadow-sm">
                   <UploadSimple className="w-5 h-5 text-accent" />
                 </div>
                 <div>
@@ -287,7 +287,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                 </p>
               </div>
             ) : (
-              <div className="p-3.5 rounded-xl border border-line bg-paper flex items-center justify-between gap-3 shadow-sm">
+              <div className="p-3.5 rounded-2xl bg-paper-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0">
                     <FileCode className="w-4 h-4" />
@@ -304,7 +304,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
-                  className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-2 cursor-pointer"
+                  className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-4 cursor-pointer"
                   title="清除所选文件"
                 >
                   <X className="w-4 h-4" />
@@ -317,7 +317,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         {/* Target Database Name */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-ink flex items-center gap-1">
+            <label className="text-xs font-semibold text-ink-muted flex items-center gap-1">
               <span>目标数据库名称 (Database Name)</span>
               <span className="text-rose-500">*</span>
             </label>
@@ -325,7 +325,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
               type="button"
               onClick={fetchDatabases}
               disabled={loadingDbs}
-              className="text-[11px] text-accent hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[11px] text-accent hover:opacity-80 flex items-center gap-1 cursor-pointer"
             >
               <ArrowsClockwise className={`w-3 h-3 ${loadingDbs ? 'animate-spin' : ''}`} />
               <span>检测运行中的数据库</span>
@@ -338,7 +338,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             value={targetDb}
             onChange={(e) => setTargetDb(e.target.value)}
             placeholder="如 postgres 或 app_db"
-            className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-mono focus:border-accent focus:outline-none shadow-subtle transition-colors"
+            className="w-full bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono focus:outline-none transition-colors"
           />
 
           {/* Quick Select Chips */}
@@ -350,10 +350,10 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                   key={dbName}
                   type="button"
                   onClick={() => setTargetDb(dbName)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-lg text-[11px] font-mono transition-colors cursor-pointer ${
                     targetDb === dbName
-                      ? 'bg-accent text-white border-accent'
-                      : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line'
+                      ? 'bg-accent text-accent-contrast font-semibold'
+                      : 'bg-paper-4 text-ink-muted hover:text-ink'
                   }`}
                 >
                   {dbName}
@@ -367,8 +367,8 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         </div>
 
         {/* Warning Callout */}
-        <div className="p-3.5 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 text-xs space-y-1.5">
-          <div className="flex items-center gap-2 font-semibold text-ink dark:text-amber-300">
+        <div className="p-3.5 rounded-2xl bg-amber-500/10 text-xs space-y-1.5">
+          <div className="flex items-center gap-2 font-semibold text-amber-600 dark:text-amber-400">
             <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
             <span>高危数据覆写风险提示</span>
           </div>
@@ -378,7 +378,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         </div>
 
         {/* Actions */}
-        <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 border-t border-line">
+        <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
           <Button8State
             size="sm"
             variant="primary"
@@ -389,7 +389,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
               (sourceType === 'upload' && !selectedFile)
             }
             icon={<ArrowsClockwise className="w-3.5 h-3.5" />}
-            className="order-1 sm:order-2 w-full sm:w-auto min-h-[44px] sm:min-h-0"
+            className="order-1 sm:order-2 w-full sm:w-auto min-h-[40px] sm:min-h-0 rounded-xl font-semibold"
           >
             确认恢复备份
           </Button8State>
@@ -397,7 +397,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+            className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-3 sm:hover:bg-paper-4 sm:rounded-xl text-center transition-colors cursor-pointer select-none"
           >
             取消
           </button>

@@ -63,30 +63,30 @@ export const Header: React.FC<HeaderProps> = ({
   }, [userMenuOpen]);
 
   return (
-    <header className="bg-paper/85 backdrop-blur-md border-b border-line sticky top-0 z-20 transition-colors">
-      {/* Mobile Top Navigation Bar (< md) - Wireframe Row 1 */}
-      <div className="md:hidden h-14 px-4 flex items-center justify-between border-b border-line/40">
+    <header className="bg-paper/80 backdrop-blur-md sticky top-0 z-20 transition-colors">
+      {/* Mobile Top Navigation Bar (< md) */}
+      <div className="md:hidden h-14 px-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {/* Hamburger Menu Button (Touch Target >= 44x44px) */}
+          {/* Hamburger Menu Button */}
           <button
             type="button"
             onClick={onOpenMenu}
             aria-label="打开导航菜单"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-ink hover:text-accent hover:bg-paper-3 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-ink hover:bg-paper-3 transition-colors cursor-pointer"
           >
             <List className="w-5 h-5" weight="bold" />
           </button>
 
           {/* Logo & Brand */}
           <div className="flex items-center gap-1.5 select-none">
-            <div className="w-7 h-7 rounded-lg bg-paper-3 border border-line flex items-center justify-center text-accent">
+            <div className="w-7 h-7 rounded-lg bg-paper-3 flex items-center justify-center text-ink">
               <Anchor className="w-3.5 h-3.5" weight="bold" />
             </div>
             <span className="font-semibold text-sm tracking-tight text-ink font-sans">VESSEL</span>
           </div>
 
           {/* Status Dot Pill */}
-          <div className="flex items-center gap-1.5 ml-1 px-2 py-1 rounded-full bg-paper-3/80 border border-line text-[11px]">
+          <div className="flex items-center gap-1.5 ml-1 px-2.5 py-1 rounded-full bg-paper-2 text-[11px]">
             <span className="relative flex h-2 w-2">
               {isDockerOnline ? (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span
               className={clsx(
                 'font-medium text-[10px]',
-                isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
+                isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
               )}
             >
               {isDockerOnline ? '在线' : '离线'}
@@ -109,30 +109,30 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* User Account / Profile Button (Touch Target >= 44x44px) */}
+        {/* User Account Button (Mobile) */}
         {user && (
           <div className="relative" ref={mobileMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-end p-1 rounded-lg text-ink transition-colors cursor-pointer select-none"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-end p-1 rounded-xl text-ink transition-colors cursor-pointer select-none"
               aria-label="管理员账号菜单"
             >
-              <div className="w-7 h-7 rounded-full bg-accent/15 text-accent flex items-center justify-center font-semibold text-xs border border-accent/20">
+              <div className="w-7 h-7 rounded-full bg-paper-3 text-ink flex items-center justify-center font-semibold text-xs">
                 {user.username.charAt(0).toUpperCase()}
               </div>
             </button>
 
-            {/* Mobile Dropdown (Right-aligned anchor, safe from viewport edges) */}
+            {/* Mobile Dropdown */}
             {userMenuOpen && (
               <div
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-paper-2 border border-line shadow-xl py-1 z-30 animate-fade-in font-sans origin-top-right"
+                className="absolute right-0 top-full mt-2 w-48 rounded-2xl bg-paper-2 shadow-2xl p-1.5 z-30 animate-fade-in font-sans origin-top-right"
               >
-                <div className="px-3.5 py-2.5 border-b border-line">
+                <div className="px-3 py-2 bg-paper-3/40 rounded-xl mb-1">
                   <p className="text-xs font-semibold text-ink truncate">{user.username}</p>
                   <p className="text-[10px] text-ink-muted">超级管理员</p>
                 </div>
-                <div className="py-1">
+                <div className="py-0.5 space-y-0.5">
                   {onOpenChangePassword && (
                     <button
                       type="button"
@@ -140,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setUserMenuOpen(false);
                         onOpenChangePassword();
                       }}
-                      className="w-full min-h-[44px] px-3.5 text-left text-xs text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center gap-2.5 cursor-pointer"
+                      className="w-full min-h-[44px] px-3 text-left text-xs text-ink-muted hover:text-ink hover:bg-paper-3 rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors"
                     >
                       <Key className="w-3.5 h-3.5" />
                       <span>修改密码</span>
@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setUserMenuOpen(false);
                         onLogout();
                       }}
-                      className="w-full min-h-[44px] px-3.5 text-left text-xs text-rose-500 hover:bg-rose-500/10 flex items-center gap-2.5 cursor-pointer"
+                      className="w-full min-h-[44px] px-3 text-left text-xs text-rose-500 hover:bg-rose-500/10 rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors"
                     >
                       <SignOut className="w-3.5 h-3.5" />
                       <span>退出登录</span>
@@ -166,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Mobile Sub-Header (< md) - Wireframe Row 2: Title & Quick Utilities */}
+      {/* Mobile Sub-Header (< md) */}
       <div className="md:hidden h-12 px-4 flex items-center justify-between">
         <h1 className="text-base font-semibold text-ink tracking-tight font-sans truncate pr-2">
           {title}
@@ -175,7 +175,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onRefresh}
             aria-label="刷新数据"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer"
           >
             <ArrowClockwise className="w-4 h-4" />
           </button>
@@ -185,17 +185,17 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Desktop Header (>= md) - Complete Classic Layout */}
+      {/* Desktop Header (>= md) - Clean borderless */}
       <div className="hidden md:flex h-16 px-6 lg:px-8 items-center justify-between">
         <div>
           <h1 className="text-base font-semibold text-ink tracking-tight font-sans">{title}</h1>
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Real-time Telemetry Strip */}
-          <div className="flex items-center divide-x divide-line rounded-lg border border-line bg-paper-2 px-1 py-1 text-xs font-sans">
+          {/* Real-time Telemetry Strip (Seamless soft pills) */}
+          <div className="flex items-center gap-1.5 rounded-xl bg-paper-2 px-2 py-1 text-xs font-sans">
             {/* Docker Daemon Status */}
-            <div className="flex items-center gap-2 px-3 py-0.5">
+            <div className="flex items-center gap-2 px-2.5 py-1">
               <span className="relative flex h-2 w-2">
                 {isDockerOnline && (
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -203,9 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span
                   className={clsx(
                     'relative inline-flex rounded-full h-2 w-2',
-                    isDockerOnline
-                      ? 'bg-emerald-500'
-                      : 'bg-[#ff6b6b] shadow-[0_0_6px_rgba(255,107,107,0.6)]'
+                    isDockerOnline ? 'bg-emerald-500' : 'bg-rose-500'
                   )}
                 />
               </span>
@@ -213,7 +211,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span
                 className={clsx(
                   'font-medium',
-                  isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-[#ff6b6b]'
+                  isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
                 )}
               >
                 {isDockerOnline ? '运行中' : '离线'}
@@ -221,19 +219,19 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* CPU */}
-            <div className="flex items-center gap-2 px-3 py-0.5">
-              <Cpu className="w-3.5 h-3.5 text-accent" weight="bold" />
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-paper-3/40 rounded-lg">
+              <Cpu className="w-3.5 h-3.5 text-ink-muted" weight="bold" />
               <span className="text-ink-muted">CPU</span>
-              <span className="text-ink font-medium">
+              <span className="text-ink font-mono font-medium">
                 <RollingCounter value={metrics.cpuUsage} suffix="%" />
               </span>
             </div>
 
             {/* Memory */}
-            <div className="flex items-center gap-2 px-3 py-0.5">
-              <Memory className="w-3.5 h-3.5 text-accent" weight="bold" />
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-paper-3/40 rounded-lg">
+              <Memory className="w-3.5 h-3.5 text-ink-muted" weight="bold" />
               <span className="text-ink-muted">RAM</span>
-              <span className="text-ink font-medium">
+              <span className="text-ink font-mono font-medium">
                 <RollingCounter value={memUsedGb} precision={1} />
                 <span className="text-ink-faint">/{memTotalGb.toFixed(0)}G</span>
               </span>
@@ -245,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onRefresh}
               data-tooltip="刷新数据"
-              className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line transition-all cursor-pointer"
+              className="p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-paper-2 transition-all cursor-pointer"
             >
               <ArrowClockwise className="w-4 h-4" />
             </button>
@@ -259,9 +257,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-line bg-paper-2 hover:bg-paper-3 text-ink text-xs transition-colors cursor-pointer select-none"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-paper-2 hover:bg-paper-3 text-ink text-xs transition-colors cursor-pointer select-none"
                 >
-                  <div className="w-5 h-5 rounded-full bg-accent/15 text-accent flex items-center justify-center font-semibold text-[10px]">
+                  <div className="w-5 h-5 rounded-full bg-paper-3 text-ink flex items-center justify-center font-semibold text-[10px]">
                     {user.username.charAt(0).toUpperCase()}
                   </div>
                   <span className="font-medium max-w-[80px] truncate">{user.username}</span>
@@ -271,12 +269,12 @@ export const Header: React.FC<HeaderProps> = ({
                 {userMenuOpen && (
                   <div
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="absolute right-0 mt-2 w-52 rounded-xl bg-paper-2 border border-line shadow-xl py-1 z-30 animate-fade-in font-sans"
+                    className="absolute right-0 mt-2 w-52 rounded-2xl bg-paper-2 shadow-2xl p-1.5 z-30 animate-fade-in font-sans origin-top-right"
                   >
                     {/* User Profile Overview */}
-                    <div className="px-3.5 py-2.5 border-b border-line">
+                    <div className="px-3 py-2 bg-paper-3/40 rounded-xl mb-1">
                       <div className="flex items-center gap-2">
-                        <div className="p-1 rounded bg-accent/10 text-accent">
+                        <div className="p-1 rounded bg-paper-3 text-ink">
                           <Shield className="w-3.5 h-3.5" weight="bold" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -287,7 +285,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     {/* Actions */}
-                    <div className="py-1">
+                    <div className="py-0.5 space-y-0.5">
                       {onOpenChangePassword && (
                         <button
                           type="button"
@@ -295,7 +293,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setUserMenuOpen(false);
                             onOpenChangePassword();
                           }}
-                          className="group w-full px-3.5 py-2 text-left text-xs text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center gap-2.5 transition-colors cursor-pointer"
+                          className="group w-full px-3 py-2 text-left text-xs text-ink-muted hover:text-ink hover:bg-paper-3 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
                           <Key className="w-3.5 h-3.5 text-ink-muted group-hover:text-ink transition-colors" />
                           <span>修改密码</span>
@@ -309,9 +307,9 @@ export const Header: React.FC<HeaderProps> = ({
                             setUserMenuOpen(false);
                             onLogout();
                           }}
-                          className="group w-full px-3.5 py-2 text-left text-xs text-ink-muted hover:text-rose-500 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/15 flex items-center gap-2.5 transition-colors cursor-pointer"
+                          className="group w-full px-3 py-2 text-left text-xs text-ink-muted hover:text-rose-500 hover:bg-rose-500/10 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
                         >
-                          <SignOut className="w-3.5 h-3.5 text-ink-muted group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-colors" />
+                          <SignOut className="w-3.5 h-3.5 text-ink-muted group-hover:text-rose-500 transition-colors" />
                           <span>退出登录</span>
                         </button>
                       )}

@@ -23,6 +23,8 @@ import { R2Config, BackupRecord } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
 import { Badge } from '../common/Badge.js';
 import { Modal } from '../common/Modal.js';
+import { Switch } from '../common/Switch.js';
+import { NumberInput } from '../common/NumberInput.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { formatBytes } from '../../utils/format.js';
 
@@ -216,18 +218,18 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Page Header (De-boxed, modern SaaS standard with compressed mobile footprint) */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle mt-0.5">
-            <CloudArrowUp className="w-5 h-5 text-accent" weight="bold" />
+          <div className="w-10 h-10 rounded-xl bg-paper-3 flex items-center justify-center text-ink flex-shrink-0 mt-0.5">
+            <CloudArrowUp className="w-5 h-5" weight="bold" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-semibold text-base sm:text-lg text-ink tracking-tight font-sans">
                 Cloudflare R2 远程对象存储灾备配置
               </h2>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-paper-3 text-ink-muted font-mono">
                 {enabled ? '自动灾备已启用' : '自动化备份未开启'}
               </span>
             </div>
@@ -240,7 +242,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsTipsExpanded(!isTipsExpanded)}
-                className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline font-medium ml-1 cursor-pointer select-none"
+                className="inline-flex items-center gap-0.5 text-xs text-ink hover:underline font-semibold ml-1 cursor-pointer select-none"
               >
                 <span>{isTipsExpanded ? '收起说明' : '详细说明'}</span>
                 {isTipsExpanded ? (
@@ -253,9 +255,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
             {/* Collapsible Guidance Box */}
             {isTipsExpanded && (
-              <div className="mt-2.5 p-3 rounded-xl bg-paper-2/80 dark:bg-white/[0.03] border border-line/80 dark:border-white/[0.08] text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
+              <div className="mt-2.5 p-3.5 rounded-2xl bg-paper-3/40 text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
                 <div className="flex items-center gap-1.5 font-medium text-ink">
-                  <Info className="w-3.5 h-3.5 text-accent flex-shrink-0" weight="fill" />
+                  <Info className="w-3.5 h-3.5 text-ink flex-shrink-0" weight="fill" />
                   <span>异地高可靠灾难恢复机制</span>
                 </div>
                 <p className="leading-relaxed">
@@ -282,10 +284,10 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
       </div>
 
       {/* Configuration Form Card */}
-      <div className="card-vessel p-5 sm:p-7 shadow-subtle">
+      <div className="card-vessel p-5 sm:p-7">
         <form onSubmit={handleSave} className="space-y-6">
-          {/* Modern Toggle Switch Row (De-boxed) */}
-          <div className="flex items-center justify-between pb-5 border-b border-line/50 dark:border-white/[0.06] gap-4">
+          {/* Toggle Switch Row */}
+          <div className="flex items-center justify-between pb-5 gap-4">
             <div>
               <h4 className="text-sm font-semibold text-ink font-sans">
                 开启 Cloudflare R2 定时自动化备份任务
@@ -297,34 +299,20 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
               </p>
             </div>
 
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              onClick={() => {
-                setEnabled(!enabled);
-                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                  navigator.vibrate(15);
-                }
-              }}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                enabled ? 'bg-accent' : 'bg-paper-3 dark:bg-white/[0.12]'
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                  enabled ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
+            <Switch
+              checked={enabled}
+              onChange={setEnabled}
+              size="md"
+              aria-label="全量定时自动备份任务"
+            />
           </div>
 
-          {/* Form Fields Grid - Progressive Disclosure: Only rendered when enabled */}
+          {/* Form Fields Grid - Progressive Disclosure */}
           {enabled ? (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
                     R2 S3 API Endpoint *
                   </label>
                   <input
@@ -335,12 +323,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
                     Bucket 存储桶名称 *
                   </label>
                   <input
@@ -351,12 +339,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
                     Access Key ID *
                   </label>
                   <input
@@ -367,12 +355,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
                     Secret Access Key *
                   </label>
                   <div className="relative">
@@ -384,12 +372,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
-                      className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                      className="w-full bg-paper-3 rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
                     />
                     <button
                       type="button"
                       onClick={() => setShowSecret(!showSecret)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5 cursor-pointer"
                       title={showSecret ? '隐藏密钥' : '显示密钥'}
                     >
                       {showSecret ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -399,7 +387,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
                 {/* CRON Schedule with Quick-pick Chips */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal">
+                  <label className="block text-xs uppercase text-ink-muted font-normal">
                     Cron 定时周期表达式
                   </label>
                   <input
@@ -410,12 +398,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
                   />
                   {/* Quick-pick Chips Container */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                    <span className="text-[11px] text-ink-muted/70 flex-shrink-0 flex items-center gap-1 mr-0.5">
-                      <Clock className="w-3 h-3 text-ink-muted/80" />
+                    <span className="text-[11px] text-ink-muted flex-shrink-0 flex items-center gap-1 mr-0.5">
+                      <Clock className="w-3 h-3 text-ink-muted" />
                       快捷填入:
                     </span>
                     {BACKUP_CRON_PRESETS.map((preset) => {
@@ -431,10 +419,10 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                             }
                           }}
                           className={clsx(
-                            'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 border',
+                            'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
                             isSelected
-                              ? 'bg-accent text-white border-accent shadow-sm font-medium'
-                              : 'bg-paper-2/80 hover:bg-paper-3 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-ink-muted hover:text-ink border-line/60 dark:border-white/[0.08]'
+                              ? 'bg-accent text-accent-contrast font-medium'
+                              : 'bg-paper-3 text-ink-muted hover:text-ink hover:bg-paper-4'
                           )}
                         >
                           {preset.label}
@@ -446,20 +434,17 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
                 {/* Retention Count with numeric constraint */}
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
                     保留版本数 (超过自动清理旧归档)
                   </label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={retentionCount}
-                    onChange={(e) => setRetentionCount(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
+                  <NumberInput
                     min={1}
                     max={30}
-                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    value={retentionCount}
+                    onChange={setRetentionCount}
+                    unit="份"
                   />
-                  <span className="text-[11px] text-ink-muted/70 dark:text-zinc-500 block mt-1">
+                  <span className="text-[11px] text-ink-faint block mt-1">
                     系统将仅保留最新的 {retentionCount} 个备份，超出的旧版本将在下一次备份成功后自动从 R2 清理。
                   </span>
                 </div>
@@ -468,10 +453,10 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
               {/* Test feedback banner */}
               {testResult && (
                 <div
-                  className={`p-3.5 rounded-lg text-xs flex items-center gap-2.5 ${
+                  className={`p-3.5 rounded-2xl text-xs flex items-center gap-2.5 ${
                     testResult.success
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                      : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                   }`}
                 >
                   {testResult.success ? (
@@ -483,15 +468,15 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 </div>
               )}
 
-              {/* Action Buttons: Stack vertically on mobile, horizontal on desktop */}
-              <div className="pt-4 border-t border-line/50 dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <Button8State
                   type="button"
                   variant="secondary"
                   size="md"
                   state={isTesting ? 'loading' : 'default'}
                   onClick={handleTest}
-                  className="w-full sm:w-auto min-h-[44px]"
+                  className="w-full sm:w-auto min-h-[42px]"
                 >
                   测试 R2 连通性
                 </Button8State>
@@ -502,14 +487,14 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   size="md"
                   icon={<FloppyDiskBack className="w-4 h-4" weight="bold" />}
                   state={isSaving ? 'loading' : 'default'}
-                  className="w-full sm:w-auto min-h-[44px]"
+                  className="w-full sm:w-auto min-h-[42px]"
                 >
                   保存备份策略
                 </Button8State>
               </div>
             </div>
           ) : (
-            /* Progressive Disclosure: Collapsed state actions */
+            /* Collapsed state actions */
             <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <span className="text-xs text-ink-muted">
                 保存后将停用系统的 CRON 定时灾备任务。
@@ -519,7 +504,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 variant="primary"
                 size="md"
                 state={isSaving ? 'loading' : 'default'}
-                className="w-full sm:w-auto min-h-[44px]"
+                className="w-full sm:w-auto min-h-[42px]"
               >
                 保存配置更改
               </Button8State>
@@ -529,14 +514,14 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
       </div>
 
       {/* Backup History Table - Mobile Stacked Layout (Rescue Squished UI) */}
-      <div className="card-vessel overflow-hidden shadow-subtle">
-        <div className="p-4 sm:p-5 flex items-center justify-between border-b border-line/50 dark:border-white/[0.06]">
+      <div className="card-vessel overflow-hidden">
+        <div className="flex items-center justify-between pb-3 sm:pb-4">
           <div className="flex items-center gap-2.5">
             <h4 className="text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-bold tracking-wider">
               归档版本历史记录 ({backups.length})
             </h4>
             {backups.length > 0 && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted font-mono">
                 保留策略: 最新 {retentionCount} 个
               </span>
             )}
@@ -548,11 +533,11 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             暂无备份历史。点击上方「立即执行系统快照」或在应用详情中进行备份。
           </div>
         ) : (
-          <div className="divide-y divide-line/60 dark:divide-white/[0.06]">
+          <div className="space-y-2.5 pt-1">
             {backups.map((b) => (
               <div
                 key={b.id}
-                className="p-4 sm:p-5 space-y-2.5 hover:bg-paper-2/40 dark:hover:bg-white/[0.02] transition-colors"
+                className="p-4 sm:p-5 space-y-2.5 rounded-2xl bg-paper-2/60 hover:bg-paper-3/80 transition-colors"
               >
                 {/* 行 1: 标题与状态标签 */}
                 <div className="flex items-start justify-between gap-2.5">
@@ -561,7 +546,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       {b.targetName}
                     </span>
                     {b.databaseName && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
                         {b.databaseName === 'all' ? '全部数据库' : `库: ${b.databaseName}`}
                       </span>
                     )}
@@ -587,13 +572,13 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   <span className="font-sans">{new Date(b.createdAt).toLocaleString()}</span>
                 </div>
 
-                {/* 行 4: 独立的操作栏 (Action Bar) - 彻底解决文字折行竖排灾难 */}
-                <div className="pt-3 border-t border-line/40 dark:border-white/[0.04] flex items-center justify-between gap-3">
+                {/* 行 4: 独立的操作栏 (Action Bar) */}
+                <div className="pt-2 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Button8State
                       size="sm"
                       variant="secondary"
-                      icon={<ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />}
+                      icon={<ArrowCounterClockwise className="w-3.5 h-3.5 text-ink" />}
                       onClick={() => {
                         setRestoringBackup(b);
                         setRestoreConfirmInput('');
@@ -620,7 +605,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       setDeletingBackup(b);
                       setDeleteBackupInput('');
                     }}
-                    className="p-2 min-h-[36px] min-w-[36px] rounded-lg text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 transition-colors cursor-pointer flex items-center justify-center"
+                    className="p-2 min-h-[36px] min-w-[36px] rounded-xl text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 transition-colors cursor-pointer flex items-center justify-center"
                     title="删除此备份归档"
                   >
                     <Trash className="w-4 h-4" />
@@ -648,7 +633,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         {deletingBackup && (
           <div className="space-y-4">
             {/* Warning Message Box */}
-            <div className="p-4 rounded-xl bg-rose-500/[0.04] border border-rose-500/20 dark:border-rose-500/25 text-xs space-y-2 shadow-subtle">
+            <div className="p-4 rounded-2xl bg-rose-500/[0.08] text-xs space-y-2">
               <div className="flex items-center gap-2 font-semibold text-sm text-ink dark:text-rose-200">
                 <Warning className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
                 <span>此操作不可撤回，请务必谨慎！</span>
@@ -677,17 +662,17 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 }}
                 placeholder={deletingBackup.fileName}
                 autoFocus
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-mono focus:border-accent focus:ring-2 focus:ring-accent/15 focus:outline-none transition-all shadow-subtle"
+                className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all"
               />
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-4 mt-2 border-t border-line flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
+            <div className="pt-4 mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
               {!isBackupDeleteConfirmed ? (
                 <button
                   type="button"
                   disabled
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-paper-3 dark:bg-[#21262d] text-ink-muted/50 dark:text-[#8b949e] border border-line/50 dark:border-white/[0.06] text-xs font-medium rounded-xl sm:rounded-lg cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[42px] px-4 py-2 bg-paper-3 text-ink-muted/40 text-xs font-medium rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
                 >
                   <Trash className="w-4 h-4 opacity-40" />
                   <span>确认删除备份</span>
@@ -697,7 +682,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   type="button"
                   onClick={handleConfirmDeleteBackup}
                   disabled={isDeleting}
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl sm:rounded-lg shadow-md shadow-red-600/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] sm:active:scale-100 cursor-pointer"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[42px] px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] sm:active:scale-100 cursor-pointer"
                 >
                   {isDeleting ? (
                     <>
@@ -717,7 +702,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 type="button"
                 onClick={() => setDeletingBackup(null)}
                 disabled={isDeleting}
-                className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+                className="order-2 sm:order-1 w-full sm:w-auto min-h-[42px] px-4 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 rounded-xl text-center transition-colors cursor-pointer select-none"
               >
                 取消
               </button>
@@ -742,7 +727,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         {restoringBackup && (
           <div className="space-y-4">
             {/* Warning Message Box */}
-            <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-500/25 text-xs space-y-2 shadow-subtle">
+            <div className="p-4 rounded-2xl bg-amber-500/[0.08] text-xs space-y-2">
               <div className="flex items-center gap-2 font-semibold text-sm text-ink dark:text-amber-200">
                 <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
                 <span>{restoringBackup.type === 'app_db' ? '数据库快照还原警示！' : '快照回滚将覆盖当前数据与容器编排！'}</span>
@@ -770,7 +755,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
               <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入 <strong className="text-accent font-semibold select-none font-mono">确认恢复</strong> 或 <strong className="text-accent font-semibold font-mono select-none">RESTORE</strong> 以确认执行：
+                请输入 <strong className="text-ink font-semibold select-none font-mono">确认恢复</strong> 或 <strong className="text-ink font-semibold font-mono select-none">RESTORE</strong> 以确认执行：
               </label>
               <input
                 type="text"
@@ -786,19 +771,19 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 }}
                 placeholder="确认恢复 或 RESTORE"
                 autoFocus
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-mono focus:border-accent focus:ring-2 focus:ring-accent/15 focus:outline-none transition-all shadow-subtle"
+                className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-all"
               />
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-4 mt-2 border-t border-line flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
+            <div className="pt-4 mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
               {!isRestoreConfirmed ? (
                 <button
                   type="button"
                   disabled
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-paper-3 dark:bg-[#21262d] text-ink-muted/50 dark:text-[#8b949e] border border-line/50 dark:border-white/[0.06] text-xs font-medium rounded-xl sm:rounded-lg cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[42px] px-4 py-2 bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 text-xs font-semibold rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
                 >
-                  <ArrowCounterClockwise className="w-4 h-4 opacity-40" />
+                  <ArrowCounterClockwise className="w-4 h-4 text-current" />
                   <span>确认恢复快照</span>
                 </button>
               ) : (
@@ -806,16 +791,16 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   type="button"
                   onClick={handleConfirmRestore}
                   disabled={isRestoring}
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-accent hover:bg-accent/90 text-white font-bold text-xs rounded-xl sm:rounded-lg shadow-md shadow-accent/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] sm:active:scale-100 cursor-pointer"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[42px] px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] sm:active:scale-100 cursor-pointer"
                 >
                   {isRestoring ? (
                     <>
-                      <CircleNotch className="w-4 h-4 animate-spin text-white" />
+                      <CircleNotch className="w-4 h-4 animate-spin text-current" />
                       <span>正在恢复...</span>
                     </>
                   ) : (
                     <>
-                      <ArrowCounterClockwise className="w-4 h-4 text-white" weight="bold" />
+                      <ArrowCounterClockwise className="w-4 h-4 text-current" weight="bold" />
                       <span>确认恢复快照</span>
                     </>
                   )}
@@ -826,7 +811,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 type="button"
                 onClick={() => setRestoringBackup(null)}
                 disabled={isRestoring}
-                className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+                className="order-2 sm:order-1 w-full sm:w-auto min-h-[42px] px-4 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 rounded-xl text-center transition-colors cursor-pointer select-none"
               >
                 取消
               </button>

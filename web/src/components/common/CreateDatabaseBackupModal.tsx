@@ -10,6 +10,8 @@ import {
 } from '@phosphor-icons/react';
 import { Modal } from './Modal.js';
 import { Button8State } from './Button8State.js';
+import { Switch } from './Switch.js';
+import { NumberInput } from './NumberInput.js';
 import { AppItem, DatabaseBackupSchedule } from '../../types/index.js';
 import { apiFetch } from '../../hooks/useData.js';
 
@@ -172,10 +174,10 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
           <div className="grid grid-cols-1 gap-2.5">
             {/* Specific Database Option */}
             <label
-              className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+              className={`p-3.5 rounded-2xl transition-all cursor-pointer flex items-start gap-3 ${
                 scope === 'specific'
-                  ? 'bg-paper-2 border-accent/80 shadow-sm'
-                  : 'bg-paper-2/40 border-line hover:border-line-strong'
+                  ? 'bg-paper-3 ring-2 ring-accent'
+                  : 'bg-paper-3/60 hover:bg-paper-3'
               }`}
             >
               <input
@@ -189,7 +191,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                 <div className="font-semibold text-ink flex items-center justify-between">
                   <span>指定单个数据库</span>
                   {scope === 'specific' && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-accent/10 text-accent font-medium">
                       推荐
                     </span>
                   )}
@@ -202,10 +204,10 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
 
             {/* All Databases Option */}
             <label
-              className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+              className={`p-3.5 rounded-2xl transition-all cursor-pointer flex items-start gap-3 ${
                 scope === 'all'
-                  ? 'bg-paper-2 border-accent/80 shadow-sm'
-                  : 'bg-paper-2/40 border-line hover:border-line-strong'
+                  ? 'bg-paper-3 ring-2 ring-accent'
+                  : 'bg-paper-3/60 hover:bg-paper-3'
               }`}
             >
               <input
@@ -227,7 +229,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
 
         {/* Database Selection / Input when scope === 'specific' */}
         {scope === 'specific' && (
-          <div className="p-3.5 rounded-xl bg-paper-2/60 border border-line space-y-2.5">
+          <div className="p-4 rounded-2xl bg-paper-3 space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-ink">
                 选择要备份的数据库名称
@@ -257,8 +259,8 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                     }}
                     className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
                       customDb === dbName
-                        ? 'bg-black text-white dark:bg-white dark:text-black font-semibold shadow-sm'
-                        : 'bg-paper-3 hover:bg-paper-2 text-ink border border-line'
+                        ? 'bg-accent text-accent-contrast font-semibold shadow-sm'
+                        : 'bg-paper-4 hover:opacity-80 text-ink'
                     }`}
                   >
                     <Database className="w-3 h-3 opacity-70" />
@@ -276,7 +278,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                 value={customDb}
                 onChange={(e) => setCustomDb(e.target.value)}
                 placeholder="或输入自定义数据库名称 (例如: app_db)"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
+                className="w-full bg-paper-4 rounded-xl px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
                 required={scope === 'specific'}
               />
             </div>
@@ -284,14 +286,14 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
         )}
 
         {/* Scheduled Automatic Backup Section */}
-        <div className="p-3.5 rounded-xl bg-paper-2/70 border border-line space-y-3 shadow-subtle">
+        <div className="p-4 rounded-2xl bg-paper-3 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Clock className="w-4.5 h-4.5 text-accent" />
               <div>
                 <div className="font-semibold text-xs text-ink flex items-center gap-1.5">
                   <span>定时自动备份</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-accent/10 text-accent font-medium font-sans">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent/10 text-accent font-medium font-sans">
                     自动化任务
                   </span>
                 </div>
@@ -301,25 +303,16 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
               </div>
             </div>
 
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enableSchedule}
-              onClick={() => setEnableSchedule(!enableSchedule)}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                enableSchedule ? 'bg-accent' : 'bg-paper-4 dark:bg-white/[0.12]'
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  enableSchedule ? 'translate-x-4' : 'translate-x-0'
-                }`}
-              />
-            </button>
+            <Switch
+              checked={enableSchedule}
+              onChange={setEnableSchedule}
+              size="sm"
+              aria-label="开启周期性自动备份计划"
+            />
           </div>
 
           {enableSchedule && (
-            <div className="pt-3 border-t border-line/60 space-y-3 animate-fade-in">
+            <div className="pt-2 space-y-3 animate-fade-in">
               {/* Presets */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-medium text-ink-muted">快捷预设计划</label>
@@ -329,10 +322,10 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                       key={p.expr}
                       type="button"
                       onClick={() => setCronExpr(p.expr)}
-                      className={`px-2.5 py-1.5 rounded-lg text-[11px] border text-left transition-all cursor-pointer ${
+                      className={`px-2.5 py-1.5 rounded-xl text-[11px] text-left transition-all cursor-pointer ${
                         cronExpr === p.expr
-                          ? 'border-accent bg-accent/10 text-accent font-semibold shadow-xs'
-                          : 'border-line/70 bg-paper hover:bg-paper-2 text-ink-muted hover:text-ink'
+                          ? 'bg-accent text-accent-contrast font-semibold shadow-xs'
+                          : 'bg-paper-4 text-ink-muted hover:text-ink'
                       }`}
                     >
                       <div className="truncate">{p.label}</div>
@@ -353,7 +346,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                     value={cronExpr}
                     onChange={(e) => setCronExpr(e.target.value)}
                     placeholder="0 2 * * *"
-                    className="w-full bg-paper border border-line rounded-lg px-3 py-1.5 text-xs font-mono text-ink focus:border-accent focus:outline-none transition-colors"
+                    className="w-full bg-paper-4 rounded-xl px-3.5 py-2 text-xs font-mono text-ink focus:outline-none transition-colors"
                   />
                   <p className="text-[10px] text-accent mt-1 font-sans">
                     {getCronDescription(cronExpr)}
@@ -364,13 +357,12 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                   <label className="text-[11px] font-medium text-ink-muted mb-1 block">
                     保留历史份数 (Retention)
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
+                  <NumberInput
+                    min={1}
+                    max={365}
                     value={retentionCount}
-                    onChange={(e) => setRetentionCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    className="w-full bg-paper border border-line rounded-lg px-3 py-1.5 text-xs font-mono text-ink focus:border-accent focus:outline-none transition-colors"
+                    onChange={setRetentionCount}
+                    unit="份"
                   />
                   <p className="text-[10px] text-ink-faint mt-1 font-sans">
                     最多保留最新 {retentionCount} 份，自动轮转清理旧版本
@@ -382,7 +374,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
         </div>
 
         {/* Backup Format & Notice */}
-        <div className="p-3 rounded-xl bg-paper-2/40 border border-line flex items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 rounded-2xl bg-paper-3 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <span className="text-base">📦</span>
             <div>
@@ -395,15 +387,15 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
         </div>
 
         {/* Modal Actions */}
-        <div className="pt-3 border-t border-line flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5">
+        <div className="pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5">
           <Button8State
             size="sm"
             variant="primary"
             state={isSubmitting ? 'loading' : 'default'}
             disabled={isSubmitting || (scope === 'specific' && !customDb.trim())}
-            icon={<CloudArrowUp className="w-4 h-4 text-white" />}
+            icon={<CloudArrowUp className="w-4 h-4" />}
             onClick={() => handleSubmit(true)}
-            className="order-1 sm:order-3 w-full sm:w-auto min-h-[44px] sm:min-h-0"
+            className="order-1 sm:order-3 w-full sm:w-auto min-h-[40px] sm:min-h-0 rounded-xl"
           >
             {isSubmitting
               ? '正在处理...'
@@ -420,7 +412,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
               disabled={isSubmitting || (scope === 'specific' && !customDb.trim())}
               icon={<FloppyDisk className="w-4 h-4 text-accent" />}
               onClick={() => handleSubmit(false)}
-              className="order-2 sm:order-2 w-full sm:w-auto min-h-[44px] sm:min-h-0"
+              className="order-2 sm:order-2 w-full sm:w-auto min-h-[40px] sm:min-h-0 rounded-xl"
             >
               仅保存定时配置
             </Button8State>
@@ -430,7 +422,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="order-3 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+            className="order-3 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-3 sm:hover:bg-paper-4 sm:rounded-xl text-center transition-colors cursor-pointer select-none"
           >
             取消
           </button>

@@ -111,21 +111,19 @@ export function CustomSelect<T extends string | number = string>({
   // Base Trigger classes
   let triggerClasses = '';
   if (isPill) {
-    triggerClasses = `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all shadow-subtle cursor-pointer select-none focus:outline-none ${
+    triggerClasses = `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer select-none focus:outline-none ${
       isOpen
-        ? 'bg-paper-3 dark:bg-paper-4 border-accent ring-1 ring-accent/20'
-        : 'bg-paper-3/70 hover:bg-paper-3 dark:bg-paper-3/40 dark:hover:bg-paper-3/70 border-line dark:border-white/10'
+        ? 'bg-paper-4 ring-2 ring-accent'
+        : 'bg-paper-3 hover:bg-paper-4'
     } ${disabled ? 'opacity-50 cursor-not-allowed bg-paper-2' : ''} ${buttonClassName}`;
   } else if (isGhost) {
-    triggerClasses = `inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer select-none focus:outline-none hover:bg-paper-3/80 ${
+    triggerClasses = `inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer select-none focus:outline-none hover:bg-paper-3/80 ${
       isOpen ? 'bg-paper-3 text-accent' : 'text-ink-muted hover:text-ink'
     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`;
   } else {
     // Default form input mode
-    triggerClasses = `w-full bg-paper dark:bg-paper-2/60 border rounded-lg flex items-center justify-between gap-2 text-left font-medium transition-colors shadow-subtle cursor-pointer focus:outline-none ${
-      isOpen
-        ? 'border-accent ring-1 ring-accent/20'
-        : 'border-line dark:border-white/10 hover:border-line-focus hover:bg-paper-2/60'
+    triggerClasses = `w-full bg-paper-3 hover:bg-paper-4/60 focus:bg-paper-4 rounded-xl flex items-center justify-between gap-2 text-left font-medium transition-colors cursor-pointer focus:outline-none ${
+      isOpen ? 'ring-2 ring-accent' : ''
     } ${disabled ? 'opacity-60 cursor-not-allowed bg-paper-2' : ''} ${sizeClasses} ${buttonClassName}`;
   }
 
@@ -172,7 +170,7 @@ export function CustomSelect<T extends string | number = string>({
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           {selectedOption?.badge && (
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-paper-3 dark:bg-white/[0.06] text-ink-muted border border-line dark:border-white/10 flex-shrink-0">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-paper-4 text-ink-muted flex-shrink-0">
               {selectedOption.badge}
             </span>
           )}
@@ -191,14 +189,14 @@ export function CustomSelect<T extends string | number = string>({
           ref={listboxRef}
           role="listbox"
           tabIndex={-1}
-          className={`absolute ${alignClass} ${widthClass} top-full mt-1.5 z-50 bg-paper/95 dark:bg-[#16161b]/95 backdrop-blur-xl border border-line dark:border-white/10 rounded-xl shadow-[0_12px_32px_-4px_rgba(0,0,0,0.36),0_0_0_1px_rgba(255,255,255,0.05)] py-1 max-h-60 overflow-y-auto animate-dropdown ${dropdownClassName}`}
+          className={`absolute ${alignClass} ${widthClass} top-full mt-1.5 z-50 bg-paper-2 rounded-2xl shadow-2xl py-1.5 max-h-60 overflow-y-auto no-scrollbar animate-dropdown ${dropdownClassName}`}
         >
           {options.length === 0 ? (
             <div className="px-3.5 py-2.5 text-xs text-ink-muted text-center">
               暂无可选选项
             </div>
           ) : (
-            <div className="px-1 space-y-0.5">
+            <div className="px-1.5 space-y-0.5">
               {options.map((opt) => {
                 const isSelected = opt.value === value;
                 return (
@@ -211,10 +209,10 @@ export function CustomSelect<T extends string | number = string>({
                       onChange(opt.value);
                       setIsOpen(false);
                     }}
-                    className={`w-full px-2.5 py-1.5 text-xs rounded-lg flex items-center justify-between gap-3 text-left transition-colors cursor-pointer select-none ${
+                    className={`w-full px-2.5 py-2 text-xs rounded-xl flex items-center justify-between gap-3 text-left transition-colors cursor-pointer select-none ${
                       isSelected
-                        ? 'bg-accent/15 dark:bg-accent/25 text-accent font-semibold'
-                        : 'text-ink-muted hover:text-ink hover:bg-paper-2 dark:hover:bg-white/[0.05]'
+                        ? 'bg-paper-4 text-accent font-semibold'
+                        : 'text-ink-muted hover:text-ink hover:bg-paper-3'
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -232,7 +230,7 @@ export function CustomSelect<T extends string | number = string>({
                         )}
                       </div>
                       {opt.badge && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-paper-3 dark:bg-white/[0.06] text-ink-muted border border-line dark:border-white/10 flex-shrink-0">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-paper-4 text-ink-muted flex-shrink-0">
                           {opt.badge}
                         </span>
                       )}
