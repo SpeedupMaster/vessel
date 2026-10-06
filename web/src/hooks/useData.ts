@@ -196,7 +196,10 @@ export function useData() {
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rebuilding' } : a)));
   };
 
-  const backupApp = async (id: string, options?: { databaseName?: string }) => {
+  const backupApp = async (
+    id: string,
+    options?: { databaseName?: string; schedule?: any; runNow?: boolean }
+  ) => {
     const res = await apiFetch(`/api/apps/${id}/backup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -206,6 +209,11 @@ export function useData() {
     if (!res.ok) throw new Error(data.error || 'Failed to backup app');
     if (data.record) {
       setBackups((prev) => [data.record, ...prev]);
+    }
+    if (data.schedule !== undefined) {
+      setApps((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, backupSchedule: data.schedule } : a))
+      );
     }
     return data;
   };

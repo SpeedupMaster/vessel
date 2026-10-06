@@ -39,7 +39,7 @@ interface AppsViewProps {
   onRestart: (id: string) => Promise<any>;
   onRebuild: (id: string) => Promise<any>;
   onFreshVolumes?: (id: string) => Promise<any>;
-  onBackup: (id: string, options?: { databaseName?: string }) => Promise<any>;
+  onBackup: (id: string, options?: { databaseName?: string; schedule?: any; runNow?: boolean }) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string, options?: { databaseName?: string }) => Promise<any>;
   onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string) => Promise<any>;

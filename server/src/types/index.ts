@@ -25,6 +25,16 @@ export interface AppItem {
   updatedAt: string;
   lastDeployedAt?: string;
   containers: ContainerInfo[];
+  backupSchedule?: DatabaseBackupSchedule;
+}
+
+export interface DatabaseBackupSchedule {
+  enabled: boolean;
+  cronSchedule: string;
+  targetDatabase?: string;
+  retentionCount?: number;
+  lastBackupAt?: string;
+  lastBackupStatus?: 'success' | 'failed' | 'idle';
 }
 
 export interface DomainItem {

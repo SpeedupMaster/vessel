@@ -68,7 +68,7 @@ interface ComposeAppViewProps {
   onRestart: (id: string) => Promise<void>;
   onRebuild: (id: string) => Promise<void>;
   onFreshVolumes?: (id: string) => Promise<any>;
-  onBackup: (id: string, options?: { databaseName?: string }) => Promise<any>;
+  onBackup: (id: string, options?: { databaseName?: string; schedule?: any; runNow?: boolean }) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string, options?: { databaseName?: string }) => Promise<any>;
   onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string) => Promise<any>;
@@ -441,13 +441,23 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     }
   };
 
-  const handleConfirmDbBackup = async (targetDbName: string) => {
+  const handleConfirmDbBackup = async (
+    targetDbName: string,
+    schedule?: any,
+    runNow: boolean = true
+  ) => {
     if (!app) return;
     try {
-      await onBackup(app.id, { databaseName: targetDbName });
-      toast.success(`数据库 ${app.name} (${targetDbName === 'all' ? '全部数据库' : targetDbName}) 快照备份已成功生成！`);
+      await onBackup(app.id, { databaseName: targetDbName, schedule, runNow });
+      if (runNow) {
+        toast.success(
+          `数据库 ${app.name} (${targetDbName === 'all' ? '全部数据库' : targetDbName}) 快照备份已成功生成！`
+        );
+      } else {
+        toast.success('定时自动备份配置已成功保存！');
+      }
     } catch (err: any) {
-      toast.error(`备份失败: ${err.message || '未知错误'}`);
+      toast.error(`处理备份失败: ${err.message || '未知错误'}`);
       throw err;
     }
   };
@@ -3035,6 +3045,41 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               )}
             </div>
           </div>
+
+          {/* Active Schedule Status Banner */}
+          {isDb && app?.backupSchedule?.enabled && (
+            <div className="p-3.5 rounded-xl bg-paper-2/80 border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-subtle">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-ink">定时自动备份已开启</span>
+                    <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      自动调度中
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted">
+                    执行周期: <code className="font-mono text-ink bg-paper-3 px-1.5 py-0.5 rounded">{app.backupSchedule.cronSchedule}</code> · 
+                    目标: <span className="font-mono text-ink font-medium">{app.backupSchedule.targetDatabase === 'all' ? '全部数据库' : app.backupSchedule.targetDatabase}</span> · 
+                    保留最新 <span className="font-mono text-ink font-medium">{app.backupSchedule.retentionCount || 7}</span> 份
+                    {app.backupSchedule.lastBackupAt && (
+                      <span className="text-ink-faint ml-2">
+                        (上次执行: {new Date(app.backupSchedule.lastBackupAt).toLocaleString()})
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowDbBackupModal(true)}
+                className="self-end sm:self-center px-3 py-1.5 rounded-lg text-xs text-ink hover:bg-paper-3 border border-line transition-colors cursor-pointer shrink-0"
+              >
+                修改定时计划
+              </button>
+            </div>
+          )}
 
           <div className="rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] overflow-hidden shadow-subtle">
             {appBackups.length === 0 ? (

@@ -616,8 +616,10 @@ export class R2BackupService {
    * Enforce retention limits on older backups
    */
   private async enforceRetention(targetId: string): Promise<void> {
+    const apps = db.get('apps') || [];
+    const app = apps.find((a) => a.id === targetId);
     const r2Config = db.get('r2Config');
-    const maxKeep = r2Config.retentionCount || 7;
+    const maxKeep = app?.backupSchedule?.retentionCount || r2Config.retentionCount || 7;
     const backups = db.get('backups');
 
     const matching = backups.filter((b) => b.targetId === targetId);

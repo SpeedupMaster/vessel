@@ -319,7 +319,31 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
 
-  const { databaseName } = req.body || {};
+  const { databaseName, schedule, runNow = true } = req.body || {};
+
+  // If a schedule was provided, save it to the app and reload scheduler
+  if (schedule !== undefined) {
+    app.backupSchedule = {
+      enabled: !!schedule.enabled,
+      cronSchedule: schedule.cronSchedule || '0 2 * * *',
+      targetDatabase: schedule.targetDatabase || databaseName || 'all',
+      retentionCount: schedule.retentionCount ? Number(schedule.retentionCount) : 7,
+      lastBackupAt: app.backupSchedule?.lastBackupAt,
+      lastBackupStatus: app.backupSchedule?.lastBackupStatus,
+    };
+    db.set('apps', [...apps]);
+    schedulerService.reload();
+  }
+
+  // If only saving schedule without running backup now
+  if (runNow === false) {
+    return res.json({
+      success: true,
+      message: '定时自动备份配置已保存',
+      schedule: app.backupSchedule,
+    });
+  }
+
   const yamlLower = (app.composeYaml || '').toLowerCase();
   const desc = (app.description || '').toLowerCase();
   const name = (app.name || '').toLowerCase();
@@ -340,7 +364,7 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
     : await r2BackupService.runAppBackup(app);
 
   if (result.success) {
-    res.json({ success: true, record: result.record });
+    res.json({ success: true, record: result.record, schedule: app.backupSchedule });
   } else {
     res.status(500).json({ error: result.error });
   }

@@ -9,6 +9,7 @@ export class SchedulerService {
   private backupJob?: ScheduledTask;
   private pruneJob?: ScheduledTask;
   private updateCheckJob?: ScheduledTask;
+  private appBackupJobs: Map<string, ScheduledTask> = new Map();
 
   constructor() {
     this.initJobs();
@@ -43,6 +44,31 @@ export class SchedulerService {
         await this.runUpdateCheck();
       });
     }
+
+    // 4. Per-Database App Scheduled Backups
+    const apps = db.get('apps') || [];
+    for (const app of apps) {
+      if (app.backupSchedule?.enabled && cron.validate(app.backupSchedule.cronSchedule)) {
+        const job = cron.schedule(app.backupSchedule.cronSchedule, async () => {
+          console.log(`[Scheduler] Executing scheduled database backup for ${app.name} (${app.id})...`);
+          try {
+            const res = await r2BackupService.runDatabaseBackup(app, {
+              databaseName: app.backupSchedule?.targetDatabase || 'all',
+            });
+            const freshApps = db.get('apps') || [];
+            const freshApp = freshApps.find((a) => a.id === app.id);
+            if (freshApp && freshApp.backupSchedule) {
+              freshApp.backupSchedule.lastBackupAt = new Date().toISOString();
+              freshApp.backupSchedule.lastBackupStatus = res.success ? 'success' : 'failed';
+              db.set('apps', [...freshApps]);
+            }
+          } catch (err: any) {
+            console.error(`[Scheduler] Scheduled database backup failed for ${app.name}:`, err.message);
+          }
+        });
+        this.appBackupJobs.set(app.id, job);
+      }
+    }
   }
 
   public async runUpdateCheck(): Promise<void> {
@@ -73,6 +99,10 @@ export class SchedulerService {
     this.backupJob?.stop();
     this.pruneJob?.stop();
     this.updateCheckJob?.stop();
+    for (const job of this.appBackupJobs.values()) {
+      job.stop();
+    }
+    this.appBackupJobs.clear();
   }
 
   public reload(): void {
