@@ -13,7 +13,7 @@ import { Button8State } from './Button8State.js';
 
 export type DatabaseType = 'postgres' | 'mongodb' | 'mariadb' | 'mysql' | 'redis' | 'libsql';
 
-interface DatabaseOption {
+export interface DatabaseOption {
   type: DatabaseType;
   label: string;
   defaultImage: string;
@@ -24,7 +24,7 @@ interface DatabaseOption {
   icon: React.ReactNode;
 }
 
-const DATABASE_OPTIONS: DatabaseOption[] = [
+export const DATABASE_OPTIONS: DatabaseOption[] = [
   {
     type: 'postgres',
     label: 'PostgreSQL',

@@ -39,6 +39,7 @@ import {
   Key,
 } from '@phosphor-icons/react';
 import { AppItem, ComposeTemplate, DomainItem, BackupRecord } from '../../types/index.js';
+import { DATABASE_OPTIONS } from '../common/CreateDatabaseModal.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { CodeEditorWithLines } from '../common/CodeEditorWithLines.js';
@@ -111,7 +112,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     | 'backups'
     | 'logs'
     | 'templates'
-    | 'advanced';
+    | 'advanced'
+    | 'monitoring';
 
   const [activeTab, setActiveTab] = useState<TabKey>('general');
 
@@ -175,10 +177,26 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     setTimeout(() => setCopiedDbField(null), 2000);
   };
 
+  const isDb = useMemo(() => {
+    if (!app && mode === 'edit') return false;
+    const desc = app?.description || '';
+    const yaml = app?.composeYaml || composeYaml || '';
+    const n = (app?.name || name || '').toLowerCase();
+    return (
+      desc.includes('Database') ||
+      yaml.includes('services:\n  database:') ||
+      yaml.includes('services:\r\n  database:') ||
+      n.endsWith('-db') ||
+      n.startsWith('postgres') ||
+      n.startsWith('mysql') ||
+      n.startsWith('mariadb') ||
+      n.startsWith('mongo') ||
+      n.startsWith('redis') ||
+      n.startsWith('libsql')
+    );
+  }, [app, mode, composeYaml, name]);
+
   const dbInfo = useMemo(() => {
-    const isDb =
-      app?.description?.includes('Database Service') ||
-      app?.composeYaml?.includes('services:\n  database:');
     if (!isDb) return null;
 
     const envMap: Record<string, string> = {};
@@ -193,22 +211,56 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     });
 
     let engine: 'PostgreSQL' | 'MongoDB' | 'MariaDB' | 'MySQL' | 'Redis' | 'libSQL' | 'Database' = 'Database';
-    if (envMap.POSTGRES_DB || envMap.POSTGRES_PASSWORD) engine = 'PostgreSQL';
-    else if (envMap.MONGO_INITDB_ROOT_PASSWORD || envMap.MONGO_INITDB_DATABASE) engine = 'MongoDB';
-    else if (envMap.MARIADB_ROOT_PASSWORD || envMap.MARIADB_DATABASE) engine = 'MariaDB';
-    else if (envMap.MYSQL_ROOT_PASSWORD || envMap.MYSQL_DATABASE) engine = 'MySQL';
-    else if (envMap.REDIS_PASSWORD) engine = 'Redis';
-    else if (envMap.SQLD_AUTH_TOKEN) engine = 'libSQL';
+    const desc = app?.description || '';
+    const yaml = app?.composeYaml || composeYaml || '';
+    const n = (app?.name || name || '').toLowerCase();
+
+    if (desc.includes('PostgreSQL') || /postgres/i.test(yaml) || n.includes('postgres') || envMap.POSTGRES_DB || envMap.POSTGRES_PASSWORD) {
+      engine = 'PostgreSQL';
+    } else if (desc.includes('MongoDB') || /mongo/i.test(yaml) || n.includes('mongo') || envMap.MONGO_INITDB_ROOT_PASSWORD || envMap.MONGO_INITDB_DATABASE) {
+      engine = 'MongoDB';
+    } else if (desc.includes('MariaDB') || /mariadb/i.test(yaml) || n.includes('mariadb') || envMap.MARIADB_ROOT_PASSWORD || envMap.MARIADB_DATABASE) {
+      engine = 'MariaDB';
+    } else if (desc.includes('MySQL') || /mysql/i.test(yaml) || n.includes('mysql') || envMap.MYSQL_ROOT_PASSWORD || envMap.MYSQL_DATABASE) {
+      engine = 'MySQL';
+    } else if (desc.includes('Redis') || /redis/i.test(yaml) || n.includes('redis') || envMap.REDIS_PASSWORD) {
+      engine = 'Redis';
+    } else if (desc.includes('libSQL') || /libsql|sqld/i.test(yaml) || n.includes('libsql') || envMap.SQLD_AUTH_TOKEN) {
+      engine = 'libSQL';
+    }
 
     const dbName = envMap.POSTGRES_DB || envMap.MYSQL_DATABASE || envMap.MARIADB_DATABASE || envMap.MONGO_INITDB_DATABASE || '';
     const user = envMap.POSTGRES_USER || envMap.MYSQL_USER || envMap.MARIADB_USER || envMap.MONGO_INITDB_ROOT_USERNAME || '';
     const password = envMap.POSTGRES_PASSWORD || envMap.MYSQL_PASSWORD || envMap.MARIADB_PASSWORD || envMap.MONGO_INITDB_ROOT_PASSWORD || envMap.REDIS_PASSWORD || envMap.SQLD_AUTH_TOKEN || '';
     const rootPassword = envMap.MYSQL_ROOT_PASSWORD || envMap.MARIADB_ROOT_PASSWORD || '';
-    const port = envMap.POSTGRES_PORT || envMap.MYSQL_PORT || envMap.MARIADB_PORT || envMap.MONGO_PORT || envMap.REDIS_PORT || envMap.LIBSQL_PORT || '';
-    const externalUrl = envMap.DATABASE_URL || envMap.MONGO_URL || envMap.REDIS_URL || envMap.LIBSQL_URL || '';
-    const internalUrl = envMap.INTERNAL_DATABASE_URL || envMap.INTERNAL_MONGO_URL || envMap.INTERNAL_REDIS_URL || envMap.INTERNAL_LIBSQL_URL || '';
-    const rootUrl = envMap.DATABASE_ROOT_URL || '';
-    const internalRootUrl = envMap.INTERNAL_DATABASE_ROOT_URL || '';
+    const port = envMap.POSTGRES_PORT || envMap.MYSQL_PORT || envMap.MARIADB_PORT || envMap.MONGO_PORT || envMap.REDIS_PORT || envMap.LIBSQL_PORT || (
+      engine === 'PostgreSQL' ? '5432' :
+      engine === 'MySQL' || engine === 'MariaDB' ? '3306' :
+      engine === 'MongoDB' ? '27017' :
+      engine === 'Redis' ? '6379' :
+      engine === 'libSQL' ? '8080' : '5432'
+    );
+
+    let externalUrl = envMap.DATABASE_URL || envMap.MONGO_URL || envMap.REDIS_URL || envMap.LIBSQL_URL || '';
+    if (!externalUrl) {
+      if (engine === 'PostgreSQL') externalUrl = `postgresql://${user || 'postgres'}:${password}@localhost:${port}/${dbName || 'postgres'}`;
+      else if (engine === 'MySQL' || engine === 'MariaDB') externalUrl = `mysql://${user || 'root'}:${password}@localhost:${port}/${dbName || 'app_db'}`;
+      else if (engine === 'MongoDB') externalUrl = `mongodb://${user || 'mongo'}:${password}@localhost:${port}/${dbName || 'app_db'}?authSource=admin`;
+      else if (engine === 'Redis') externalUrl = `redis://default:${password}@localhost:${port}`;
+      else if (engine === 'libSQL') externalUrl = `http://localhost:${port}`;
+    }
+
+    let internalUrl = envMap.INTERNAL_DATABASE_URL || envMap.INTERNAL_MONGO_URL || envMap.INTERNAL_REDIS_URL || envMap.INTERNAL_LIBSQL_URL || '';
+    if (!internalUrl) {
+      if (engine === 'PostgreSQL') internalUrl = `postgresql://${user || 'postgres'}:${password}@database:${port}/${dbName || 'postgres'}`;
+      else if (engine === 'MySQL' || engine === 'MariaDB') internalUrl = `mysql://${user || 'root'}:${password}@database:${port}/${dbName || 'app_db'}`;
+      else if (engine === 'MongoDB') internalUrl = `mongodb://${user || 'mongo'}:${password}@database:${port}/${dbName || 'app_db'}?authSource=admin`;
+      else if (engine === 'Redis') internalUrl = `redis://default:${password}@database:${port}`;
+      else if (engine === 'libSQL') internalUrl = `http://database:${port}`;
+    }
+
+    const rootUrl = envMap.DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@localhost:${port}/${dbName || 'app_db'}` : '');
+    const internalRootUrl = envMap.INTERNAL_DATABASE_ROOT_URL || (rootPassword ? `mysql://root:${rootPassword}@database:${port}/${dbName || 'app_db'}` : '');
 
     return {
       engine,
@@ -222,7 +274,18 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       rootUrl,
       internalRootUrl,
     };
-  }, [app, envContent]);
+  }, [isDb, app, envContent, composeYaml, name]);
+
+  const dbOption = useMemo(() => {
+    if (!isDb) return null;
+    return DATABASE_OPTIONS.find(
+      (opt) =>
+        opt.label.toLowerCase() === dbInfo?.engine.toLowerCase() ||
+        opt.type.toLowerCase() === dbInfo?.engine.toLowerCase() ||
+        (app?.name || name || '').toLowerCase().includes(opt.type) ||
+        (app?.description || '').toLowerCase().includes(opt.type)
+    );
+  }, [isDb, dbInfo, app, name]);
 
   const handleAppBackup = async () => {
     if (!app || isBackingUp) return;
@@ -655,7 +718,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const handleConfirmFreshVolumes = async () => {
     if (!app) return;
     setIsFreshVolumesModalOpen(false);
-    setActiveTab('deployments');
+    setActiveTab(isDb ? 'logs' : 'deployments');
     try {
       if (onFreshVolumes) {
         await onFreshVolumes(app.id);
@@ -684,7 +747,46 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   return (
     <div className="space-y-6 animate-fade-in pb-16">
       {/* ================= VESSEL GLOBAL APP HEADER ================= */}
-      <div className="pb-4 border-b border-line">
+      {isDb ? (
+        <div className="pb-3 border-b border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            {/* Database Engine Official Icon with Live Status Dot */}
+            <div className="relative flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-paper-2 dark:bg-[#16161b] border border-line/40 flex items-center justify-center p-1.5 shadow-sm">
+                {dbOption?.icon || <Database className="w-6 h-6 text-emerald-500" />}
+              </div>
+              <span
+                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-paper dark:ring-[#0f0f12] ${
+                  app?.status === 'running'
+                    ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
+                    : app?.status === 'deploying' || app?.status === 'rebuilding'
+                    ? 'bg-blue-500 animate-pulse'
+                    : 'bg-rose-500'
+                }`}
+              />
+            </div>
+
+            {/* Title & Subtitle / ID */}
+            <div>
+              <h2 className="text-xl font-bold text-ink leading-tight tracking-tight">
+                {app?.name || name}
+              </h2>
+              <p className="text-xs font-mono text-ink-muted leading-tight mt-0.5">
+                {app?.id || '新建数据库'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onBack}
+            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-paper-2 border border-line/50 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>返回列表</span>
+          </button>
+        </div>
+      ) : (
+        <div className="pb-4 border-b border-line">
         {/* Top Navigation & Status Badges & Danger Action */}
         <div className="flex items-center justify-between mb-3.5">
           <button
@@ -854,10 +956,40 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* ================= GLOBAL HORIZONTAL TAB NAVIGATION ================= */}
-      <div className="border-b border-line/20 dark:border-white/[0.04] flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none -mt-2">
-        {/* General Tab */}
+      {isDb ? (
+        <div className="flex items-center gap-1 p-1 bg-stone-100/90 dark:bg-white/[0.04] rounded-xl border border-line/40 w-fit overflow-x-auto scrollbar-none -mt-2">
+          {(['general', 'environment', 'logs', 'monitoring', 'backups', 'advanced'] as TabKey[]).map((tabKey) => {
+            const labels: Record<string, string> = {
+              general: 'General',
+              environment: 'Environment',
+              logs: 'Logs',
+              monitoring: 'Monitoring',
+              backups: 'Backups',
+              advanced: 'Advanced',
+            };
+            const isActive = activeTab === tabKey;
+            return (
+              <button
+                key={tabKey}
+                type="button"
+                onClick={() => setActiveTab(tabKey)}
+                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? 'bg-white dark:bg-[#1f1f24] text-ink shadow-sm font-semibold'
+                    : 'text-ink-muted hover:text-ink hover:bg-white/40 dark:hover:bg-white/[0.04]'
+                }`}
+              >
+                {labels[tabKey]}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="border-b border-line/20 dark:border-white/[0.04] flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none -mt-2">
+          {/* General Tab */}
         <button
           onClick={() => setActiveTab('general')}
           className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
@@ -1031,9 +1163,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           )}
         </button>
       </div>
+      )}
 
       {/* ================= ACTION & CONTROL BAR (EDIT MODE - GENERAL, ENVIRONMENT, LOGS & DOMAINS TABS) ================= */}
-      {mode === 'edit' && (activeTab === 'general' || activeTab === 'environment' || activeTab === 'logs' || activeTab === 'domains') && (
+      {!isDb && mode === 'edit' && (activeTab === 'general' || activeTab === 'environment' || activeTab === 'logs' || activeTab === 'domains') && (
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 pb-1">
           {/* Left: Core State-Driven Actions (Heuristic Principle 2 & Interaction Flow) */}
           <div className="flex flex-wrap items-center gap-2">
@@ -1501,6 +1634,70 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           ) : (
             /* ================= EDIT MODE: UNIFIED WORKSPACE ================= */
             <div className="space-y-6">
+              {/* Deploy Settings Card for Database (Dokploy 1:1 Figure 2) */}
+              {isDb && (
+                <div className="rounded-2xl border border-line/60 bg-paper dark:bg-[#121216] p-6 shadow-subtle space-y-4">
+                  <h3 className="text-base font-semibold text-ink tracking-tight">Deploy Settings</h3>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Deploy Button */}
+                    <button
+                      type="button"
+                      onClick={() => app && onDeploy(app.id)}
+                      disabled={app?.status === 'deploying' || app?.status === 'rebuilding'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-black text-white hover:bg-stone-800 dark:bg-white dark:text-black dark:hover:bg-stone-200 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+                    >
+                      {app?.status === 'deploying' || app?.status === 'rebuilding' ? (
+                        <CircleNotch className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+                          <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+                          <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+                          <path d="M12 9v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+                        </svg>
+                      )}
+                      <span>{app?.status === 'deploying' || app?.status === 'rebuilding' ? 'Deploying...' : 'Deploy'}</span>
+                    </button>
+
+                    {/* Reload Button */}
+                    <button
+                      type="button"
+                      onClick={() => app && onRestart(app.id)}
+                      disabled={app?.status !== 'running'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-ink border border-line/40 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      <ArrowsClockwise className="w-3.5 h-3.5" />
+                      <span>Reload</span>
+                    </button>
+
+                    {/* Stop Button */}
+                    <button
+                      type="button"
+                      onClick={() => app && onStop(app.id)}
+                      disabled={app?.status !== 'running'}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="m4.93 4.93 14.14 14.14"/>
+                      </svg>
+                      <span>Stop</span>
+                    </button>
+
+                    {/* Open Terminal Button */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('logs')}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-ink border border-line/40 transition-colors cursor-pointer"
+                    >
+                      <span className="font-mono font-bold text-xs">&gt;_</span>
+                      <span>Open Terminal</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* DATABASE CREDENTIALS & CONNECTION PANEL (Dokploy style) */}
               {dbInfo && (
                 <div className="rounded-xl border border-line/80 bg-paper-2/70 dark:bg-[#111115] overflow-hidden shadow-subtle font-sans">
@@ -1725,72 +1922,74 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
               )}
 
-              {/* COMPOSE YAML EDITOR WORKSPACE - INDEPENDENT IDE CARD */}
-              <div className="rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] overflow-hidden shadow-subtle">
-                {/* Card Window Header */}
-                <div className="px-4 py-2.5 bg-paper-3/40 dark:bg-white/[0.02] border-b border-line/30 dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-xs sm:text-sm text-ink tracking-tight">Compose 编排文件 (YAML)</h3>
-                    {/* YAML Validation Indicator */}
-                    {!composeYaml.trim() ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-paper-3 text-ink-muted border border-line rounded-full font-medium">
-                        待填写编排配置
-                      </span>
-                    ) : yamlValidation.valid ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/80 rounded-full font-medium">
-                        <Check className="w-3 h-3 text-emerald-500" />
-                        YAML 语法有效
-                      </span>
-                    ) : (
-                      <span
-                        className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/80 rounded-full truncate max-w-xs font-medium cursor-help"
-                        data-tooltip={yamlValidation.error || ''}
+              {/* COMPOSE YAML EDITOR WORKSPACE - INDEPENDENT IDE CARD (FOR COMPOSE APPS) */}
+              {!isDb && (
+                <div className="rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] overflow-hidden shadow-subtle">
+                  {/* Card Window Header */}
+                  <div className="px-4 py-2.5 bg-paper-3/40 dark:bg-white/[0.02] border-b border-line/30 dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-semibold text-xs sm:text-sm text-ink tracking-tight">Compose 编排文件 (YAML)</h3>
+                      {/* YAML Validation Indicator */}
+                      {!composeYaml.trim() ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-paper-3 text-ink-muted border border-line rounded-full font-medium">
+                          待填写编排配置
+                        </span>
+                      ) : yamlValidation.valid ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/80 rounded-full font-medium">
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          YAML 语法有效
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/80 rounded-full truncate max-w-xs font-medium cursor-help"
+                          data-tooltip={yamlValidation.error || ''}
+                        >
+                          <Warning className="w-3 h-3 text-rose-500" />
+                          语法错误: {yamlValidation.error}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 sm:gap-1.5 self-end sm:self-auto">
+                      {/* Preview Button (Ghost style) */}
+                      <button
+                        type="button"
+                        onClick={() => setIsPreviewOpen(true)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-ink-muted hover:text-ink hover:bg-paper-3/80 rounded-md transition-colors cursor-pointer"
                       >
-                        <Warning className="w-3 h-3 text-rose-500" />
-                        语法错误: {yamlValidation.error}
-                      </span>
-                    )}
+                        <GitBranch className="w-3.5 h-3.5 text-accent" />
+                        <span>预览配置</span>
+                      </button>
+
+                      {/* Copy Button (Ghost style) */}
+                      <button
+                        type="button"
+                        onClick={handleCopyYaml}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-ink-muted hover:text-ink hover:bg-paper-3/80 rounded-md transition-colors cursor-pointer"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>{copiedYaml ? '已复制' : '复制配置'}</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1 sm:gap-1.5 self-end sm:self-auto">
-                    {/* Preview Button (Ghost style) */}
-                    <button
-                      type="button"
-                      onClick={() => setIsPreviewOpen(true)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-ink-muted hover:text-ink hover:bg-paper-3/80 rounded-md transition-colors cursor-pointer"
-                    >
-                      <GitBranch className="w-3.5 h-3.5 text-accent" />
-                      <span>预览配置</span>
-                    </button>
+                  {/* Enhanced Code Editor with Syntax Highlighting and Borderless */}
+                  <CodeEditorWithLines
+                    borderless
+                    language="yaml"
+                    value={composeYaml}
+                    onChange={setComposeYaml}
+                    placeholder="services:&#10;  app:&#10;    image: ...&#10;    ports:&#10;      - '8080:80'"
+                    minHeight="480px"
+                  />
 
-                    {/* Copy Button (Ghost style) */}
-                    <button
-                      type="button"
-                      onClick={handleCopyYaml}
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs text-ink-muted hover:text-ink hover:bg-paper-3/80 rounded-md transition-colors cursor-pointer"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>{copiedYaml ? '已复制' : '复制配置'}</span>
-                    </button>
+                  {/* Card Window Footer */}
+                  <div className="px-4 py-2 bg-paper-3/20 dark:bg-white/[0.01] border-t border-line/30 dark:border-white/[0.06] flex items-center justify-between text-xs text-ink-muted">
+                    <span>Tab 键自动补全 2 格缩进 · 支持 docker compose v2 标准语法</span>
+                    <span className="text-ink-faint font-mono text-[11px] hidden sm:inline">compose-spec v2</span>
                   </div>
                 </div>
-
-                {/* Enhanced Code Editor with Syntax Highlighting and Borderless */}
-                <CodeEditorWithLines
-                  borderless
-                  language="yaml"
-                  value={composeYaml}
-                  onChange={setComposeYaml}
-                  placeholder="services:&#10;  app:&#10;    image: ...&#10;    ports:&#10;      - '8080:80'"
-                  minHeight="480px"
-                />
-
-                {/* Card Window Footer */}
-                <div className="px-4 py-2 bg-paper-3/20 dark:bg-white/[0.01] border-t border-line/30 dark:border-white/[0.06] flex items-center justify-between text-xs text-ink-muted">
-                  <span>Tab 键自动补全 2 格缩进 · 支持 docker compose v2 标准语法</span>
-                  <span className="text-ink-faint font-mono text-[11px] hidden sm:inline">compose-spec v2</span>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -2401,6 +2600,120 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ================= TAB CONTENT: MONITORING (DATABASE CONTAINER METRICS & HEALTH) ================= */}
+      {activeTab === 'monitoring' && mode === 'edit' && app && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-semibold text-sm text-ink tracking-tight">Monitoring & Telemetry</h3>
+            <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+              实时监控此数据库容器实例的运行状态、健康检查、端口网络与数据卷持久化
+            </p>
+          </div>
+
+          {/* Quick Metrics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Status Card */}
+            <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
+              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+                Container State
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    app?.status === 'running'
+                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
+                      : 'bg-rose-500'
+                  }`}
+                />
+                <span className="text-base font-semibold text-ink capitalize">
+                  {app?.status || 'Unknown'}
+                </span>
+              </div>
+              <p className="text-[11px] text-ink-muted">
+                {app?.containers?.[0]?.status || (app?.status === 'running' ? 'Active and responding' : 'Container is not running')}
+              </p>
+            </div>
+
+            {/* Port Card */}
+            <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
+              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+                Exposed Port
+              </div>
+              <div className="text-base font-semibold font-mono text-ink">
+                {dbInfo?.port || '5432'}
+              </div>
+              <p className="text-[11px] text-ink-muted">
+                0.0.0.0:{dbInfo?.port || '5432'} (Host)
+              </p>
+            </div>
+
+            {/* Engine Image Card */}
+            <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
+              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+                Engine & Image
+              </div>
+              <div className="text-base font-semibold text-ink truncate">
+                {dbInfo?.engine || 'Database'}
+              </div>
+              <p className="text-[11px] font-mono text-ink-muted truncate">
+                {app?.containers?.[0]?.image || 'Official Docker Image'}
+              </p>
+            </div>
+
+            {/* Restart Policy Card */}
+            <div className="p-4 rounded-xl border border-line/60 bg-paper dark:bg-[#121216] shadow-subtle space-y-2">
+              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+                Restart Policy
+              </div>
+              <div className="text-base font-semibold text-ink">
+                unless-stopped
+              </div>
+              <p className="text-[11px] text-ink-muted">
+                Auto-restart on system failure
+              </p>
+            </div>
+          </div>
+
+          {/* Container Details & Storage Table */}
+          <div className="rounded-xl border border-line/80 bg-paper dark:bg-[#111115] overflow-hidden shadow-subtle">
+            <div className="px-5 py-3.5 bg-paper-3/40 dark:bg-white/[0.02] border-b border-line/30 dark:border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Stack className="w-4 h-4 text-accent" />
+                <h4 className="font-semibold text-xs sm:text-sm text-ink tracking-tight">
+                  容器运行详情 (Container Inspection)
+                </h4>
+              </div>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-paper-3 dark:bg-white/[0.06] text-ink-muted border border-line/60">
+                Docker Engine
+              </span>
+            </div>
+
+            <div className="divide-y divide-line/30 dark:divide-white/[0.06] text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
+                <span className="text-ink-muted">Container Name</span>
+                <span className="font-mono text-ink font-semibold">{app?.containers?.[0]?.name || app?.name || 'database'}</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
+                <span className="text-ink-muted">Container ID</span>
+                <span className="font-mono text-ink">{app?.containers?.[0]?.id ? app.containers[0].id.slice(0, 12) : '未生成'}</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
+                <span className="text-ink-muted">Data Volume Mount</span>
+                <span className="font-mono text-ink">./data &rarr; Persistent Storage</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
+                <span className="text-ink-muted">Internal Network</span>
+                <span className="font-mono text-ink">vessel-network (Bridge)</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-5 hover:bg-paper-2/40 transition-colors">
+                <span className="text-ink-muted">Last Deployed At</span>
+                <span className="font-mono text-ink-muted">{app?.lastDeployedAt || app?.updatedAt || '从未部署'}</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
