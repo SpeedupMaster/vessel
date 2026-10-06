@@ -2057,7 +2057,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         type="text"
                         value={externalPortInput}
                         onChange={(e) => setExternalPortInput(e.target.value)}
-                        placeholder="例如: 5432 (留空则保持关闭)"
+                        placeholder=""
                         className="w-full bg-stone-50/50 dark:bg-white/[0.03] border border-line/60 rounded-xl px-4 py-2.5 text-xs text-ink font-mono focus:border-accent focus:bg-paper focus:outline-none transition-colors"
                       />
                     </div>
@@ -2124,12 +2124,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                           </div>
                         ) : null}
                       </div>
-                    ) : (
-                      <div className="p-3.5 rounded-xl bg-stone-50/70 dark:bg-white/[0.02] border border-line/50 flex items-center gap-2.5 text-xs text-ink-muted">
-                        <span className="text-base">🔒</span>
-                        <span>外部网络连接当前已关闭（默认仅限容器内部网络安全互通）。如需宿主机客户端直连，请在上方输入端口并保存。</span>
-                      </div>
-                    )}
+                    ) : null}
 
                     <div className="pt-2 flex justify-end">
                       <button

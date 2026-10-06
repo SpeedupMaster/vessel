@@ -118,7 +118,6 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   const [dbRootPassword, setDbRootPassword] = useState('');
   const [showRootPassword, setShowRootPassword] = useState(false);
   const [dockerImage, setDockerImage] = useState('');
-  const [enableExternalPort, setEnableExternalPort] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,7 +132,6 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       setDbName('');
       setDbUser('');
       setDockerImage('');
-      setEnableExternalPort(false);
       setError(null);
     }
   }, [selectedType, isOpen]);
@@ -188,7 +186,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   database:
     image: \${POSTGRES_IMAGE:-${imageToUse}}
     restart: unless-stopped
-${enableExternalPort ? '    ports:\n      - "${POSTGRES_PORT:-5432}:5432"\n' : ''}    environment:
+    environment:
       POSTGRES_DB: \${POSTGRES_DB:-${finalDbName}}
       POSTGRES_USER: \${POSTGRES_USER:-${finalDbUser}}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
@@ -200,9 +198,7 @@ ${enableExternalPort ? '    ports:\n      - "${POSTGRES_PORT:-5432}:5432"\n' : '
 POSTGRES_DB=${finalDbName}
 POSTGRES_USER=${finalDbUser}
 POSTGRES_PASSWORD=${dbPassword}
-${enableExternalPort ? `POSTGRES_PORT=5432
-DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@localhost:5432/${finalDbName}
-` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
 INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${finalDbName}
 `;
@@ -213,7 +209,7 @@ INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${
   database:
     image: \${MONGO_IMAGE:-${imageToUse}}
     restart: unless-stopped
-${enableExternalPort ? '    ports:\n      - "${MONGO_PORT:-27017}:27017"\n' : ''}    environment:
+    environment:
       MONGO_INITDB_DATABASE: \${MONGO_INITDB_DATABASE:-${finalDbName}}
       MONGO_INITDB_ROOT_USERNAME: \${MONGO_INITDB_ROOT_USERNAME:-${finalDbUser}}
       MONGO_INITDB_ROOT_PASSWORD: \${MONGO_INITDB_ROOT_PASSWORD}
@@ -224,9 +220,7 @@ ${enableExternalPort ? '    ports:\n      - "${MONGO_PORT:-27017}:27017"\n' : ''
 MONGO_INITDB_DATABASE=${finalDbName}
 MONGO_INITDB_ROOT_USERNAME=${finalDbUser}
 MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
-${enableExternalPort ? `MONGO_PORT=27017
-MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@localhost:27017/${finalDbName}?authSource=admin
-` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
 INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${finalDbName}?authSource=admin
 `;
@@ -237,7 +231,7 @@ INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${final
   database:
     image: \${MARIADB_IMAGE:-${imageToUse}}
     restart: unless-stopped
-${enableExternalPort ? '    ports:\n      - "${MARIADB_PORT:-3306}:3306"\n' : ''}    environment:
+    environment:
       MARIADB_DATABASE: \${MARIADB_DATABASE:-${finalDbName}}
       MARIADB_USER: \${MARIADB_USER:-${finalDbUser}}
       MARIADB_PASSWORD: \${MARIADB_PASSWORD}
@@ -257,10 +251,7 @@ MARIADB_USER=${finalDbUser}
 MARIADB_PASSWORD=${dbPassword}
 MARIADB_ROOT_PASSWORD=${dbRootPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
-${enableExternalPort ? `MARIADB_PORT=3306
-DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@localhost:3306/${finalDbName}
-DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@localhost:3306/${finalDbName}
-` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
 INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
 INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
@@ -272,7 +263,7 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalD
   database:
     image: \${MYSQL_IMAGE:-${imageToUse}}
     restart: unless-stopped
-${enableExternalPort ? '    ports:\n      - "${MYSQL_PORT:-3306}:3306"\n' : ''}    environment:
+    environment:
       MYSQL_DATABASE: \${MYSQL_DATABASE:-${finalDbName}}
       MYSQL_USER: \${MYSQL_USER:-${finalDbUser}}
       MYSQL_PASSWORD: \${MYSQL_PASSWORD}
@@ -286,10 +277,7 @@ MYSQL_DATABASE=${finalDbName}
 MYSQL_USER=${finalDbUser}
 MYSQL_PASSWORD=${dbPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
-${enableExternalPort ? `MYSQL_PORT=3306
-DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@localhost:3306/${finalDbName}
-DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@localhost:3306/${finalDbName}
-` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
 INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
 INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
@@ -301,15 +289,13 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalD
   database:
     image: \${REDIS_IMAGE:-${imageToUse}}
     restart: unless-stopped
-${enableExternalPort ? '    ports:\n      - "${REDIS_PORT:-6379}:6379"\n' : ''}    command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
+    command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
     volumes:
       - ./data:/data
 `;
         envContent = `REDIS_IMAGE=${imageToUse}
 REDIS_PASSWORD=${dbPassword}
-${enableExternalPort ? `REDIS_PORT=6379
-REDIS_URL=redis://:${dbPassword}@localhost:6379
-` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
 INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
 `;
@@ -320,7 +306,7 @@ INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
   database:
     image: \${LIBSQL_IMAGE:-${imageToUse}}
     restart: unless-stopped
-${enableExternalPort ? '    ports:\n      - "${LIBSQL_PORT:-8080}:8080"\n' : ''}    environment:
+    environment:
       SQLD_AUTH_TOKEN: \${SQLD_AUTH_TOKEN}
       SQLD_NODE: "primary"
       SQLD_HTTP_LISTEN_ADDR: "0.0.0.0:8080"
@@ -329,9 +315,7 @@ ${enableExternalPort ? '    ports:\n      - "${LIBSQL_PORT:-8080}:8080"\n' : ''}
 `;
         envContent = `LIBSQL_IMAGE=${imageToUse}
 SQLD_AUTH_TOKEN=${dbPassword}
-${enableExternalPort ? `LIBSQL_PORT=8080
-LIBSQL_URL=http://localhost:8080
-` : '# 外部网络连接已关闭 (仅限容器内网访问)\n'}
+# 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
 INTERNAL_LIBSQL_URL=http://database:8080
 `;
@@ -511,25 +495,6 @@ INTERNAL_LIBSQL_URL=http://database:8080
               placeholder={`默认 ${currentOption.defaultImage}`}
               className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono transition-colors"
             />
-          </div>
-
-          {/* External Connection Toggle (Default OFF) */}
-          <div className="p-3 bg-paper-2/70 dark:bg-white/[0.02] rounded-xl border border-line flex items-center justify-between gap-3">
-            <div>
-              <div className="font-semibold text-xs text-ink">开启外部网络连接 (向宿主机暴露端口)</div>
-              <p className="text-[11px] text-ink-muted mt-0.5">
-                默认关闭（推荐）。关闭后数据库仅可在容器内部网络中互联互通，安全性更高。创建后可在「外部凭据」中随时调整。
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-              <input
-                type="checkbox"
-                checked={enableExternalPort}
-                onChange={(e) => setEnableExternalPort(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer dark:bg-stone-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent"></div>
-            </label>
           </div>
         </div>
 
