@@ -20,6 +20,7 @@ interface DatabaseOption {
   defaultUser?: string;
   defaultDbName?: string;
   hasUserAndDb: boolean;
+  hasRootPassword?: boolean;
   icon: React.ReactNode;
 }
 
@@ -53,6 +54,7 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
     defaultUser: 'mariadb',
     defaultDbName: 'app_db',
     hasUserAndDb: true,
+    hasRootPassword: true,
     icon: (
       <svg className="w-8 h-8" preserveAspectRatio="xMidYMid" viewBox="0 0 256 170"><path d="M250.4 0c-4 .1-2.7 1.3-11.3 3.4-8.6 2.1-19.1 1.4-28.4 5.3-27.8 11.7-33.4 51.5-58.6 65.7-18.9 10.7-37.9 11.5-55 16.9a100.6 100.6 0 0 0-33.7 19.5c-8 6.8-8.1 12.8-16.4 21.4-8.8 9.1-35 .1-47 14.1 3.8 3.9 5.5 5 13 4-1.5 3-10.7 5.4-9 9.8 2 4.6 24.3 7.7 44.6-4.5 9.4-5.7 17-14 31.7-16 19-2.5 41 1.7 63 4.9-3.3 9.7-9.9 16.2-15.1 24-1.7 1.7 3.2 2 8.8.9 10-2.5 17.3-4.5 24.9-9 9.3-5.4 10.7-19.3 22.1-22.3 6.4 9.8 23.7 12.1 34.5 4.3-9.4-2.7-12-22.8-8.9-31.6 3-8.4 6-21.8 9-32.8 3.3-12 4.5-26.9 8.5-33 6-9 12.5-12.2 18.2-17.3 5.7-5.2 10.9-10.2 10.7-22 0-3.7-2-5.8-5.6-5.7Z" fill="#002B64" className="dark:fill-[#588ec4]"/><path d="M242 7c.9 3.2 2.3 4.7 8.8 5.3-1 8.1-6.4 12.6-12.5 16.8-5.3 3.8-11.2 7.4-15 13.3-3.8 6-6.3 26.5-12.3 46.8-5.1 17.5-13 34.9-26.6 42.5-1.4-3.6.2-10.2-2.6-12.4-1.9 5.2-4 10.2-6.4 14.9a53.2 53.2 0 0 1-39.6 30.2c9.4-12.7 18.3-25.8 18.5-47.7-6.6 1.4-6.4 17-13.2 21.2-4.4.5-8.8.5-13.2.2-18.3-1.1-37-6.6-54-1.1-11.7 3.7-21.2 12.5-31 16.8-11.6 5-20.3 7-34.7 5-1.9-2.5 10.5-5.6 9.8-11-5.7-.6-9 .7-13.8-1.5.5-1 1.3-1.8 2.3-2.5 9-6.2 34.5-1.5 41.3-8.2 4.2-4.1 7-8.4 9.8-12.6A51.2 51.2 0 0 1 73 107.4c7.4-5 16.6-9.7 25.7-12.9 12.4-4.3 24.9-4.7 38-9.7 8.2-3.1 17-7 24.2-12.3 1.7-1.3 3.4-2.7 4.9-4.1 20.6-20 24.6-55.5 56.7-58.8 4-.4 7.1-.2 10-.3 3.3-.1 6.3-.5 9.5-2.3Zm-39.2 113.3c.3 6.1 3.9 18.3 7 21.2-6.1 1.5-16.7-1-19.4-5.3 1.4-6.3 8.6-12 12.4-16Z" fill="#C49A6C"/><path d="M244.2 13.8c-1.2 2.6-3.6 6-3.6 12.6 0 1.1-.9 1.9-.9.2.1-6.5 1.8-9.3 3.6-13 .9-1.5 1.4-.9 1 .2Zm-1.2-1c-1.5 2.5-5 7-5.6 13.6 0 1.2-1 1.9-.9.1.7-6.4 3.5-10.4 5.6-14 1-1.3 1.4-.7.9.4Zm-1.2-1.2c-1.6 2.3-7 7.7-8.2 14.2-.2 1.2-1.1 1.8-.9 0 1.2-6.3 5.9-11.3 8.3-14.6 1-1.3 1.5-.6.8.4Zm-1-1.5-.5.6c-2.4 2.6-8 9-10 14.7-.3 1-1.4 1.6-.8-.1 2-6.1 7.7-12.7 10.5-15.7 1.3-1.1 1.6-.4.8.5Zm-29 13.1c1.2-5.4 5.4-7.8 12.6-7.2 1.8 8-8 11.3-12.6 7.2Z" fill="#002B64" className="dark:fill-[#588ec4]"/></svg>
     ),
@@ -60,10 +62,11 @@ const DATABASE_OPTIONS: DatabaseOption[] = [
   {
     type: 'mysql',
     label: 'MySQL',
-    defaultImage: 'mysql:8.4',
-    defaultUser: 'root',
+    defaultImage: 'mysql:8',
+    defaultUser: 'mysql',
     defaultDbName: 'app_db',
     hasUserAndDb: true,
+    hasRootPassword: true,
     icon: (
       <svg className="w-8 h-8" preserveAspectRatio="xMidYMid" viewBox="0 0 256 252"><path fill="#00546B" className="dark:fill-[#38bdf8]" d="M236 194c-14 0-25 1-34 5-3 1-7 1-7 4l3 6c2 3 5 8 9 11l11 8 21 10 11 9 6 4-3-6-5-5c-5-7-11-13-18-18-6-3-18-9-20-15h-1l12-3 18-3 8-2v-2l-9-10c-8-8-18-15-28-22l-18-8c-2-1-6-2-7-4l-7-13-15-30-8-20c-18-30-38-48-68-65-6-4-14-5-22-7l-13-1-8-6C34 5 8-9 1 9c-5 11 7 22 11 28l9 13 3 9c3 8 5 17 9 24l6 10c2 2 4 3 5 6-3 4-3 9-4 13-7 20-4 44 5 59 2 4 9 14 18 10 8-3 6-13 8-22l1-4 8 14c5 9 14 18 22 24 4 3 8 8 13 10l-4-4-9-10c-8-10-14-21-20-32l-7-17-3-6c-3 4-7 7-9 12-3 7-3 17-4 26h-1c-6-1-8-7-10-12-5-12-6-32-1-46 1-4 6-15 4-19-1-3-4-5-6-7l-7-12-10-30-9-13c-3-5-7-8-10-14-1-2-2-5 0-7l2-2c2-2 9 0 11 1 6 3 12 5 17 9l8 6h4c6 1 12 0 17 2 9 3 18 7 25 12 23 14 42 35 54 59 3 4 3 8 5 12l12 26c4 8 7 16 12 23 3 4 14 6 18 8l12 4 18 12c2 2 11 7 12 10Z"/><path fill="#00546B" className="dark:fill-[#38bdf8]" d="m58 43-7 1 6 7 4 9v-1c3-1 4-4 4-8l-2-4-5-4Z"/></svg>
     ),
@@ -112,6 +115,8 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   const [dbUser, setDbUser] = useState('');
   const [dbPassword, setDbPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [dbRootPassword, setDbRootPassword] = useState('');
+  const [showRootPassword, setShowRootPassword] = useState(false);
   const [dockerImage, setDockerImage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,14 +127,10 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setDbPassword(generateSecurePassword(20));
+      setDbRootPassword(generateSecurePassword(20));
       setName(`${selectedType}-db`);
-      if (currentOption.hasUserAndDb) {
-        setDbName(currentOption.defaultDbName || 'app_db');
-        setDbUser(currentOption.defaultUser || 'root');
-      } else {
-        setDbName('');
-        setDbUser('');
-      }
+      setDbName('');
+      setDbUser('');
       setDockerImage('');
       setError(null);
     }
@@ -143,6 +144,10 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
     setDbPassword(generateSecurePassword(20));
   };
 
+  const handleGenerateRootPassword = () => {
+    setDbRootPassword(generateSecurePassword(20));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -150,7 +155,11 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       return;
     }
     if (!dbPassword.trim()) {
-      setError('请输入或生成数据库访问密码');
+      setError('请输入或生成数据库访问密码 (Database Password)');
+      return;
+    }
+    if (currentOption.hasRootPassword && !dbRootPassword.trim()) {
+      setError('请输入或生成 Root 密码 (Database Root password)');
       return;
     }
 
@@ -227,7 +236,7 @@ MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
 MARIADB_DATABASE=${finalDbName}
 MARIADB_USER=${finalDbUser}
 MARIADB_PASSWORD=${dbPassword}
-MARIADB_ROOT_PASSWORD=${dbPassword}
+MARIADB_ROOT_PASSWORD=${dbRootPassword}
 `;
         break;
 
@@ -250,7 +259,7 @@ MARIADB_ROOT_PASSWORD=${dbPassword}
 MYSQL_DATABASE=${finalDbName}
 MYSQL_USER=${finalDbUser}
 MYSQL_PASSWORD=${dbPassword}
-MYSQL_ROOT_PASSWORD=${dbPassword}
+MYSQL_ROOT_PASSWORD=${dbRootPassword}
 `;
         break;
 
@@ -416,6 +425,40 @@ SQLD_AUTH_TOKEN=${dbPassword}
               </div>
             </div>
           </div>
+
+          {/* Database Root password (for MariaDB & MySQL) */}
+          {currentOption.hasRootPassword && (
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1.5">Database Root password</label>
+              <div className="relative flex items-center">
+                <input
+                  type={showRootPassword ? 'text' : 'password'}
+                  value={dbRootPassword}
+                  onChange={(e) => setDbRootPassword(e.target.value)}
+                  placeholder="Database Root password"
+                  className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                />
+                <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
+                  <button
+                    type="button"
+                    onClick={handleGenerateRootPassword}
+                    className="p-1 hover:text-ink hover:bg-paper-3 rounded transition-colors cursor-pointer"
+                    title="重新随机生成 Root 密码"
+                  >
+                    <ArrowsClockwise className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRootPassword(!showRootPassword)}
+                    className="p-1 hover:text-ink hover:bg-paper-3 rounded transition-colors cursor-pointer"
+                    title={showRootPassword ? '隐藏密码' : '显示密码'}
+                  >
+                    {showRootPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Docker image */}
           <div>
