@@ -291,10 +291,33 @@ export function useData() {
     document.body.removeChild(a);
   };
 
-  const restoreBackup = async (id: string) => {
-    const res = await apiFetch(`/api/r2/backups/${id}/restore`, { method: 'POST' });
+  const restoreBackup = async (id: string, options?: { databaseName?: string }) => {
+    const res = await apiFetch(`/api/r2/backups/${id}/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options || {}),
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to restore backup');
+    await fetchAll();
+    return data;
+  };
+
+  const restoreDatabaseFromFile = async (appId: string, file: File, databaseName?: string) => {
+    const token = localStorage.getItem('vessel_token') || '';
+    const query = new URLSearchParams();
+    query.set('filename', file.name);
+    if (databaseName) query.set('databaseName', databaseName);
+    const res = await fetch(`/api/apps/${appId}/restore-file?${query.toString()}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: file,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to restore backup file');
     await fetchAll();
     return data;
   };
@@ -383,6 +406,7 @@ export function useData() {
     deleteBackup,
     downloadBackup,
     restoreBackup,
+    restoreDatabaseFromFile,
     saveRegistry,
     testRegistry,
     saveMaintenance,

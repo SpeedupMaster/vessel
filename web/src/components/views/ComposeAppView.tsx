@@ -46,6 +46,7 @@ import { CodeEditorWithLines } from '../common/CodeEditorWithLines.js';
 import { Modal } from '../common/Modal.js';
 import { DatabaseTerminalModal } from '../common/DatabaseTerminalModal.js';
 import { CreateDatabaseBackupModal } from '../common/CreateDatabaseBackupModal.js';
+import { RestoreDatabaseBackupModal } from '../common/RestoreDatabaseBackupModal.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { LogsPanel } from './LogsPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
@@ -69,7 +70,8 @@ interface ComposeAppViewProps {
   onFreshVolumes?: (id: string) => Promise<any>;
   onBackup: (id: string, options?: { databaseName?: string }) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
-  onRestoreBackup?: (id: string) => Promise<any>;
+  onRestoreBackup?: (id: string, options?: { databaseName?: string }) => Promise<any>;
+  onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string) => Promise<any>;
   onDeleteBackup?: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
   onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
@@ -96,6 +98,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   onBackup,
   onDownloadBackup,
   onRestoreBackup,
+  onRestoreDatabaseFromFile,
   onDeleteBackup,
   onSubscribeLogs,
   onCreateDomain,
@@ -179,6 +182,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [copiedDbField, setCopiedDbField] = useState<string | null>(null);
   const [showTerminalModal, setShowTerminalModal] = useState(false);
   const [showDbBackupModal, setShowDbBackupModal] = useState(false);
+  const [showRestoreDbModal, setShowRestoreDbModal] = useState(false);
 
   const handleCopyDbField = (text: string, fieldKey: string) => {
     if (!text) return;
@@ -467,13 +471,42 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     if (!restoringBackup || !onRestoreBackup || isRestoringBackup) return;
     setIsRestoringBackup(true);
     try {
-      await onRestoreBackup(restoringBackup.id);
+      await onRestoreBackup(restoringBackup.id, {
+        databaseName:
+          restoringBackup.databaseName && restoringBackup.databaseName !== 'all'
+            ? restoringBackup.databaseName
+            : undefined,
+      });
       toast.success(`应用 ${app?.name || ''} 快照恢复成功！`);
       setRestoringBackup(null);
     } catch (err: any) {
       toast.error(`恢复快照失败: ${err.message || '未知错误'}`);
     } finally {
       setIsRestoringBackup(false);
+    }
+  };
+
+  const handleRestoreDbRecord = async (recordId: string, targetDatabaseName?: string) => {
+    if (!onRestoreBackup) return;
+    try {
+      toast.info('正在还原数据库快照至容器...');
+      await onRestoreBackup(recordId, { databaseName: targetDatabaseName });
+      toast.success('数据库快照已成功恢复生效！');
+    } catch (err: any) {
+      toast.error(`恢复快照失败: ${err.message || '未知错误'}`);
+      throw err;
+    }
+  };
+
+  const handleRestoreDbFile = async (appId: string, file: File, targetDatabaseName?: string) => {
+    if (!onRestoreDatabaseFromFile) return;
+    try {
+      toast.info(`正在上传并导入 ${file.name}...`);
+      await onRestoreDatabaseFromFile(appId, file, targetDatabaseName);
+      toast.success(`文件 ${file.name} 已成功恢复至数据库！`);
+    } catch (err: any) {
+      toast.error(`导入恢复失败: ${err.message || '未知错误'}`);
+      throw err;
     }
   };
 
@@ -2961,35 +2994,89 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       {activeTab === 'backups' && mode === 'edit' && app && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="font-semibold text-sm text-ink tracking-tight">
-                {isDb ? '数据库转储与灾备快照' : 'Cloudflare R2 灾备记录'}
-              </h3>
-              <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-                {isDb
-                  ? '支持选择指定数据库进行原生 SQL 快照转储导出，可按需恢复并同步至 Cloudflare R2'
-                  : '此应用对应的数据卷与 Compose 编排快照备份存档'}
-              </p>
+            <div className="flex items-start gap-3">
+              {isDb && (
+                <div className="w-9 h-9 rounded-xl bg-paper-2 dark:bg-[#16161b] border border-line flex items-center justify-center text-ink-muted shrink-0 mt-0.5 shadow-sm">
+                  <Database className="w-4.5 h-4.5 text-emerald-500" />
+                </div>
+              )}
+              <div>
+                <h3 className="font-semibold text-sm text-ink tracking-tight">
+                  {isDb ? '备份 (Backups)' : 'Cloudflare R2 灾备记录'}
+                </h3>
+                <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+                  {isDb
+                    ? '为数据库添加备份，将数据保存至不同存储服务提供商 (Add backups to your database to save data to a different provider).'
+                    : '此应用对应的数据卷与 Compose 编排快照备份存档'}
+                </p>
+              </div>
             </div>
 
-            <Button8State
-              size="sm"
-              variant="primary"
-              state={isBackingUp ? 'loading' : 'default'}
-              icon={isDb ? <Database className="w-4 h-4 text-white" /> : <CloudArrowUp className="w-4 h-4 text-white" />}
-              onClick={handleAppBackup}
-            >
-              {isDb ? '新建数据库备份' : '立即备份此应用'}
-            </Button8State>
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <Button8State
+                size="sm"
+                variant="primary"
+                state={isBackingUp ? 'loading' : 'default'}
+                icon={<Plus className="w-3.5 h-3.5 text-white" weight="bold" />}
+                onClick={handleAppBackup}
+              >
+                {isDb ? '新建备份' : '立即备份此应用'}
+              </Button8State>
+
+              {isDb && (
+                <Button8State
+                  size="sm"
+                  variant="secondary"
+                  icon={<ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />}
+                  onClick={() => setShowRestoreDbModal(true)}
+                >
+                  恢复备份
+                </Button8State>
+              )}
+            </div>
           </div>
 
           <div className="rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] overflow-hidden shadow-subtle">
             {appBackups.length === 0 ? (
-              <div className="py-14 text-center text-ink-muted text-xs">
-                {isDb
-                  ? '暂无此数据库的独立快照备份。点击右上角「新建数据库备份」选择要导出的数据库。'
-                  : '暂无此应用的独立备份归档。点击右上角即可立即将编排与数据卷上传至 R2。'}
-              </div>
+              isDb ? (
+                <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-paper-3/60 dark:bg-white/[0.04] text-ink-muted flex items-center justify-center border border-line/40 shadow-sm">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ink-muted">
+                      <path d="M4 6c0 1.66 3.58 3 8 3s8-1.34 8-3-3.58-3-8-3-8 1.34-8 3z" />
+                      <path d="M4 6v6c0 1.66 3.58 3 8 3" />
+                      <path d="M20 6v3" />
+                      <path d="M4 12v6c0 1.66 3.58 3 8 3" />
+                      <path d="M16 19h6m-3-3l3 3-3 3" />
+                    </svg>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-ink-muted">暂无备份配置</p>
+                    <p className="text-[11px] text-ink-faint font-sans">No backups configured</p>
+                  </div>
+                  <div className="flex items-center gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleAppBackup}
+                      className="px-4 py-2 bg-ink dark:bg-white text-paper dark:text-ink text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-sm hover:opacity-90 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" weight="bold" />
+                      <span>新建备份</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowRestoreDbModal(true)}
+                      className="px-4 py-2 bg-paper hover:bg-paper-2 text-ink text-xs font-semibold rounded-lg border border-line flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                    >
+                      <ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />
+                      <span>恢复备份</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-14 text-center text-ink-muted text-xs">
+                  暂无此应用的独立备份归档。点击右上角即可立即将编排与数据卷上传至 R2。
+                </div>
+              )
             ) : (
               <div className="divide-y divide-line/40">
                 {appBackups.map((b) => (
@@ -3708,6 +3795,19 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           app={app}
           engineName={dbInfo?.engine || 'Database'}
           onConfirm={handleConfirmDbBackup}
+        />
+      )}
+
+      {/* Restore Database Backup Modal */}
+      {showRestoreDbModal && app && (
+        <RestoreDatabaseBackupModal
+          isOpen={showRestoreDbModal}
+          onClose={() => setShowRestoreDbModal(false)}
+          app={app}
+          engineName={dbInfo?.engine || 'Database'}
+          backups={backups}
+          onRestoreRecord={handleRestoreDbRecord}
+          onRestoreFile={handleRestoreDbFile}
         />
       )}
 

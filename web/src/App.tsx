@@ -93,6 +93,7 @@ function MainConsole() {
     deleteBackup,
     downloadBackup,
     restoreBackup,
+    restoreDatabaseFromFile,
     saveRegistry,
     testRegistry,
     saveMaintenance,
@@ -306,6 +307,7 @@ function MainConsole() {
                 onBackup={backupApp}
                 onDownloadBackup={downloadBackup}
                 onRestoreBackup={restoreBackup}
+                onRestoreDatabaseFromFile={restoreDatabaseFromFile}
                 onDeleteBackup={deleteBackup}
                 onSubscribeLogs={subscribeLogs}
                 onCreateDomain={createDomain}

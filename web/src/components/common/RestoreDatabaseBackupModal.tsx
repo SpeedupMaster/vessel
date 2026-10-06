@@ -1,0 +1,403 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Database,
+  ArrowsClockwise,
+  UploadSimple,
+  Archive,
+  Warning,
+  CircleNotch,
+  CheckCircle,
+  FileCode,
+  X,
+} from '@phosphor-icons/react';
+import { Modal } from './Modal.js';
+import { Button8State } from './Button8State.js';
+import { AppItem, BackupRecord } from '../../types/index.js';
+import { apiFetch } from '../../hooks/useData.js';
+import { formatBytes } from '../../utils/format.js';
+
+interface RestoreDatabaseBackupModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  app: AppItem;
+  engineName: string;
+  backups: BackupRecord[];
+  onRestoreRecord: (recordId: string, databaseName?: string) => Promise<any>;
+  onRestoreFile?: (appId: string, file: File, databaseName?: string) => Promise<any>;
+}
+
+export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProps> = ({
+  isOpen,
+  onClose,
+  app,
+  engineName,
+  backups,
+  onRestoreRecord,
+  onRestoreFile,
+}) => {
+  const [sourceType, setSourceType] = useState<'existing' | 'upload'>('existing');
+  const [selectedRecordId, setSelectedRecordId] = useState<string>('');
+  const [targetDb, setTargetDb] = useState<string>('');
+  const [availableDatabases, setAvailableDatabases] = useState<string[]>([]);
+  const [loadingDbs, setLoadingDbs] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // File upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Relevant backups for this app (prefer app's own backups, or matching type)
+  const appBackups = backups.filter(
+    (b) => b.targetId === app.id || b.type === 'app_db'
+  );
+
+  // Fetch databases inside container
+  const fetchDatabases = useCallback(async () => {
+    setLoadingDbs(true);
+    try {
+      const res = await apiFetch(`/api/apps/${app.id}/databases`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.databases) && data.databases.length > 0) {
+          setAvailableDatabases(data.databases);
+          if (!targetDb) {
+            setTargetDb(data.databases[0]);
+          }
+        }
+      }
+    } catch {
+      // Fallback: parse from env
+    } finally {
+      setLoadingDbs(false);
+    }
+  }, [app.id, targetDb]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Parse default db from env
+      const envLines = (app.envContent || '').split('\n');
+      let envDb = '';
+      for (const line of envLines) {
+        const trimmed = line.trim();
+        if (
+          trimmed.startsWith('POSTGRES_DB=') ||
+          trimmed.startsWith('MYSQL_DATABASE=') ||
+          trimmed.startsWith('MARIADB_DATABASE=') ||
+          trimmed.startsWith('MONGO_INITDB_DATABASE=')
+        ) {
+          envDb = trimmed.split('=')[1]?.trim() || '';
+          break;
+        }
+      }
+      const initial = envDb || (engineName.toLowerCase().includes('postgres') ? 'postgres' : 'app_db');
+      setTargetDb(initial);
+
+      if (appBackups.length > 0) {
+        setSelectedRecordId(appBackups[0].id);
+        setSourceType('existing');
+      } else {
+        setSourceType('upload');
+      }
+      setSelectedFile(null);
+      fetchDatabases();
+    }
+  }, [isOpen, app.envContent, engineName, fetchDatabases, appBackups.length]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setSelectedFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const dbTarget = targetDb.trim() || undefined;
+      if (sourceType === 'existing') {
+        if (!selectedRecordId) throw new Error('请选择要恢复的历史备份归档');
+        await onRestoreRecord(selectedRecordId, dbTarget);
+      } else {
+        if (!selectedFile) throw new Error('请选择或拖拽要导入的备份文件');
+        if (!onRestoreFile) throw new Error('暂不支持文件直接还原');
+        await onRestoreFile(app.id, selectedFile, dbTarget);
+      }
+      onClose();
+    } catch {
+      // Handled by toast in caller
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const selectedRecord = appBackups.find((b) => b.id === selectedRecordId);
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={() => !isSubmitting && onClose()}
+      title="恢复数据库备份"
+      subtitle={`目标应用: ${app.name} (${engineName})`}
+      maxWidth="max-w-lg"
+    >
+      <form onSubmit={handleSubmit} className="space-y-5 pt-1 text-xs">
+        {/* Source Selection Tabs */}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-ink">备份源模式</label>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-paper-2 rounded-xl border border-line">
+            <button
+              type="button"
+              onClick={() => setSourceType('existing')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                sourceType === 'existing'
+                  ? 'bg-paper shadow-sm text-ink border border-line/60 font-semibold'
+                  : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              <Archive className="w-4 h-4 text-accent" />
+              <span>历史归档快照 ({appBackups.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceType('upload')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                sourceType === 'upload'
+                  ? 'bg-paper shadow-sm text-ink border border-line/60 font-semibold'
+                  : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              <UploadSimple className="w-4 h-4 text-emerald-500" />
+              <span>上传本地文件</span>
+            </button>
+          </div>
+        </div>
+
+        {/* TAB 1: Existing Backup Records */}
+        {sourceType === 'existing' && (
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-ink">选择历史备份归档</label>
+            {appBackups.length === 0 ? (
+              <div className="p-4 rounded-xl border border-dashed border-line text-center text-ink-muted bg-paper-2/40 space-y-2">
+                <p>暂无此数据库的历史备份快照。</p>
+                <button
+                  type="button"
+                  onClick={() => setSourceType('upload')}
+                  className="text-accent hover:underline font-medium text-xs cursor-pointer inline-flex items-center gap-1"
+                >
+                  <UploadSimple className="w-3.5 h-3.5" />
+                  <span>切换至「上传本地文件」导入</span>
+                </button>
+              </div>
+            ) : (
+              <div className="max-h-52 overflow-y-auto space-y-2 pr-1 divide-y-0">
+                {appBackups.map((b) => (
+                  <div
+                    key={b.id}
+                    onClick={() => setSelectedRecordId(b.id)}
+                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      selectedRecordId === b.id
+                        ? 'border-accent bg-accent/5 ring-1 ring-accent/20'
+                        : 'border-line hover:border-line/80 hover:bg-paper-2/60 bg-paper'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <FileCode className="w-4 h-4 text-accent flex-shrink-0" />
+                        <span className="font-mono text-ink font-semibold truncate text-[11.5px]">
+                          {b.fileName}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10.5px] text-ink-muted pl-6">
+                        <span>{formatBytes(b.fileSizeBytes)}</span>
+                        <span>•</span>
+                        <span>{new Date(b.createdAt).toLocaleString()}</span>
+                        {b.databaseName && (
+                          <span className="ml-1 px-1.5 py-0.2 rounded bg-paper-3 text-ink-muted font-mono">
+                            {b.databaseName === 'all' ? '全部库' : b.databaseName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <input
+                        type="radio"
+                        name="restoreRecord"
+                        checked={selectedRecordId === b.id}
+                        onChange={() => setSelectedRecordId(b.id)}
+                        className="text-accent focus:ring-accent"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: Upload Local File */}
+        {sourceType === 'upload' && (
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-ink">选择本地 SQL 或归档文件</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".sql,.gz,.dump,.archive,.rdb"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            {!selectedFile ? (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center space-y-2 ${
+                  isDragging
+                    ? 'border-accent bg-accent/5'
+                    : 'border-line/70 hover:border-accent hover:bg-paper-2/50 bg-paper-2/30'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-paper-3 text-ink-muted flex items-center justify-center mx-auto shadow-sm">
+                  <UploadSimple className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-ink hover:underline">点击选择文件</span>
+                  <span className="text-ink-muted text-xs"> 或将文件拖拽至此处</span>
+                </div>
+                <p className="text-[11px] text-ink-faint">
+                  支持 .sql, .sql.gz, .archive, .archive.gz, .dump, .rdb
+                </p>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl border border-line bg-paper flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <FileCode className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-semibold text-ink truncate">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-[11px] text-ink-muted">
+                      {formatBytes(selectedFile.size)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-2 cursor-pointer"
+                  title="清除所选文件"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Target Database Name */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-ink flex items-center gap-1">
+              <span>目标数据库名称 (Database Name)</span>
+              <span className="text-rose-500">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={fetchDatabases}
+              disabled={loadingDbs}
+              className="text-[11px] text-accent hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <ArrowsClockwise className={`w-3 h-3 ${loadingDbs ? 'animate-spin' : ''}`} />
+              <span>检测运行中的数据库</span>
+            </button>
+          </div>
+
+          <input
+            type="text"
+            required
+            value={targetDb}
+            onChange={(e) => setTargetDb(e.target.value)}
+            placeholder="如 postgres 或 app_db"
+            className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-mono focus:border-accent focus:outline-none shadow-subtle transition-colors"
+          />
+
+          {/* Quick Select Chips */}
+          {availableDatabases.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[11px] text-ink-muted">检测到现有库:</span>
+              {availableDatabases.map((dbName) => (
+                <button
+                  key={dbName}
+                  type="button"
+                  onClick={() => setTargetDb(dbName)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                    targetDb === dbName
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border-line'
+                  }`}
+                >
+                  {dbName}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-ink-muted leading-relaxed">
+            数据将直接导入至该目标数据库中，容器内现有同名数据表记录将被覆写。
+          </p>
+        </div>
+
+        {/* Warning Callout */}
+        <div className="p-3.5 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 text-xs space-y-1.5">
+          <div className="flex items-center gap-2 font-semibold text-ink dark:text-amber-300">
+            <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
+            <span>高危数据覆写风险提示</span>
+          </div>
+          <p className="text-ink-muted leading-relaxed text-[11.5px]">
+            还原过程将通过原生管道流将转储直接注入容器。目标数据库中已存在的冲突数据将被覆盖。还原期间建议暂停写入业务。
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="pt-2 flex items-center justify-end gap-3 border-t border-line">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
+          >
+            取消
+          </button>
+          <Button8State
+            size="sm"
+            variant="primary"
+            state={isSubmitting ? 'loading' : 'default'}
+            disabled={
+              isSubmitting ||
+              (sourceType === 'existing' && !selectedRecordId) ||
+              (sourceType === 'upload' && !selectedFile)
+            }
+            icon={<ArrowsClockwise className="w-3.5 h-3.5" />}
+          >
+            确认恢复备份
+          </Button8State>
+        </div>
+      </form>
+    </Modal>
+  );
+};

@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
 import YAML from 'yaml';
-import { db } from '../db/index.js';
+import { DATA_DIR, db } from '../db/index.js';
 import { dockerService } from '../services/docker.js';
 import { caddyService } from '../services/caddy.js';
 import { r2BackupService } from '../services/r2Backup.js';
@@ -660,11 +662,47 @@ apiRouter.delete('/r2/backups/:id', requireAuth, async (req: Request, res: Respo
 
 apiRouter.post('/r2/backups/:id/restore', requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const result = await r2BackupService.restoreBackup(id);
+  const { databaseName } = req.body || {};
+  const result = await r2BackupService.restoreBackup(id, { databaseName });
   if (!result.success) {
     return res.status(500).json({ error: result.error });
   }
   res.json({ success: true, message: result.message });
+});
+
+apiRouter.post('/apps/:id/restore-file', requireAuth, async (req: Request, res: Response) => {
+  const apps = db.get('apps') || [];
+  const app = apps.find((a) => a.id === req.params.id);
+  if (!app) return res.status(404).json({ error: 'App not found' });
+
+  const fileName = (req.query.filename as string) || `upload_${Date.now()}.sql`;
+  const databaseName = req.query.databaseName as string;
+  const tempDir = path.join(DATA_DIR, 'temp');
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+  const tempFilePath = path.join(tempDir, `${Date.now()}_${path.basename(fileName)}`);
+
+  const writeStream = fs.createWriteStream(tempFilePath);
+  req.pipe(writeStream);
+
+  req.on('error', (err) => {
+    writeStream.destroy();
+    res.status(500).json({ error: err.message });
+  });
+
+  writeStream.on('finish', async () => {
+    try {
+      const result = await r2BackupService.restoreDatabaseFromFile(app, tempFilePath, { databaseName });
+      try { fs.unlinkSync(tempFilePath); } catch {}
+      if (result.success) {
+        res.json({ success: true, message: result.message });
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (e: any) {
+      try { fs.unlinkSync(tempFilePath); } catch {}
+      res.status(500).json({ error: e.message });
+    }
+  });
 });
 
 apiRouter.post('/r2/backup-now', requireAuth, async (req: Request, res: Response) => {

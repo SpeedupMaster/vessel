@@ -492,7 +492,10 @@ export class R2BackupService {
   /**
    * Restore a backup snapshot archive to system or app
    */
-  public async restoreBackup(id: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  public async restoreBackup(
+    id: string,
+    options?: { databaseName?: string }
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
     const backups = db.get('backups') || [];
     const record = backups.find((b) => b.id === id);
     if (!record) return { success: false, error: '未找到该备份记录' };
@@ -532,7 +535,7 @@ export class R2BackupService {
     }
 
     if (record.type === 'app_db' || record.fileName.endsWith('.sql.gz') || record.fileName.endsWith('.archive.gz') || record.fileName.endsWith('.rdb.gz')) {
-      return this.restoreDatabaseDump(record, localPath);
+      return this.restoreDatabaseDump(record, localPath, options);
     }
 
     try {
@@ -652,7 +655,8 @@ export class R2BackupService {
    */
   public async restoreDatabaseDump(
     record: BackupRecord,
-    localPath: string
+    localPath: string,
+    options?: { databaseName?: string }
   ): Promise<{ success: boolean; message?: string; error?: string }> {
     const apps = db.get('apps') || [];
     const app = apps.find((a) => a.id === record.targetId);
@@ -682,24 +686,35 @@ export class R2BackupService {
       const user = envVars['POSTGRES_USER'] || 'postgres';
       const pass = envVars['POSTGRES_PASSWORD'] || '';
       const defaultDb = envVars['POSTGRES_DB'] || 'postgres';
-      const targetDb = record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb;
+      const targetDb = options?.databaseName?.trim() || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
       restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'psql', '-U', user, '-d', targetDb];
     } else if (isMariaDB) {
       const user = envVars['MARIADB_USER'] || 'root';
       const pass = envVars['MARIADB_PASSWORD'] || envVars['MARIADB_ROOT_PASSWORD'] || '';
+      const defaultDb = envVars['MARIADB_DATABASE'] || 'app_db';
+      const targetDb = options?.databaseName?.trim() || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
       restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mariadb', '-u', user];
       if (pass) restoreArgs.push(`-p${pass}`);
+      if (targetDb && targetDb !== 'all') restoreArgs.push(targetDb);
     } else if (isMySQL) {
       const user = envVars['MYSQL_USER'] || 'root';
       const pass = envVars['MYSQL_PASSWORD'] || envVars['MYSQL_ROOT_PASSWORD'] || '';
+      const defaultDb = envVars['MYSQL_DATABASE'] || 'app_db';
+      const targetDb = options?.databaseName?.trim() || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
       restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mysql', '-u', user];
       if (pass) restoreArgs.push(`-p${pass}`);
+      if (targetDb && targetDb !== 'all') restoreArgs.push(targetDb);
     } else if (isMongo) {
       const user = envVars['MONGO_INITDB_ROOT_USERNAME'] || '';
       const pass = envVars['MONGO_INITDB_ROOT_PASSWORD'] || '';
+      const defaultDb = envVars['MONGO_INITDB_DATABASE'] || 'app_db';
+      const targetDb = options?.databaseName?.trim() || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
       restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mongorestore'];
       if (user && pass) {
         restoreArgs.push('-u', user, '-p', pass, '--authenticationDatabase', 'admin');
+      }
+      if (targetDb && targetDb !== 'all') {
+        restoreArgs.push('-d', targetDb);
       }
       restoreArgs.push('--archive');
     } else {
@@ -707,11 +722,16 @@ export class R2BackupService {
     }
 
     return new Promise((resolve) => {
+      const isGzip = localPath.endsWith('.gz');
       const readStream = fs.createReadStream(localPath);
-      const gunzip = zlib.createGunzip();
       const child = spawn('docker', restoreArgs, { cwd: appDir, shell: true });
 
-      readStream.pipe(gunzip).pipe(child.stdin);
+      if (isGzip) {
+        const gunzip = zlib.createGunzip();
+        readStream.pipe(gunzip).pipe(child.stdin);
+      } else {
+        readStream.pipe(child.stdin);
+      }
 
       let stderr = '';
       child.stderr.on('data', (d) => {
@@ -734,6 +754,29 @@ export class R2BackupService {
         resolve({ success: false, error: `启动恢复失败: ${err.message}` });
       });
     });
+  }
+
+  /**
+   * Restore database from uploaded file
+   */
+  public async restoreDatabaseFromFile(
+    app: AppItem,
+    filePath: string,
+    options?: { databaseName?: string }
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const stats = fs.statSync(filePath);
+    const syntheticRecord: BackupRecord = {
+      id: `upload-${Date.now()}`,
+      type: 'app_db',
+      targetId: app.id,
+      targetName: app.name,
+      fileName: path.basename(filePath),
+      fileSizeBytes: stats.size,
+      databaseName: options?.databaseName || 'all',
+      createdAt: new Date().toISOString(),
+      status: 'completed',
+    };
+    return this.restoreDatabaseDump(syntheticRecord, filePath, options);
   }
 }
 
