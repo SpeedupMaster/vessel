@@ -28,7 +28,7 @@ export const DATABASE_OPTIONS: DatabaseOption[] = [
   {
     type: 'postgres',
     label: 'PostgreSQL',
-    defaultImage: 'postgres:16-alpine',
+    defaultImage: 'postgres:18-alpine',
     defaultUser: 'postgres',
     defaultDbName: 'postgres',
     hasUserAndDb: true,
@@ -211,7 +211,11 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
     let envContent = '';
 
     switch (selectedType) {
-      case 'postgres':
+      case 'postgres': {
+        const isPgLegacy = /postgres:(?:1[0-7]|[1-9])(?:[.-]|$)/.test(imageToUse);
+        const pgMountPath = isPgLegacy ? '/var/lib/postgresql/data' : '/var/lib/postgresql';
+        const pgDataEnv = isPgLegacy ? '\n      PGDATA: /var/lib/postgresql/data/pgdata' : '';
+
         composeYaml = `services:
   database:
     image: \${POSTGRES_IMAGE:-${imageToUse}}
@@ -220,10 +224,9 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
     environment:
       POSTGRES_DB: \${POSTGRES_DB:-${finalDbName}}
       POSTGRES_USER: \${POSTGRES_USER:-${finalDbUser}}
-      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}${pgDataEnv}
     volumes:
-      - ./data:/var/lib/postgresql/data
+      - ./data:${pgMountPath}
     networks:
       - default
       - vessel-net
@@ -241,6 +244,7 @@ POSTGRES_PASSWORD=${dbPassword}
 INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@${generatedId}:5432/${finalDbName}
 `;
         break;
+      }
 
       case 'mongodb':
         composeYaml = `services:
