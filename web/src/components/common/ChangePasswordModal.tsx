@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Key,
@@ -123,9 +124,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center md:items-center bg-black/60 backdrop-blur-sm animate-fade-in font-sans"
+      className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center md:items-center p-0 md:p-4 bg-black/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in font-sans"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleAttemptClose();
@@ -135,15 +136,15 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       {/* Modal / Bottom Sheet Container */}
       <div
         className={clsx(
-          'w-full max-h-[92vh] flex flex-col bg-paper-2 border-line shadow-2xl transition-all',
+          'w-full max-h-[92vh] flex flex-col bg-paper-2 border-line shadow-2xl transition-all overflow-hidden',
           'rounded-t-2xl md:rounded-2xl border-t md:border md:max-w-md md:w-full md:max-h-[85vh]'
         )}
       >
         {/* Mobile Drag Indicator */}
         <div className="md:hidden w-10 h-1 bg-ink-muted/25 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
 
-        {/* Header - Sticky on Mobile */}
-        <div className="sticky top-0 z-10 bg-paper-2/95 backdrop-blur-md px-5 py-3.5 border-b border-line flex items-center justify-between shrink-0">
+        {/* Header */}
+        <div className="bg-paper-2 px-5 py-3.5 border-b border-line flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-paper-3 border border-line flex items-center justify-center text-accent shadow-subtle shrink-0">
               <Key className="w-4 h-4" weight="bold" />
@@ -159,7 +160,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             onClick={handleAttemptClose}
             disabled={loading}
             aria-label="关闭弹窗"
-            className="min-w-[44px] min-h-[44px] -mr-2 p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
+            className="min-w-[40px] min-h-[40px] -mr-1.5 p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
           >
             <X className="w-4 h-4" weight="bold" />
           </button>
@@ -345,7 +346,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           </div>
 
           {/* Sticky Bottom Actions - Always visible above virtual keyboard */}
-          <div className="sticky bottom-0 z-10 bg-paper-2/95 backdrop-blur-md px-5 py-3.5 border-t border-line flex items-center justify-end gap-3 shrink-0 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
+          <div className="sticky bottom-0 z-10 bg-paper-2 px-5 py-3.5 border-t border-line flex items-center justify-end gap-3 shrink-0 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))]">
             <Button8State
               type="button"
               variant="secondary"
@@ -374,7 +375,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       {/* Discard Confirmation Action Modal (Prevents accidental loss of input) */}
       {showDiscardConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="w-full max-w-xs bg-paper-2 border border-line rounded-xl shadow-2xl p-4.5 space-y-3.5">
+          <div className="w-full max-w-xs bg-paper-2 border border-line rounded-xl shadow-2xl p-4.5 space-y-3.5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
                 <Warning className="w-4 h-4" weight="bold" />
@@ -405,6 +406,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };

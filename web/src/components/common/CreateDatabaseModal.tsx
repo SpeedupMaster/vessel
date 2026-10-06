@@ -437,7 +437,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Top Header */}
-        <div className="sticky top-0 z-10 bg-paper/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-line flex items-center justify-between shrink-0">
+        <div className="sticky top-0 z-10 bg-paper px-4 sm:px-6 py-3.5 border-b border-line flex items-center justify-between shrink-0">
           <div>
             <h3 id="create-db-title" className="text-base sm:text-lg font-semibold text-ink tracking-tight font-sans">创建受管数据库</h3>
             <p className="text-[11px] sm:text-xs text-ink-muted">选择官方数据库引擎并配置连接参数</p>
@@ -636,7 +636,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
           </div>
 
           {/* Sticky Bottom Action Bar: Mobile Sticky Full-Width / Desktop Dual Buttons */}
-          <div className="sticky bottom-0 z-10 bg-paper/95 backdrop-blur-md px-4 sm:px-6 py-3.5 sm:py-4 border-t border-line pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between sm:justify-end gap-3 shrink-0 shadow-subtle">
+          <div className="sticky bottom-0 z-10 bg-paper px-4 sm:px-6 py-3.5 sm:py-4 border-t border-line pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between sm:justify-end gap-3 shrink-0 shadow-subtle">
             {/* Desktop Cancel Button (Hidden on Mobile, where top X handles cancel) */}
             <button
               type="button"
