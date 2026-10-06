@@ -317,12 +317,40 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
 
-  const result = await r2BackupService.runAppBackup(app);
+  const { databaseName } = req.body || {};
+  const yamlLower = (app.composeYaml || '').toLowerCase();
+  const desc = (app.description || '').toLowerCase();
+  const name = (app.name || '').toLowerCase();
+
+  const isDb =
+    desc.includes('database') ||
+    yamlLower.includes('database:') ||
+    name.endsWith('-db') ||
+    name.startsWith('postgres') ||
+    name.startsWith('mysql') ||
+    name.startsWith('mariadb') ||
+    name.startsWith('mongo') ||
+    name.startsWith('redis') ||
+    name.startsWith('libsql');
+
+  const result = isDb
+    ? await r2BackupService.runDatabaseBackup(app, { databaseName })
+    : await r2BackupService.runAppBackup(app);
+
   if (result.success) {
     res.json({ success: true, record: result.record });
   } else {
     res.status(500).json({ error: result.error });
   }
+});
+
+apiRouter.get('/apps/:id/databases', async (req: Request, res: Response) => {
+  const apps = db.get('apps') || [];
+  const app = apps.find((a) => a.id === req.params.id);
+  if (!app) return res.status(404).json({ error: 'App not found' });
+
+  const databases = await dockerService.listDatabasesInApp(app);
+  res.json({ databases });
 });
 
 apiRouter.post('/apps/:id/exec', requireAuth, async (req: Request, res: Response) => {

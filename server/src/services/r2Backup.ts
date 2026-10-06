@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
+import { spawn } from 'child_process';
 import archiver from 'archiver';
 import AdmZip from 'adm-zip';
 import {
@@ -12,6 +14,7 @@ import {
 import { DATA_DIR, APPS_DATA_DIR, db } from '../db/index.js';
 import { BackupRecord, R2Config, AppItem } from '../types/index.js';
 import { caddyService } from './caddy.js';
+import { dockerService } from './docker.js';
 
 export class R2BackupService {
   private getS3Client(config?: R2Config): S3Client | null {
@@ -235,6 +238,161 @@ export class R2BackupService {
   }
 
   /**
+   * Run targeted database dump backup (PostgreSQL, MySQL, MariaDB, MongoDB, Redis, libSQL)
+   */
+  public async runDatabaseBackup(
+    app: AppItem,
+    options?: { databaseName?: string }
+  ): Promise<{ success: boolean; record?: BackupRecord; error?: string }> {
+    const targetDb = options?.databaseName?.trim() || 'all';
+    const { composePath, appDir, envPath } = dockerService.prepareAppFiles(app);
+
+    const envVars: Record<string, string> = {};
+    (app.envContent || '').split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          envVars[trimmed.substring(0, eqIdx).trim()] = trimmed.substring(eqIdx + 1).trim();
+        }
+      }
+    });
+
+    const yamlLower = (app.composeYaml || '').toLowerCase();
+    const isPostgres = yamlLower.includes('postgres');
+    const isMariaDB = yamlLower.includes('mariadb');
+    const isMySQL = !isMariaDB && yamlLower.includes('mysql');
+    const isMongo = yamlLower.includes('mongo');
+    const isRedis = yamlLower.includes('redis');
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const ext = isMongo ? 'archive.gz' : isRedis ? 'rdb.gz' : 'sql.gz';
+    const dbTag = targetDb === 'all' ? 'all' : targetDb.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `vessel_db_${app.name || app.id}_${dbTag}_${timestamp}.${ext}`;
+    const backupsDir = path.join(DATA_DIR, 'backups');
+    if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
+    const localGzPath = path.join(backupsDir, fileName);
+
+    let dumpArgs: string[] = [];
+
+    if (isPostgres) {
+      const user = envVars['POSTGRES_USER'] || 'postgres';
+      const pass = envVars['POSTGRES_PASSWORD'] || '';
+      if (targetDb === 'all') {
+        dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'pg_dumpall', '-U', user];
+      } else {
+        dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'pg_dump', '-U', user, '-d', targetDb, '--clean', '--if-exists'];
+      }
+    } else if (isMariaDB) {
+      const user = envVars['MARIADB_USER'] || 'root';
+      const pass = envVars['MARIADB_PASSWORD'] || envVars['MARIADB_ROOT_PASSWORD'] || '';
+      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mariadb-dump', '-u', user];
+      if (pass) dumpArgs.push(`-p${pass}`);
+      if (targetDb === 'all') {
+        dumpArgs.push('--all-databases', '--single-transaction', '--quick');
+      } else {
+        dumpArgs.push('--databases', targetDb, '--single-transaction', '--quick');
+      }
+    } else if (isMySQL) {
+      const user = envVars['MYSQL_USER'] || 'root';
+      const pass = envVars['MYSQL_PASSWORD'] || envVars['MYSQL_ROOT_PASSWORD'] || '';
+      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mysqldump', '-u', user];
+      if (pass) dumpArgs.push(`-p${pass}`);
+      if (targetDb === 'all') {
+        dumpArgs.push('--all-databases', '--single-transaction', '--quick');
+      } else {
+        dumpArgs.push('--databases', targetDb, '--single-transaction', '--quick');
+      }
+    } else if (isMongo) {
+      const user = envVars['MONGO_INITDB_ROOT_USERNAME'] || '';
+      const pass = envVars['MONGO_INITDB_ROOT_PASSWORD'] || '';
+      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mongodump'];
+      if (user && pass) {
+        dumpArgs.push('-u', user, '-p', pass, '--authenticationDatabase', 'admin');
+      }
+      if (targetDb !== 'all') {
+        dumpArgs.push('-d', targetDb);
+      }
+      dumpArgs.push('--archive');
+    } else if (isRedis) {
+      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'cat', '/data/dump.rdb'];
+    } else {
+      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'sh', '-c', 'cat /data/*'];
+    }
+
+    return new Promise((resolve) => {
+      const writeStream = fs.createWriteStream(localGzPath);
+      const gzip = zlib.createGzip();
+      let stderr = '';
+
+      const child = spawn('docker', dumpArgs, { cwd: appDir, shell: true });
+      child.stdout.pipe(gzip).pipe(writeStream);
+
+      child.stderr.on('data', (d) => {
+        stderr += d.toString();
+      });
+
+      child.on('close', async (code) => {
+        if (code === 0) {
+          writeStream.on('finish', async () => {
+            try {
+              const stats = fs.statSync(localGzPath);
+              const sizeBytes = stats.size;
+
+              const r2Config = db.get('r2Config');
+              const client = this.getS3Client(r2Config);
+              if (client && r2Config.enabled && r2Config.bucketName) {
+                const fileBuffer = fs.readFileSync(localGzPath);
+                await client.send(
+                  new PutObjectCommand({
+                    Bucket: r2Config.bucketName,
+                    Key: `databases/${app.id}/${fileName}`,
+                    Body: fileBuffer,
+                    ContentType: 'application/gzip',
+                  })
+                );
+              }
+
+              const record: BackupRecord = {
+                id: `db-${Date.now()}`,
+                type: 'app_db',
+                targetId: app.id,
+                targetName: `${app.name} (${targetDb === 'all' ? '全部数据库' : targetDb})`,
+                fileName,
+                fileSizeBytes: sizeBytes,
+                createdAt: new Date().toISOString(),
+                status: 'completed',
+                databaseName: targetDb,
+              };
+
+              const backups = db.get('backups') || [];
+              db.set('backups', [record, ...backups]);
+              await this.enforceRetention(app.id);
+
+              resolve({ success: true, record });
+            } catch (err: any) {
+              resolve({ success: false, error: err.message });
+            }
+          });
+        } else {
+          if (fs.existsSync(localGzPath)) {
+            try { fs.unlinkSync(localGzPath); } catch {}
+          }
+          const cleanError = stderr.trim() || `数据库导出命令异常退出 (退出码 ${code})。请确认容器处于运行状态。`;
+          resolve({ success: false, error: cleanError });
+        }
+      });
+
+      child.on('error', (err) => {
+        if (fs.existsSync(localGzPath)) {
+          try { fs.unlinkSync(localGzPath); } catch {}
+        }
+        resolve({ success: false, error: `启动备份命令失败: ${err.message}` });
+      });
+    });
+  }
+
+  /**
    * Get a readable download stream for a backup
    */
   public async getBackupDownload(id: string): Promise<{
@@ -373,6 +531,10 @@ export class R2BackupService {
       return { success: false, error: '备份文件不存在，无法执行恢复' };
     }
 
+    if (record.type === 'app_db' || record.fileName.endsWith('.sql.gz') || record.fileName.endsWith('.archive.gz') || record.fileName.endsWith('.rdb.gz')) {
+      return this.restoreDatabaseDump(record, localPath);
+    }
+
     try {
       const zip = new AdmZip(localPath);
 
@@ -483,6 +645,95 @@ export class R2BackupService {
         }
       }
     }
+  }
+
+  /**
+   * Restore database dump into running container
+   */
+  public async restoreDatabaseDump(
+    record: BackupRecord,
+    localPath: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const apps = db.get('apps') || [];
+    const app = apps.find((a) => a.id === record.targetId);
+    if (!app) return { success: false, error: '关联的应用不存在，无法执行恢复' };
+
+    const { composePath, appDir, envPath } = dockerService.prepareAppFiles(app);
+    const envVars: Record<string, string> = {};
+    (app.envContent || '').split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          envVars[trimmed.substring(0, eqIdx).trim()] = trimmed.substring(eqIdx + 1).trim();
+        }
+      }
+    });
+
+    const yamlLower = (app.composeYaml || '').toLowerCase();
+    const isPostgres = yamlLower.includes('postgres');
+    const isMariaDB = yamlLower.includes('mariadb');
+    const isMySQL = !isMariaDB && yamlLower.includes('mysql');
+    const isMongo = yamlLower.includes('mongo');
+
+    let restoreArgs: string[] = [];
+
+    if (isPostgres) {
+      const user = envVars['POSTGRES_USER'] || 'postgres';
+      const pass = envVars['POSTGRES_PASSWORD'] || '';
+      const defaultDb = envVars['POSTGRES_DB'] || 'postgres';
+      const targetDb = record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb;
+      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'psql', '-U', user, '-d', targetDb];
+    } else if (isMariaDB) {
+      const user = envVars['MARIADB_USER'] || 'root';
+      const pass = envVars['MARIADB_PASSWORD'] || envVars['MARIADB_ROOT_PASSWORD'] || '';
+      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mariadb', '-u', user];
+      if (pass) restoreArgs.push(`-p${pass}`);
+    } else if (isMySQL) {
+      const user = envVars['MYSQL_USER'] || 'root';
+      const pass = envVars['MYSQL_PASSWORD'] || envVars['MYSQL_ROOT_PASSWORD'] || '';
+      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mysql', '-u', user];
+      if (pass) restoreArgs.push(`-p${pass}`);
+    } else if (isMongo) {
+      const user = envVars['MONGO_INITDB_ROOT_USERNAME'] || '';
+      const pass = envVars['MONGO_INITDB_ROOT_PASSWORD'] || '';
+      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mongorestore'];
+      if (user && pass) {
+        restoreArgs.push('-u', user, '-p', pass, '--authenticationDatabase', 'admin');
+      }
+      restoreArgs.push('--archive');
+    } else {
+      return { success: false, error: '此类型数据库暂不支持直接还原，请手动导入' };
+    }
+
+    return new Promise((resolve) => {
+      const readStream = fs.createReadStream(localPath);
+      const gunzip = zlib.createGunzip();
+      const child = spawn('docker', restoreArgs, { cwd: appDir, shell: true });
+
+      readStream.pipe(gunzip).pipe(child.stdin);
+
+      let stderr = '';
+      child.stderr.on('data', (d) => {
+        stderr += d.toString();
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({
+            success: true,
+            message: `数据库快照 ${record.fileName} 已成功导入恢复至容器！`,
+          });
+        } else {
+          const cleanErr = stderr.trim() || `数据库导入退出码: ${code}。请确保容器处于运行状态。`;
+          resolve({ success: false, error: cleanErr });
+        }
+      });
+
+      child.on('error', (err) => {
+        resolve({ success: false, error: `启动恢复失败: ${err.message}` });
+      });
+    });
   }
 }
 

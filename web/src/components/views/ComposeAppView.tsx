@@ -45,6 +45,7 @@ import { Button8State } from '../common/Button8State.js';
 import { CodeEditorWithLines } from '../common/CodeEditorWithLines.js';
 import { Modal } from '../common/Modal.js';
 import { DatabaseTerminalModal } from '../common/DatabaseTerminalModal.js';
+import { CreateDatabaseBackupModal } from '../common/CreateDatabaseBackupModal.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { LogsPanel } from './LogsPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
@@ -66,7 +67,7 @@ interface ComposeAppViewProps {
   onRestart: (id: string) => Promise<void>;
   onRebuild: (id: string) => Promise<void>;
   onFreshVolumes?: (id: string) => Promise<any>;
-  onBackup: (id: string) => Promise<any>;
+  onBackup: (id: string, options?: { databaseName?: string }) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string) => Promise<any>;
   onDeleteBackup?: (id: string) => Promise<any>;
@@ -177,6 +178,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [isSavingExternalPort, setIsSavingExternalPort] = useState(false);
   const [copiedDbField, setCopiedDbField] = useState<string | null>(null);
   const [showTerminalModal, setShowTerminalModal] = useState(false);
+  const [showDbBackupModal, setShowDbBackupModal] = useState(false);
 
   const handleCopyDbField = (text: string, fieldKey: string) => {
     if (!text) return;
@@ -420,6 +422,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
   const handleAppBackup = async () => {
     if (!app || isBackingUp) return;
+    if (isDb) {
+      setShowDbBackupModal(true);
+      return;
+    }
     setIsBackingUp(true);
     try {
       await onBackup(app.id);
@@ -428,6 +434,17 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       toast.error(`备份失败: ${err.message || '未知错误'}`);
     } finally {
       setIsBackingUp(false);
+    }
+  };
+
+  const handleConfirmDbBackup = async (targetDbName: string) => {
+    if (!app) return;
+    try {
+      await onBackup(app.id, { databaseName: targetDbName });
+      toast.success(`数据库 ${app.name} (${targetDbName === 'all' ? '全部数据库' : targetDbName}) 快照备份已成功生成！`);
+    } catch (err: any) {
+      toast.error(`备份失败: ${err.message || '未知错误'}`);
+      throw err;
     }
   };
 
@@ -2945,9 +2962,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-semibold text-sm text-ink tracking-tight">Cloudflare R2 灾备记录</h3>
+              <h3 className="font-semibold text-sm text-ink tracking-tight">
+                {isDb ? '数据库转储与灾备快照' : 'Cloudflare R2 灾备记录'}
+              </h3>
               <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-                此应用对应的数据卷与 Compose 编排快照备份存档
+                {isDb
+                  ? '支持选择指定数据库进行原生 SQL 快照转储导出，可按需恢复并同步至 Cloudflare R2'
+                  : '此应用对应的数据卷与 Compose 编排快照备份存档'}
               </p>
             </div>
 
@@ -2955,25 +2976,37 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               size="sm"
               variant="primary"
               state={isBackingUp ? 'loading' : 'default'}
-              icon={<CloudArrowUp className="w-4 h-4 text-white" />}
+              icon={isDb ? <Database className="w-4 h-4 text-white" /> : <CloudArrowUp className="w-4 h-4 text-white" />}
               onClick={handleAppBackup}
             >
-              立即备份此应用
+              {isDb ? '新建数据库备份' : '立即备份此应用'}
             </Button8State>
           </div>
 
           <div className="rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] overflow-hidden shadow-subtle">
             {appBackups.length === 0 ? (
               <div className="py-14 text-center text-ink-muted text-xs">
-                暂无此应用的独立备份归档。点击右上角即可立即将编排与数据卷上传至 R2。
+                {isDb
+                  ? '暂无此数据库的独立快照备份。点击右上角「新建数据库备份」选择要导出的数据库。'
+                  : '暂无此应用的独立备份归档。点击右上角即可立即将编排与数据卷上传至 R2。'}
               </div>
             ) : (
               <div className="divide-y divide-line/40">
                 {appBackups.map((b) => (
                   <div key={b.id} className="p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-paper-3/20 transition-colors">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-xs sm:text-sm text-ink font-mono">{b.fileName}</span>
+                        {b.databaseName && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                            {b.databaseName === 'all' ? '全部数据库' : `库: ${b.databaseName}`}
+                          </span>
+                        )}
+                        {b.type === 'app_db' && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            原生转储
+                          </span>
+                        )}
                         <Badge variant="running">已同步 R2</Badge>
                       </div>
                       <p className="text-xs text-ink-muted">
@@ -3577,7 +3610,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         <Modal
           isOpen={!!restoringBackup}
           onClose={() => !isRestoringBackup && setRestoringBackup(null)}
-          title="⚠️ 确认恢复应用快照"
+          title={restoringBackup.type === 'app_db' || isDb ? '⚠️ 确认恢复数据库快照' : '⚠️ 确认恢复应用快照'}
           subtitle={`快照归档: ${restoringBackup.fileName}`}
           maxWidth="max-w-md"
         >
@@ -3585,10 +3618,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 text-xs space-y-2">
               <div className="flex items-center gap-2 font-semibold text-sm text-ink">
                 <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
-                <span>快照恢复风险警示</span>
+                <span>{restoringBackup.type === 'app_db' || isDb ? '数据库快照还原风险警示' : '快照恢复风险警示'}</span>
               </div>
               <p className="text-ink-muted leading-relaxed">
-                恢复操作将使用快照归档覆盖当前应用 <strong>{app?.name}</strong> 的本地 Compose 编排配置、.env 环境变量与数据卷。
+                {restoringBackup.type === 'app_db' || isDb
+                  ? `恢复操作将直接将 SQL 转储/数据流导入正在运行的数据库容器中，覆盖现有 ${restoringBackup.databaseName && restoringBackup.databaseName !== 'all' ? `「${restoringBackup.databaseName}」` : '相应'} 数据库内容。`
+                  : `恢复操作将使用快照归档覆盖当前应用 ${app?.name} 的本地 Compose 编排配置、.env 环境变量与数据卷。`}
               </p>
             </div>
 
@@ -3663,6 +3698,17 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Create Database Backup Modal */}
+      {showDbBackupModal && app && (
+        <CreateDatabaseBackupModal
+          isOpen={showDbBackupModal}
+          onClose={() => setShowDbBackupModal(false)}
+          app={app}
+          engineName={dbInfo?.engine || 'Database'}
+          onConfirm={handleConfirmDbBackup}
+        />
       )}
 
       {/* Database Command Terminal Modal */}

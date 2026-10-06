@@ -63,6 +63,7 @@ export interface BackupRecord {
   createdAt: string;
   status: 'completed' | 'uploading' | 'failed';
   downloadUrl?: string;
+  databaseName?: string;
 }
 
 export interface RegistryItem {

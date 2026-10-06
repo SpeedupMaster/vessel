@@ -498,6 +498,81 @@ export class DockerService {
       });
     });
   }
+
+  /**
+   * List available database names inside database container
+   */
+  public async listDatabasesInApp(app: AppItem): Promise<string[]> {
+    const yamlLower = (app.composeYaml || '').toLowerCase();
+    const envVars: Record<string, string> = {};
+    (app.envContent || '').split('\n').forEach((l) => {
+      const trimmed = l.trim();
+      if (!trimmed || trimmed.startsWith('#')) return;
+      const idx = trimmed.indexOf('=');
+      if (idx !== -1) {
+        envVars[trimmed.substring(0, idx).trim()] = trimmed.substring(idx + 1).trim();
+      }
+    });
+
+    const defaultDb =
+      envVars['POSTGRES_DB'] ||
+      envVars['MYSQL_DATABASE'] ||
+      envVars['MARIADB_DATABASE'] ||
+      envVars['MONGO_INITDB_DATABASE'] ||
+      '';
+
+    if (yamlLower.includes('postgres')) {
+      const res = await this.execInApp(app, {
+        command: 'SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname;',
+        mode: 'db',
+      });
+      if (res.success && res.output) {
+        const dbs = res.output
+          .split('\n')
+          .map((s) => s.trim())
+          .filter((s) => s && !s.startsWith('datname') && !s.startsWith('-') && !s.startsWith('(') && !s.includes('rows'));
+        if (dbs.length > 0) return dbs;
+      }
+      return defaultDb ? [defaultDb] : ['postgres'];
+    }
+
+    if (yamlLower.includes('mysql') || yamlLower.includes('mariadb')) {
+      const res = await this.execInApp(app, {
+        command: 'SHOW DATABASES;',
+        mode: 'db',
+      });
+      if (res.success && res.output) {
+        const ignored = ['information_schema', 'performance_schema', 'sys', 'mysql', 'Database'];
+        const dbs = res.output
+          .split('\n')
+          .map((s) => s.trim())
+          .filter((s) => s && !ignored.includes(s));
+        if (dbs.length > 0) return dbs;
+      }
+      return defaultDb ? [defaultDb] : ['app_db'];
+    }
+
+    if (yamlLower.includes('mongo')) {
+      const res = await this.execInApp(app, {
+        command: 'show dbs',
+        mode: 'db',
+      });
+      if (res.success && res.output) {
+        const dbs = res.output
+          .split('\n')
+          .map((s) => s.trim().split(/\s+/)[0])
+          .filter((s) => s && !['admin', 'config', 'local'].includes(s));
+        if (dbs.length > 0) return dbs;
+      }
+      return defaultDb ? [defaultDb] : ['app_db'];
+    }
+
+    if (yamlLower.includes('redis')) {
+      return ['db0'];
+    }
+
+    return defaultDb ? [defaultDb] : ['default'];
+  }
 }
 
 export const dockerService = new DockerService();

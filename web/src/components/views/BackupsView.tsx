@@ -409,9 +409,14 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2.5">
                     <span className="font-semibold text-ink dark:text-zinc-100 text-sm font-sans">{b.targetName}</span>
-                    <Badge variant={b.type === 'system' ? 'accent' : 'default'}>
-                      {b.type === 'system' ? '系统级快照' : '应用卷备份'}
+                    <Badge variant={b.type === 'system' ? 'accent' : b.type === 'app_db' ? 'running' : 'default'}>
+                      {b.type === 'system' ? '系统级快照' : b.type === 'app_db' ? '数据库转储' : '应用卷备份'}
                     </Badge>
+                    {b.databaseName && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                        {b.databaseName === 'all' ? '全部数据库' : `库: ${b.databaseName}`}
+                      </span>
+                    )}
                     <Badge variant="running">已同步 R2</Badge>
                   </div>
                   <p className="text-ink-muted/80 dark:text-zinc-500 font-mono text-[11px] truncate max-w-lg">{b.fileName}</p>
@@ -574,16 +579,26 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-500/25 text-xs space-y-2 shadow-subtle">
               <div className="flex items-center gap-2 font-semibold text-sm text-ink dark:text-amber-200">
                 <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
-                <span>快照回滚将覆盖当前数据与容器编排！</span>
+                <span>{restoringBackup.type === 'app_db' ? '数据库快照还原警示！' : '快照回滚将覆盖当前数据与容器编排！'}</span>
               </div>
               <p className="text-ink-muted leading-relaxed">
-                执行恢复后，将解压该快照并全面还原系统：
+                {restoringBackup.type === 'app_db'
+                  ? '执行恢复后，将把该原生转储流直接导入至目标容器：'
+                  : '执行恢复后，将解压该快照并全面还原系统：'}
               </p>
-              <ul className="list-disc list-inside text-ink-muted space-y-1 pl-1">
-                <li>平台核心数据库记录与元数据将还原至快照备份时刻</li>
-                <li>受管应用与服务配置文件将被覆盖，未备份的变更将丢失</li>
-                <li>Caddy 路由引擎将自动依据恢复后的域名规则重新加载</li>
-              </ul>
+              {restoringBackup.type === 'app_db' ? (
+                <ul className="list-disc list-inside text-ink-muted space-y-1 pl-1">
+                  <li>将把数据恢复至当前运行中的数据库容器</li>
+                  <li>{restoringBackup.databaseName && restoringBackup.databaseName !== 'all' ? `指定数据库「${restoringBackup.databaseName}」` : '所有匹配数据库'}现有数据表将被覆盖</li>
+                  <li>无需重启容器，数据导入完成后即时生效</li>
+                </ul>
+              ) : (
+                <ul className="list-disc list-inside text-ink-muted space-y-1 pl-1">
+                  <li>平台核心数据库记录与元数据将还原至快照备份时刻</li>
+                  <li>受管应用与服务配置文件将被覆盖，未备份的变更将丢失</li>
+                  <li>Caddy 路由引擎将自动依据恢复后的域名规则重新加载</li>
+                </ul>
+              )}
             </div>
 
             {/* Input Verification Box */}
