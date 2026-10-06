@@ -17,7 +17,7 @@ import {
   Database,
   Stack,
 } from '@phosphor-icons/react';
-import { AppItem, ComposeTemplate, DomainItem, BackupRecord } from '../../types/index.js';
+import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { ComposeAppView } from './ComposeAppView.js';
@@ -25,7 +25,6 @@ import { CreateDatabaseModal } from '../common/CreateDatabaseModal.js';
 
 interface AppsViewProps {
   apps: AppItem[];
-  templates: ComposeTemplate[];
   logsMap: Record<string, string[]>;
   domains?: DomainItem[];
   backups?: BackupRecord[];
@@ -55,7 +54,6 @@ interface AppsViewProps {
 
 export const AppsView: React.FC<AppsViewProps> = ({
   apps,
-  templates,
   logsMap,
   domains = [],
   backups = [],
@@ -158,7 +156,6 @@ export const AppsView: React.FC<AppsViewProps> = ({
     return (
       <ComposeAppView
         mode="create"
-        templates={templates}
         logsMap={logsMap}
         domains={domains}
         backups={backups}
@@ -195,7 +192,6 @@ export const AppsView: React.FC<AppsViewProps> = ({
       <ComposeAppView
         mode="edit"
         app={selectedApp}
-        templates={templates}
         logsMap={logsMap}
         domains={domains}
         backups={backups}

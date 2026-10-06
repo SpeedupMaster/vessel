@@ -13,7 +13,6 @@ import {
   Package,
   HardDrives,
   CloudArrowUp,
-  Sparkle,
   Copy,
   Check,
   Warning,
@@ -42,7 +41,7 @@ import {
   CaretRight,
 } from '@phosphor-icons/react';
 import clsx from 'clsx';
-import { AppItem, ComposeTemplate, DomainItem, BackupRecord } from '../../types/index.js';
+import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
 import { DATABASE_OPTIONS } from '../common/CreateDatabaseModal.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
@@ -59,7 +58,6 @@ import { formatBytes } from '../../utils/format.js';
 interface ComposeAppViewProps {
   mode: 'create' | 'edit';
   app?: AppItem | null;
-  templates: ComposeTemplate[];
   logsMap: Record<string, string[]>;
   domains?: DomainItem[];
   backups?: BackupRecord[];
@@ -86,7 +84,6 @@ interface ComposeAppViewProps {
 export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   mode,
   app,
-  templates,
   logsMap,
   domains = [],
   backups = [],
@@ -120,7 +117,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     | 'containers'
     | 'backups'
     | 'logs'
-    | 'templates'
     | 'advanced'
     | 'monitoring';
 
@@ -735,23 +731,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     } finally {
       setIsBindingDomain(false);
     }
-  };
-
-  // Handle template selection
-  const handleSelectTemplate = (tmpl: ComposeTemplate) => {
-    setName(tmpl.name);
-    setTempName(tmpl.name);
-    setDescription(tmpl.description);
-    setComposeYaml(tmpl.composeYaml);
-    setEnvContent(tmpl.envContent || '');
-
-    // Check if envContent has DOMAIN=...
-    const match = (tmpl.envContent || '').match(/(?:^|\n)\s*DOMAIN\s*=\s*([^\s#\r\n]+)/i);
-    if (match && match[1]) {
-      setDeployDomain(match[1]);
-      setBindDomainOnDeploy(true);
-    }
-    setActiveTab('general');
   };
 
   // Open strict delete confirmation modal
@@ -1479,21 +1458,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 )}
               </span>
               {activeTab === 'domains' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('templates')}
-              className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'templates'
-                  ? 'text-accent font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-              }`}
-            >
-              <Sparkle className="w-3.5 h-3.5 text-amber-500" />
-              <span>预置模板</span>
-              {activeTab === 'templates' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
               )}
             </button>
@@ -2732,50 +2696,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
         </div>
       )}
-
-      {/* ================= TAB CONTENT 3: TEMPLATES (CREATE MODE) ================= */}
-      {activeTab === 'templates' && (
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-sm text-ink tracking-tight">官方预置模板库</h3>
-            <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-              点击任意模板，即刻导入经过安全生产验证的标准 Docker Compose 编排规则及配置。
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {templates.map((tmpl) => (
-              <div
-                key={tmpl.name}
-                className="p-5 rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] hover:border-accent/40 hover:bg-paper-2/90 transition-all flex flex-col justify-between shadow-subtle hover:shadow-card"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-ink">{tmpl.name}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-paper-3 dark:bg-white/[0.06] text-ink-muted border border-line/60 dark:border-white/10 font-medium">
-                      {tmpl.category}
-                    </span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-2.5 line-clamp-3 leading-relaxed">{tmpl.description}</p>
-                </div>
-
-                <div className="mt-5 pt-3.5 border-t border-line/30 dark:border-white/[0.06] flex items-center justify-end">
-                  <button
-                    onClick={() => {
-                      handleSelectTemplate(tmpl);
-                      setActiveTab('general');
-                    }}
-                    className="px-3 py-1.5 bg-accent text-white font-medium text-xs rounded-lg hover:bg-accent-hover transition-colors shadow-subtle cursor-pointer"
-                  >
-                    使用此模板
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ================= TAB CONTENT 4: DEPLOYMENTS & TERMINAL (EDIT MODE) ================= */}
       {activeTab === 'deployments' && mode === 'edit' && app && (
         <div className="space-y-4">

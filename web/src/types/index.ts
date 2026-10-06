@@ -114,14 +114,6 @@ export interface SystemMetrics {
   totalBackups: number;
 }
 
-export interface ComposeTemplate {
-  name: string;
-  category: string;
-  description: string;
-  composeYaml: string;
-  envContent: string;
-}
-
 export interface AuthUser {
   username: string;
   isDefaultPassword?: boolean;

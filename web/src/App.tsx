@@ -72,7 +72,6 @@ function MainConsole() {
     backups,
     registries,
     maintenance,
-    templates,
     loading: dataLoading,
     logsMap,
     subscribeLogs,
@@ -294,7 +293,6 @@ function MainConsole() {
             {route.tab === 'apps' && (
               <AppsView
                 apps={apps}
-                templates={templates}
                 logsMap={logsMap}
                 domains={domains}
                 backups={backups}

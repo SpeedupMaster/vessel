@@ -16,7 +16,6 @@
   - 模态弹窗与工作台具备精准物理弹性反馈。
 - **Docker Compose 一等公民**：
   - 以原生 `docker-compose.yml` 与 `.env` 为核心，零私有黑盒封装，完全透明。
-  - 内置一键预置模板：`n8n` 自动化流、`PostgreSQL 16 + pgAdmin`、`WordPress + MariaDB`、`Umami Analytics`、`Redis Cache` 等。
   - 独立工作区隔离目录，支持启动、停止、重启、拉取重建及环境变量在线配置。
   - 基于 WebSocket 的流式实时部署控制台终端（带 ANSI 日志渲染与平滑自动滚动）。
 - **Caddy 原生自动 SSL 证书与动态反代**：

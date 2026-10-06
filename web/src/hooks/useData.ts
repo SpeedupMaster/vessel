@@ -7,7 +7,6 @@ import {
   RegistryItem,
   MaintenanceConfig,
   SystemMetrics,
-  ComposeTemplate,
 } from '../types/index.js';
 import { getAuthHeaders } from './useAuth.js';
 
@@ -41,7 +40,6 @@ export function useData() {
   const [backups, setBackups] = useState<BackupRecord[]>([]);
   const [registries, setRegistries] = useState<RegistryItem[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceConfig | null>(null);
-  const [templates, setTemplates] = useState<ComposeTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [logsMap, setLogsMap] = useState<Record<string, string[]>>({});
 
@@ -49,14 +47,13 @@ export function useData() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [appsRes, domainsRes, r2Res, backupsRes, regRes, maintRes, tmplRes] = await Promise.all([
+      const [appsRes, domainsRes, r2Res, backupsRes, regRes, maintRes] = await Promise.all([
         apiFetch('/api/apps').then((r) => r.json()),
         apiFetch('/api/domains').then((r) => r.json()),
         apiFetch('/api/r2/config').then((r) => r.json()),
         apiFetch('/api/r2/backups').then((r) => r.json()),
         apiFetch('/api/registries').then((r) => r.json()),
         apiFetch('/api/maintenance/config').then((r) => r.json()),
-        apiFetch('/api/templates').then((r) => r.json()),
       ]);
 
       if (Array.isArray(appsRes)) setApps(appsRes);
@@ -65,7 +62,6 @@ export function useData() {
       if (Array.isArray(backupsRes)) setBackups(backupsRes);
       if (Array.isArray(regRes)) setRegistries(regRes);
       if (maintRes) setMaintenance(maintRes);
-      if (Array.isArray(tmplRes)) setTemplates(tmplRes);
     } catch (e) {
       console.error('Error fetching initial data:', e);
     } finally {
@@ -392,7 +388,6 @@ export function useData() {
     backups,
     registries,
     maintenance,
-    templates,
     loading,
     logsMap,
     subscribeLogs,
