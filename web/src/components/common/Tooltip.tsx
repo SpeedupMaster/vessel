@@ -162,8 +162,15 @@ export const GlobalTooltip: React.FC = () => {
   });
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentTargetRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    const hideTooltip = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      currentTargetRef.current = null;
+      setTooltipState((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+    };
+
     // Automatically convert any native title attributes to data-tooltip on hover
     // to prevent ugly browser default tooltips from ever popping up
     const handleMouseOver = (e: MouseEvent) => {
@@ -182,11 +189,18 @@ export const GlobalTooltip: React.FC = () => {
       const text = target.getAttribute('data-tooltip');
       if (!text || !text.trim()) return;
 
+      currentTargetRef.current = target;
       const side = (target.getAttribute('data-tooltip-side') as any) || 'top';
       const delay = Number(target.getAttribute('data-tooltip-delay')) || 100;
 
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
+        // If element is no longer in DOM, abort
+        if (!target.isConnected) {
+          hideTooltip();
+          return;
+        }
+
         const rect = target.getBoundingClientRect();
         let x = 0;
         let y = 0;
@@ -233,17 +247,39 @@ export const GlobalTooltip: React.FC = () => {
     const handleMouseOut = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest('[data-tooltip]');
       if (target) {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        setTooltipState((prev) => ({ ...prev, visible: false }));
+        hideTooltip();
+      }
+    };
+
+    // When clicking any element or moving mouse over detached node, dismiss tooltip immediately
+    const handleClick = () => {
+      hideTooltip();
+    };
+
+    const handleMouseMove = () => {
+      if (currentTargetRef.current && !currentTargetRef.current.isConnected) {
+        hideTooltip();
       }
     };
 
     document.addEventListener('mouseover', handleMouseOver);
     document.addEventListener('mouseout', handleMouseOut);
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('click', handleClick);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('scroll', handleClick, true);
+    document.addEventListener('keydown', handleClick);
+    window.addEventListener('blur', handleClick);
 
     return () => {
       document.removeEventListener('mouseover', handleMouseOver);
       document.removeEventListener('mouseout', handleMouseOut);
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('scroll', handleClick, true);
+      document.removeEventListener('keydown', handleClick);
+      window.removeEventListener('blur', handleClick);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);

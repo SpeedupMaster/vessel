@@ -492,7 +492,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
               type="button"
               onClick={onClose}
               className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer ml-0.5"
-              title="关闭终端 (Esc)"
+              aria-label="关闭终端"
             >
               <X className="w-4 h-4" />
             </button>
