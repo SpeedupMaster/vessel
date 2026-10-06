@@ -7,11 +7,10 @@ import {
   Check,
   Terminal,
   CircleNotch,
-  ArrowsClockwise,
   Trash,
-  Play,
   Database,
-  ArrowRight,
+  CaretDown,
+  Play,
 } from '@phosphor-icons/react';
 import { AppItem } from '../../types/index.js';
 import { apiFetch } from '../../hooks/useData.js';
@@ -41,12 +40,14 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [mounted, setMounted] = useState(false);
   const [commandInput, setCommandInput] = useState('');
   const [mode, setMode] = useState<'db' | 'shell'>('db');
   const [isExecuting, setIsExecuting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showQuickMenu, setShowQuickMenu] = useState(false);
   const [history, setHistory] = useState<CommandRecord[]>([]);
   const [cmdHistoryList, setCmdHistoryList] = useState<string[]>([]);
   const [historyPointer, setHistoryPointer] = useState<number | null>(null);
@@ -54,30 +55,29 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
   // Identify database engine
   const dbInfo = useMemo(() => {
     const yaml = (app.composeYaml || '').toLowerCase();
-    const env = (app.envContent || '').toLowerCase();
     const name = (app.name || '').toLowerCase();
 
     for (const opt of DATABASE_OPTIONS) {
       if (opt.type === 'postgres' && (yaml.includes('postgres') || name.includes('postgres'))) {
-        return { type: 'postgresql', name: 'PostgreSQL', icon: opt.icon, defaultCli: 'psql', prompt: 'postgres=# ' };
+        return { type: 'postgresql', name: 'PostgreSQL', defaultCli: 'psql', prompt: 'postgres=# ' };
       }
       if (opt.type === 'mysql' && (yaml.includes('mysql') || name.includes('mysql')) && !yaml.includes('mariadb')) {
-        return { type: 'mysql', name: 'MySQL', icon: opt.icon, defaultCli: 'mysql', prompt: 'mysql> ' };
+        return { type: 'mysql', name: 'MySQL', defaultCli: 'mysql', prompt: 'mysql> ' };
       }
       if (opt.type === 'mariadb' && (yaml.includes('mariadb') || name.includes('mariadb'))) {
-        return { type: 'mariadb', name: 'MariaDB', icon: opt.icon, defaultCli: 'mariadb', prompt: 'mariadb> ' };
+        return { type: 'mariadb', name: 'MariaDB', defaultCli: 'mariadb', prompt: 'mariadb> ' };
       }
       if (opt.type === 'redis' && (yaml.includes('redis') || name.includes('redis'))) {
-        return { type: 'redis', name: 'Redis', icon: opt.icon, defaultCli: 'redis-cli', prompt: 'redis:6379> ' };
+        return { type: 'redis', name: 'Redis', defaultCli: 'redis-cli', prompt: '127.0.0.1:6379> ' };
       }
       if (opt.type === 'mongodb' && (yaml.includes('mongo') || name.includes('mongo'))) {
-        return { type: 'mongodb', name: 'MongoDB', icon: opt.icon, defaultCli: 'mongosh', prompt: 'mongosh> ' };
+        return { type: 'mongodb', name: 'MongoDB', defaultCli: 'mongosh', prompt: 'mongosh> ' };
       }
       if (opt.type === 'libsql' && (yaml.includes('sqld') || yaml.includes('libsql') || name.includes('libsql'))) {
-        return { type: 'libsql', name: 'libSQL', icon: opt.icon, defaultCli: 'sqld', prompt: 'sqld> ' };
+        return { type: 'libsql', name: 'libSQL', defaultCli: 'sqld', prompt: 'sqld> ' };
       }
     }
-    return { type: 'generic', name: '容器服务', icon: null, defaultCli: 'sh', prompt: 'db> ' };
+    return { type: 'generic', name: '容器服务', defaultCli: 'sh', prompt: 'db> ' };
   }, [app]);
 
   // Current prompt string
@@ -87,53 +87,53 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
   const quickCommands = useMemo(() => {
     if (mode === 'shell') {
       return [
-        { label: '文件清单', cmd: 'ls -la' },
-        { label: '磁盘空间', cmd: 'df -h' },
-        { label: '环境变量', cmd: 'env' },
-        { label: '运行进程', cmd: 'ps aux' },
-        { label: '系统内核', cmd: 'uname -a' },
+        { label: '列出文件与权限', cmd: 'ls -la' },
+        { label: '查看磁盘空间', cmd: 'df -h' },
+        { label: '查看环境变量', cmd: 'env' },
+        { label: '查看当前运行进程', cmd: 'ps aux' },
+        { label: '查看系统内核信息', cmd: 'uname -a' },
       ];
     }
 
     switch (dbInfo.type) {
       case 'postgresql':
         return [
-          { label: '列出数据库 (\\l)', cmd: '\\l' },
-          { label: '列出数据表 (\\dt)', cmd: '\\dt' },
-          { label: '数据库版本', cmd: 'SELECT version();' },
-          { label: '当前用户与库', cmd: 'SELECT current_user, current_database();' },
-          { label: '当前连接数', cmd: 'SELECT count(*) FROM pg_stat_activity;' },
-          { label: '当前服务器时间', cmd: 'SELECT now();' },
+          { label: '列出所有数据库', cmd: '\\l' },
+          { label: '列出当前库所有数据表', cmd: '\\dt' },
+          { label: '查询数据库引擎版本', cmd: 'SELECT version();' },
+          { label: '查询当前用户与数据库', cmd: 'SELECT current_user, current_database();' },
+          { label: '查询当前活动连接数', cmd: 'SELECT count(*) FROM pg_stat_activity;' },
+          { label: '查询数据库服务器时间', cmd: 'SELECT now();' },
         ];
       case 'mysql':
       case 'mariadb':
         return [
           { label: '查看所有数据库', cmd: 'SHOW DATABASES;' },
-          { label: '查看数据表', cmd: 'SHOW TABLES;' },
-          { label: '数据库版本', cmd: 'SELECT VERSION();' },
-          { label: '系统状态', cmd: 'STATUS;' },
-          { label: '当前连接进程', cmd: 'SHOW PROCESSLIST;' },
+          { label: '查看当前库数据表', cmd: 'SHOW TABLES;' },
+          { label: '查询数据库引擎版本', cmd: 'SELECT VERSION();' },
+          { label: '查看服务器综合状态', cmd: 'STATUS;' },
+          { label: '查看当前活动连接进程', cmd: 'SHOW PROCESSLIST;' },
         ];
       case 'redis':
         return [
-          { label: '存活心跳 (PING)', cmd: 'PING' },
-          { label: '服务器信息 (INFO)', cmd: 'INFO' },
-          { label: '键数量 (DBSIZE)', cmd: 'DBSIZE' },
-          { label: '所有键 (KEYS *)', cmd: 'KEYS *' },
-          { label: '客户端连接', cmd: 'CLIENT LIST' },
+          { label: '存活心跳检测', cmd: 'PING' },
+          { label: '服务器运行信息 (INFO)', cmd: 'INFO' },
+          { label: '查询当前数据库键数量', cmd: 'DBSIZE' },
+          { label: '查看所有键列表', cmd: 'KEYS *' },
+          { label: '列出所有已连接客户端', cmd: 'CLIENT LIST' },
         ];
       case 'mongodb':
         return [
-          { label: '查看数据库列表', cmd: 'show dbs' },
-          { label: '查看集合 (Collections)', cmd: 'show collections' },
-          { label: '数据库状态统计', cmd: 'db.stats()' },
-          { label: '引擎版本', cmd: 'db.version()' },
+          { label: '查看所有数据库列表', cmd: 'show dbs' },
+          { label: '查看当前集合 (Collections)', cmd: 'show collections' },
+          { label: '数据库运行统计信息', cmd: 'db.stats()' },
+          { label: '查看引擎版本', cmd: 'db.version()' },
         ];
       default:
         return [
-          { label: '列出文件', cmd: 'ls -la' },
-          { label: '环境变量', cmd: 'env' },
-          { label: '磁盘用量', cmd: 'df -h' },
+          { label: '列出文件目录', cmd: 'ls -la' },
+          { label: '查看环境变量', cmd: 'env' },
+          { label: '查看磁盘用量', cmd: 'df -h' },
         ];
     }
   }, [dbInfo.type, mode]);
@@ -154,8 +154,8 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
         );
         gsap.fromTo(
           panelRef.current,
-          { opacity: 0, scale: 0.96, y: 12 },
-          { opacity: 1, scale: 1, y: 0, duration: 0.25, ease: 'power3.out' }
+          { opacity: 0, scale: 0.97, y: 10 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.22, ease: 'power3.out' }
         );
       }
       setTimeout(() => {
@@ -169,19 +169,36 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
     };
   }, [isOpen]);
 
+  // Click outside to close quick menu dropdown
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowQuickMenu(false);
+      }
+    };
+    if (showQuickMenu) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showQuickMenu]);
+
   // Escape key handler
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        if (showQuickMenu) {
+          setShowQuickMenu(false);
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, showQuickMenu, onClose]);
 
-  // Scroll to bottom when history changes
+  // Auto scroll
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history, isExecuting]);
@@ -192,6 +209,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
     if (!cmd || isExecuting) return;
 
     setCommandInput('');
+    setShowQuickMenu(false);
     setHistoryPointer(null);
     setCmdHistoryList((prev) => [cmd, ...prev.filter((c) => c !== cmd)]);
 
@@ -205,10 +223,10 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
 
     if (cmd === 'help') {
       const helpText = [
-        '── 数据库终端帮助指南 ──',
-        '• 模式切换: 可在上方切换「数据库 CLI」或「容器 Shell」模式',
-        '• 快捷键: [↑ / ↓] 浏览历史命令 | [Ctrl + L] 清空屏幕 | [Esc] 关闭窗口',
-        `• 快捷操作: 点击上方快捷指令可直接运行预置命令`,
+        '── 终端操作指南 ──',
+        '• 模式切换: 右上方可切换「数据库 CLI」或「容器 Shell」模式',
+        '• 快捷指令: 点击右上角「快捷指令 ▾」菜单可一键运行预设命令',
+        '• 快捷键: [↑ / ↓] 浏览历史命令 | [Ctrl + L] 清屏 | [Esc] 关闭终端',
         '• 退出终端: 输入 exit 或 \\q 可直接关闭本窗口',
       ].join('\n');
 
@@ -321,12 +339,12 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
   const isRunning = app.status === 'running';
 
   const modalElement = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden">
       {/* Backdrop */}
       <div
         ref={backdropRef}
         onClick={onClose}
-        className="fixed inset-0 bg-black/60 dark:bg-black/85 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
       />
 
       {/* Terminal Window Panel */}
@@ -335,44 +353,32 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
         className="relative w-full max-w-5xl h-[680px] max-h-[92vh] bg-[#0c0d12] border border-zinc-800/90 rounded-2xl shadow-2xl z-10 flex flex-col overflow-hidden text-zinc-200 font-sans"
       >
         {/* Terminal Header */}
-        <div className="px-4 py-3 bg-[#13141b] border-b border-zinc-800 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+        <div className="px-4 py-2.5 bg-[#12131a] border-b border-zinc-800/80 flex items-center justify-between gap-3 flex-shrink-0">
           {/* Left: Window Title & Meta */}
-          <div className="flex items-center gap-3">
-            {/* macOS Style Traffic Dots */}
-            <div className="flex items-center gap-1.5 mr-1">
-              <button
-                onClick={onClose}
-                className="w-3 h-3 rounded-full bg-rose-500/80 hover:bg-rose-500 transition-colors cursor-pointer"
-                title="关闭"
-              />
-              <button
-                onClick={() => setHistory([])}
-                className="w-3 h-3 rounded-full bg-amber-500/80 hover:bg-amber-500 transition-colors cursor-pointer"
-                title="清空"
-              />
-              <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-zinc-800/90 flex items-center justify-center text-zinc-300 font-mono text-xs font-bold">
+              &gt;_
             </div>
 
-            {/* Title & Icon */}
             <div className="flex items-center gap-2">
-              <div className="p-1 rounded-md bg-zinc-800/80 text-emerald-400">
-                <Terminal className="w-4 h-4" />
-              </div>
               <span className="font-semibold text-xs sm:text-sm text-zinc-100 font-mono tracking-tight">
                 {app.name}
               </span>
               <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
-                数据库命令终端
+                数据库终端
               </span>
             </div>
 
-            {/* Status & Engine Badge */}
-            <div className="hidden md:flex items-center gap-2">
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-zinc-800/80 text-zinc-300 border border-zinc-700/50">
+                {dbInfo.name}
+              </span>
+
               <span
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono font-medium ${
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-mono font-medium ${
                   isRunning
-                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50'
-                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                    ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-800/40'
+                    : 'bg-zinc-800/80 text-zinc-400 border border-zinc-700/50'
                 }`}
               >
                 <span
@@ -380,18 +386,14 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                     isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'
                   }`}
                 />
-                {isRunning ? '已连接 (运行中)' : '离线 (未启动)'}
-              </span>
-
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-zinc-800/70 text-zinc-300 border border-zinc-700/60">
-                {dbInfo.name}
+                {isRunning ? '运行中' : '已停止'}
               </span>
             </div>
           </div>
 
           {/* Right: Controls & Mode Switch */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mode Switcher */}
+          <div className="flex items-center gap-2">
+            {/* Mode Segmented Switcher */}
             <div className="flex items-center p-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-medium font-mono">
               <button
                 type="button"
@@ -399,13 +401,13 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                   setMode('db');
                   inputRef.current?.focus();
                 }}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                   mode === 'db'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <Database className="w-3 h-3" />
+                <Database className="w-3 h-3 text-emerald-400" />
                 <span>数据库 CLI</span>
               </button>
               <button
@@ -414,15 +416,51 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                   setMode('shell');
                   inputRef.current?.focus();
                 }}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                   mode === 'shell'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <Terminal className="w-3 h-3" />
+                <Terminal className="w-3 h-3 text-cyan-400" />
                 <span>容器 Shell</span>
               </button>
+            </div>
+
+            {/* Quick Commands Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowQuickMenu(!showQuickMenu)}
+                className="px-2.5 py-1 text-xs font-mono font-medium text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="选择并执行快捷预设指令"
+              >
+                <span>快捷指令</span>
+                <CaretDown className={`w-3 h-3 text-zinc-400 transition-transform ${showQuickMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showQuickMenu && (
+                <div className="absolute right-0 mt-1.5 w-72 bg-[#161720] border border-zinc-700/80 rounded-xl shadow-2xl py-1.5 z-30 font-mono text-xs">
+                  <div className="px-3 py-1.5 text-[10px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800/80 mb-1">
+                    {mode === 'db' ? `${dbInfo.name} 预设指令` : '容器系统指令'}
+                  </div>
+                  {quickCommands.map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleExecute(item.cmd)}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-800/80 flex flex-col gap-0.5 transition-colors cursor-pointer group"
+                    >
+                      <div className="text-zinc-200 group-hover:text-white font-medium text-xs">
+                        {item.label}
+                      </div>
+                      <div className="text-[11px] text-emerald-400/90 dark:text-emerald-400 truncate">
+                        {item.cmd}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Clear Screen */}
@@ -443,7 +481,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
               type="button"
               onClick={handleCopyOutput}
               disabled={history.length === 0}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/70 rounded-lg transition-colors cursor-pointer disabled:opacity-40"
+              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/70 rounded-lg transition-colors cursor-pointer disabled:opacity-30"
               title="复制终端输出"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -453,70 +491,45 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/70 rounded-lg transition-colors cursor-pointer"
-              title="关闭 (Esc)"
+              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer ml-0.5"
+              title="关闭终端 (Esc)"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Quick Command Toolbar */}
-        <div className="px-4 py-2 bg-[#0f1016] border-b border-zinc-800/70 flex items-center gap-2 overflow-x-auto flex-shrink-0 scrollbar-none text-xs">
-          <span className="text-[11px] font-mono text-zinc-500 whitespace-nowrap mr-1 flex items-center gap-1">
-            <span>快捷指令:</span>
-          </span>
-          {quickCommands.map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleExecute(item.cmd)}
-              disabled={isExecuting}
-              className="px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800/90 text-[11px] font-mono transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm active:scale-95"
-            >
-              <span>{item.label}</span>
-              <span className="text-zinc-500 text-[10px]">({item.cmd})</span>
-            </button>
-          ))}
-        </div>
-
         {/* Terminal Screen Body */}
         <div
           onClick={() => inputRef.current?.focus()}
-          className="flex-1 bg-[#090a0f] p-4 sm:p-5 font-mono text-xs sm:text-[13px] leading-relaxed overflow-y-auto space-y-3 select-text cursor-text"
+          className="flex-1 bg-[#090a0f] p-4 sm:p-5 font-mono text-xs sm:text-[13px] leading-relaxed overflow-y-auto space-y-2 select-text cursor-text"
         >
-          {/* Welcome Banner */}
-          <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/70 text-zinc-400 space-y-1">
-            <div className="text-emerald-400 font-semibold flex items-center gap-2">
-              <span>●</span>
-              <span>Vessel 数据库容器终端 [Database Interactive Console]</span>
+          {/* CLI Welcome Banner */}
+          <div className="text-zinc-500 text-xs leading-relaxed space-y-0.5 pb-2 border-b border-zinc-900/80">
+            <div className="text-zinc-400 font-medium">
+              Vessel Terminal 1.0 — {dbInfo.name} ({mode === 'db' ? `Interactive ${dbInfo.defaultCli}` : '/bin/sh'})
             </div>
-            <div className="text-zinc-400 text-[11px] leading-normal">
-              目标服务: <span className="text-zinc-200">database</span> | 数据库引擎:{' '}
-              <span className="text-zinc-200">{dbInfo.name}</span> | 当前模式:{' '}
-              <span className="text-emerald-300">
-                {mode === 'db' ? `数据库 CLI (${dbInfo.defaultCli})` : '容器 Shell (/bin/sh)'}
+            <div>
+              Target service container: <span className="text-zinc-300">database</span> | Status:{' '}
+              <span className={isRunning ? 'text-emerald-400' : 'text-zinc-400'}>
+                {isRunning ? 'running' : 'stopped'}
               </span>
             </div>
-            <div className="text-zinc-500 text-[11px]">
-              输入 <span className="text-zinc-300">help</span> 查看快捷键，输入{' '}
-              <span className="text-zinc-300">clear</span> 清屏，直接输入命令并按{' '}
-              <span className="text-zinc-300">Enter</span> 执行。
+            <div className="text-zinc-600">
+              Type &quot;help&quot; for instructions, &quot;\q&quot; or &quot;exit&quot; to leave, or select from &quot;快捷指令&quot; above.
             </div>
+            {!isRunning && (
+              <div className="text-amber-500/90 pt-1">
+                [vessel] 注意: 容器当前未运行，请先在控制台点击「部署」或「启动」容器后再执行命令。
+              </div>
+            )}
           </div>
-
-          {!isRunning && (
-            <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-800/60 text-amber-300 text-xs flex items-center gap-2">
-              <span>⚠️</span>
-              <span>容器当前未在运行中。执行命令前请先在主界面点击「部署」或「重载」启动该容器。</span>
-            </div>
-          )}
 
           {/* History of executed commands */}
           {history.map((item) => (
-            <div key={item.id} className="space-y-1 group">
+            <div key={item.id} className="space-y-1">
               {/* Command line */}
-              <div className="flex items-center gap-2 text-zinc-400">
+              <div className="flex items-center gap-2 text-zinc-400 pt-1">
                 <span className="text-zinc-600 text-[10px] select-none font-mono">[{item.time}]</span>
                 <span className={item.prompt.includes('#') ? 'text-emerald-400 font-bold' : 'text-cyan-400 font-bold'}>
                   {item.prompt}
@@ -526,10 +539,10 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
 
               {/* Command output */}
               <div
-                className={`pl-4 whitespace-pre-wrap rounded-md py-1 px-2 ${
+                className={`pl-4 whitespace-pre-wrap ${
                   item.isError
-                    ? 'text-rose-400 bg-rose-950/20 border-l-2 border-rose-500 font-mono'
-                    : 'text-zinc-300 font-mono leading-relaxed'
+                    ? 'text-rose-400/90 border-l border-rose-500/50 pl-3 my-0.5'
+                    : 'text-zinc-300 leading-relaxed'
                 }`}
               >
                 {item.output}
@@ -541,7 +554,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
           {isExecuting && (
             <div className="flex items-center gap-2 text-zinc-400 pl-4 py-1">
               <CircleNotch className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-              <span className="text-xs text-zinc-400 font-mono">命令执行中...</span>
+              <span className="text-xs text-zinc-500 font-mono">执行中...</span>
             </div>
           )}
 
@@ -550,9 +563,9 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
         </div>
 
         {/* Terminal Input Bar */}
-        <div className="p-3 bg-[#111218] border-t border-zinc-800 flex items-center gap-2.5 flex-shrink-0">
+        <div className="px-4 py-2.5 bg-[#101117] border-t border-zinc-800/80 flex items-center gap-2 flex-shrink-0">
           <span
-            className={`font-mono text-xs font-bold select-none pl-1 ${
+            className={`font-mono text-xs font-bold select-none ${
               mode === 'db' ? 'text-emerald-400' : 'text-cyan-400'
             }`}
           >
@@ -568,10 +581,10 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
             disabled={isExecuting}
             placeholder={
               mode === 'db'
-                ? `输入 ${dbInfo.name} 语句 (例如: ${quickCommands[0]?.cmd || 'SELECT 1;'})`
-                : '输入 Linux 容器命令 (例如: ls -la, df -h)'
+                ? `输入 ${dbInfo.name} 语句 (例: ${quickCommands[0]?.cmd || 'SELECT 1;'})`
+                : '输入 Linux 命令 (例: ls -la, df -h, env)'
             }
-            className="flex-1 bg-transparent border-none text-zinc-100 font-mono text-xs sm:text-sm focus:outline-none placeholder:text-zinc-600 disabled:opacity-50"
+            className="flex-1 bg-transparent border-none text-zinc-100 font-mono text-xs sm:text-[13px] focus:outline-none placeholder:text-zinc-600 disabled:opacity-50"
             autoFocus
           />
 
@@ -579,14 +592,15 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
             type="button"
             onClick={() => handleExecute()}
             disabled={!commandInput.trim() || isExecuting}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium font-mono flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:hover:bg-emerald-600 cursor-pointer shadow-sm active:scale-95"
+            className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-mono flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:hover:bg-zinc-800 cursor-pointer"
+            title="执行命令 (Enter)"
           >
             {isExecuting ? (
-              <CircleNotch className="w-3.5 h-3.5 animate-spin" />
+              <CircleNotch className="w-3 h-3 animate-spin text-zinc-400" />
             ) : (
-              <Play className="w-3 h-3" weight="fill" />
+              <Play className="w-3 h-3 text-zinc-300" weight="fill" />
             )}
-            <span>执行</span>
+            <span className="text-[11px]">执行</span>
           </button>
         </div>
       </div>
