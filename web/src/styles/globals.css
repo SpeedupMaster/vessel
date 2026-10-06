@@ -325,17 +325,88 @@ html.dark [role="switch"].bg-accent > div,
   cursor: not-allowed;
 }
 
+html.dark .btn-vessel-ghost,
+.dark .btn-vessel-ghost {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html.dark .btn-vessel-ghost:hover,
+.dark .btn-vessel-ghost:hover {
+  background-color: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+/* Secondary / Neutral Action Button Utility */
+.btn-vessel-secondary {
+  background-color: #ffffff;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1.125rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-vessel-secondary:hover,
+.btn-vessel-secondary.is-hover {
+  background-color: var(--color-paper-2);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--color-ink);
+}
+
+.btn-vessel-secondary:active,
+.btn-vessel-secondary.is-active {
+  transform: translateY(1px);
+}
+
+.btn-vessel-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+html.dark .btn-vessel-secondary,
+.dark .btn-vessel-secondary {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--color-ink);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+html.dark .btn-vessel-secondary:hover,
+.dark .btn-vessel-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
 /* Card & Surface Utilities */
 .card-vessel {
   background-color: var(--color-paper-2);
-  border: none !important;
+  border: 1px solid var(--color-line-subtle);
   border-radius: var(--radius-lg);
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
-  transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card-vessel:hover {
+html.dark .card-vessel,
+.dark .card-vessel {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Only explicitly interactive card elements get hover background change */
+a.card-vessel:hover,
+button.card-vessel:hover,
+.card-vessel.cursor-pointer:hover {
   background-color: var(--color-paper-3);
 }
 
@@ -516,30 +587,44 @@ select {
   outline: none !important;
 }
 
-/* Default light mode focus ring: 1px crisp Ink Black (#09090b) */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):focus,
-textarea:focus,
+/* Ensure borderless / transparent inputs never render any outline, border, or shadow */
+input.border-none,
+input.bg-transparent,
+textarea.border-none,
+textarea.bg-transparent {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Default light mode focus: clean soft zinc border without flashing box-shadow ring */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):not(.bg-transparent):focus,
+textarea:not(.border-none):not(.bg-transparent):focus,
 select:focus {
   outline: none !important;
-  box-shadow: 0 0 0 1px #09090b !important;
+  border-color: #a1a1aa !important;
+  box-shadow: none !important;
 }
 
-/* Default dark mode focus ring: 1px crisp Ink White (#f4f4f5) */
-html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):focus,
-html.dark textarea:focus,
+/* Default dark mode focus: clean 30% translucent white border without flashing box-shadow ring */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):not(.bg-transparent):focus,
+html.dark textarea:not(.border-none):not(.bg-transparent):focus,
 html.dark select:focus,
-.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):focus,
-.dark textarea:focus,
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(.border-none):not(.bg-transparent):focus,
+.dark textarea:not(.border-none):not(.bg-transparent):focus,
 .dark select:focus {
   outline: none !important;
-  box-shadow: 0 0 0 1px #f4f4f5 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: none !important;
 }
 
-/* Error state focus override */
-input.focus\:ring-rose-500:focus,
-input.ring-rose-500:focus,
-input[aria-invalid="true"]:focus {
+/* Error / Danger state focus override */
+input[class*="rose-500"]:focus,
+textarea[class*="rose-500"]:focus,
+input[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus {
   outline: none !important;
-  box-shadow: 0 0 0 1px #f43f5e !important;
+  border-color: rgba(244, 63, 94, 0.8) !important;
+  box-shadow: none !important;
 }
 

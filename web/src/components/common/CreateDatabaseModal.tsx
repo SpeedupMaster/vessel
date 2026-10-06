@@ -458,7 +458,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex-1 flex flex-col overflow-hidden">
           <div
             ref={scrollBodyRef}
             className="flex-1 overflow-y-auto px-6 py-4 space-y-6 no-scrollbar pb-24 sm:pb-6"
@@ -476,9 +476,9 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                       role="radio"
                       aria-checked={isSelected}
                       onClick={() => handleSelectType(db.type)}
-                      className={`flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl text-center transition-all cursor-pointer select-none active:scale-[0.98] ${
+                      className={`flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl text-center transition-colors cursor-pointer select-none active:scale-[0.98] ${
                         isSelected
-                          ? 'bg-paper-4 shadow-sm ring-2 ring-accent'
+                          ? 'bg-paper-4 shadow-sm ring-1 ring-zinc-400 dark:ring-white/30'
                           : 'bg-paper-3 hover:bg-paper-4/60'
                       }`}
                     >
@@ -506,13 +506,20 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                 <input
                   ref={nameInputRef}
                   type="text"
+                  name="db_instance_name"
+                  id="db_instance_name"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  data-bwignore="true"
+                  data-protonpass-ignore="true"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="例如 my-postgres"
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
+                  className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                 />
               </div>
 
@@ -522,13 +529,20 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   <label className="block text-xs font-semibold text-ink-muted mb-1.5">初始数据库名称 (Database Name)</label>
                   <input
                     type="text"
+                    name="db_database_name"
+                    id="db_database_name"
+                    autoComplete="off"
+                    data-1p-ignore="true"
+                    data-lpignore="true"
+                    data-bwignore="true"
+                    data-protonpass-ignore="true"
                     value={dbName}
                     onChange={(e) => setDbName(e.target.value)}
                     placeholder="例如 app_db"
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
+                    className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                 </div>
               )}
@@ -539,13 +553,20 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   <label className="block text-xs font-semibold text-ink-muted mb-1.5">数据库用户名 (Database User)</label>
                   <input
                     type="text"
+                    name="db_username"
+                    id="db_username"
+                    autoComplete="off"
+                    data-1p-ignore="true"
+                    data-lpignore="true"
+                    data-bwignore="true"
+                    data-protonpass-ignore="true"
                     value={dbUser}
                     onChange={(e) => setDbUser(e.target.value)}
                     placeholder={`默认 ${currentOption.defaultUser}`}
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
+                    className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                 </div>
               )}
@@ -556,11 +577,17 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                 <div className="relative flex items-center">
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    name="db_password"
+                    id="db_password"
+                    autoComplete="new-password"
+                    data-1p-ignore="true"
+                    data-lpignore="true"
+                    data-bwignore="true"
+                    data-protonpass-ignore="true"
                     value={dbPassword}
                     onChange={(e) => setDbPassword(e.target.value)}
                     placeholder="请输入或点击右侧生成密码"
-                    autoComplete="new-password"
-                    className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:outline-none transition-colors"
+                    className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                   <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
                     <button
@@ -592,11 +619,17 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   <div className="relative flex items-center">
                     <input
                       type={showRootPassword ? 'text' : 'password'}
+                      name="db_root_password"
+                      id="db_root_password"
+                      autoComplete="new-password"
+                      data-1p-ignore="true"
+                      data-lpignore="true"
+                      data-bwignore="true"
+                      data-protonpass-ignore="true"
                       value={dbRootPassword}
                       onChange={(e) => setDbRootPassword(e.target.value)}
                       placeholder="请输入或点击右侧生成 Root 密码"
-                      autoComplete="new-password"
-                      className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:outline-none transition-colors"
+                      className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                     />
                     <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
                       <button
@@ -627,13 +660,20 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                 <label className="block text-xs font-semibold text-ink-muted mb-1.5">Docker 镜像标签 (Docker Image)</label>
                 <input
                   type="text"
+                  name="db_docker_image"
+                  id="db_docker_image"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  data-bwignore="true"
+                  data-protonpass-ignore="true"
                   value={dockerImage}
                   onChange={(e) => setDockerImage(e.target.value)}
                   placeholder={`默认 ${currentOption.defaultImage}`}
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full min-h-[44px] bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none font-mono transition-colors"
+                  className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 font-mono transition-colors shadow-sm"
                 />
               </div>
             </div>
@@ -646,7 +686,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="hidden sm:inline-flex px-4 py-2 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer"
+              className="btn-vessel-secondary hidden sm:inline-flex px-4 py-2 text-xs font-medium rounded-xl cursor-pointer"
             >
               取消
             </button>

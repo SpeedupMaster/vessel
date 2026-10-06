@@ -257,7 +257,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-paper-2 hover:bg-paper-3 text-ink text-xs transition-colors cursor-pointer select-none"
+                  className="btn-vessel-secondary flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs cursor-pointer select-none"
                 >
                   <div className="w-5 h-5 rounded-full bg-paper-3 text-ink flex items-center justify-center font-semibold text-[10px]">
                     {user.username.charAt(0).toUpperCase()}

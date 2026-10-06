@@ -209,9 +209,9 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                   <div
                     key={b.id}
                     onClick={() => setSelectedRecordId(b.id)}
-                    className={`p-3.5 rounded-2xl transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    className={`p-3.5 rounded-2xl transition-colors cursor-pointer flex items-center justify-between gap-3 ${
                       selectedRecordId === b.id
-                        ? 'bg-paper-4 ring-2 ring-accent'
+                        ? 'bg-paper-4 ring-1 ring-zinc-400 dark:ring-white/30'
                         : 'bg-paper-3 hover:bg-paper-4/60'
                     }`}
                   >
@@ -269,9 +269,9 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`p-6 rounded-2xl transition-all cursor-pointer text-center space-y-2 ${
+                className={`p-6 rounded-2xl transition-colors cursor-pointer text-center space-y-2 ${
                   isDragging
-                    ? 'bg-paper-4 ring-2 ring-accent'
+                    ? 'bg-paper-4 ring-1 ring-zinc-400 dark:ring-white/30'
                     : 'bg-paper-3 hover:bg-paper-4/60'
                 }`}
               >
@@ -338,7 +338,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             value={targetDb}
             onChange={(e) => setTargetDb(e.target.value)}
             placeholder="如 postgres 或 app_db"
-            className="w-full bg-paper-3 focus:bg-paper-4 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono focus:outline-none transition-colors"
+            className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
           />
 
           {/* Quick Select Chips */}
@@ -397,7 +397,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-3 sm:hover:bg-paper-4 sm:rounded-xl text-center transition-colors cursor-pointer select-none"
+            className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
           >
             取消
           </button>

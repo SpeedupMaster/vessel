@@ -185,8 +185,8 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                 <div className="mt-5 space-y-4">
                   {/* 用户名输入框 */}
                   <div>
-                    <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-semibold mb-1.5">
-                      {isGHCR ? 'GitHub 用户名' : '账号 / 用户名'}
+                    <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                      {isGHCR ? 'GitHub 用户名 (Username)' : 'Docker Hub 用户名 (Username)'}
                     </label>
                     <input
                       type="text"
@@ -197,14 +197,14 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                       value={currentUsername}
                       onChange={(e) => handleInputChange(reg.id, 'username', e.target.value)}
                       placeholder={isGHCR ? '例如: your-github-id' : '例如: docker-username'}
-                      className="w-full min-h-[42px] bg-paper-3 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink focus:outline-none focus:ring-1 focus:ring-ink transition-all disabled:opacity-60"
+                      className="w-full min-h-[42px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm disabled:opacity-60"
                     />
                   </div>
 
                   {/* 凭证/密码输入框 */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-semibold">
+                      <label className="text-xs font-medium text-ink/85 dark:text-zinc-300">
                         {isGHCR ? 'GitHub PAT 令牌' : '密码 / 访问令牌'}
                       </label>
                       {isGHCR && (
@@ -239,7 +239,7 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                             ? 'ghp_xxxxxxxxxxxx'
                             : 'dckr_pat_... 或 密码'
                         }
-                        className="w-full min-h-[42px] bg-paper-3 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-all disabled:opacity-60"
+                        className="w-full min-h-[42px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm disabled:opacity-60"
                       />
 
                       {/* Actions: Clear (X) + Toggle Visibility (Eye) */}

@@ -13,6 +13,8 @@ import {
   ArrowsInSimple,
   CaretDown,
   CheckCircle,
+  Terminal,
+  Trash,
 } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { AppItem } from '../../types/index.js';
@@ -35,6 +37,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
   const [logType, setLogType] = useState<'all' | 'info' | 'debug' | 'warn' | 'error'>('all');
   const [search, setSearch] = useState('');
   const [isPaused, setIsPaused] = useState(false);
+  const [clearedOffset, setClearedOffset] = useState<number>(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -158,9 +161,16 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
     return logs.map(parseLogLine);
   }, [logs]);
 
+  const visibleLogs = useMemo(() => {
+    if (clearedOffset > 0 && clearedOffset <= parsedLogs.length) {
+      return parsedLogs.slice(clearedOffset);
+    }
+    return parsedLogs;
+  }, [parsedLogs, clearedOffset]);
+
   const filteredLogs = useMemo(() => {
     const now = Date.now();
-    return parsedLogs.filter((item) => {
+    return visibleLogs.filter((item) => {
       if (logType !== 'all') {
         if (logType === 'error' && item.level !== 'error') return false;
         if (logType === 'warn' && item.level !== 'warn') return false;
@@ -185,7 +195,16 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
       }
       return true;
     });
-  }, [parsedLogs, logType, search, timeRange]);
+  }, [visibleLogs, logType, search, timeRange]);
+
+  const handleClear = () => {
+    setClearedOffset(parsedLogs.length);
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(15);
+      } catch {}
+    }
+  };
 
   const handleCopy = () => {
     const text = filteredLogs.map((l) => l.raw).join('\n');
@@ -252,7 +271,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
       {!isFullscreen && (
         <div className="space-y-2">
           {/* Row 1: Full-width Search Bar */}
-          <div className="relative w-full flex items-center rounded-2xl bg-paper-2 focus-within:bg-paper-3 transition-colors">
+          <div className="relative w-full flex items-center rounded-2xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm focus-within:border-zinc-400 dark:focus-within:border-white/30 transition-colors">
             <div className="pl-3.5 pr-2 flex items-center text-ink-muted/70 pointer-events-none shrink-0">
               <MagnifyingGlass className="w-4 h-4" weight="bold" />
             </div>
@@ -291,7 +310,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 selectedService !== 'all'
                   ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
+                  : "bg-paper-2 hover:bg-paper-3 border border-zinc-200/60 dark:border-white/10 dark:hover:border-white/20 text-ink-muted hover:text-ink"
               )}
             >
               <span>
@@ -315,7 +334,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 limit !== 100
                   ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
+                  : "bg-paper-2 hover:bg-paper-3 border border-zinc-200/60 dark:border-white/10 dark:hover:border-white/20 text-ink-muted hover:text-ink"
               )}
             >
               <span>行数: {limit} 行</span>
@@ -334,7 +353,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 timeRange !== 'all'
                   ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
+                  : "bg-paper-2 hover:bg-paper-3 border border-zinc-200/60 dark:border-white/10 dark:hover:border-white/20 text-ink-muted hover:text-ink"
               )}
             >
               <span>
@@ -362,7 +381,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 "min-h-[32px] px-3 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 select-none active:scale-95",
                 logType !== 'all'
                   ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                  : "bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink"
+                  : "bg-paper-2 hover:bg-paper-3 border border-zinc-200/60 dark:border-white/10 dark:hover:border-white/20 text-ink-muted hover:text-ink"
               )}
             >
               <span>
@@ -405,52 +424,51 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
       {/* 3. TERMINAL VIEWPORT (STANDALONE CARD OR 100% FULLSCREEN CONTAINER) */}
       <div
         className={clsx(
-          "bg-[#09090b] dark:bg-black overflow-hidden flex flex-col transition-all",
+          "bg-paper-2 dark:bg-[#0d1117] overflow-hidden flex flex-col font-mono transition-colors",
           isFullscreen
             ? "fixed inset-0 z-50 rounded-none border-0 w-screen h-[100dvh]"
-            : "rounded-2xl shadow-lg min-h-[460px] max-h-[calc(100vh-320px)] sm:max-h-[calc(100vh-280px)] flex-1"
+            : "rounded-2xl shadow-lg border border-zinc-200/50 dark:border-white/5 min-h-[460px] max-h-[calc(100vh-320px)] sm:max-h-[calc(100vh-280px)] flex-1"
         )}
       >
-        {/* Terminal Dark Integrated Toolbar (Mac / Hacker Style) */}
-        <div className="bg-[#161b22] dark:bg-[#121214] px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 select-none">
-          {/* Left: Terminal status indicators & meta */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            {/* Status dot */}
+        {/* Terminal Integrated Toolbar */}
+        <div className="px-3.5 sm:px-4 py-2.5 bg-paper-3 dark:bg-[#161b22] border-b border-zinc-200/50 dark:border-white/5 flex items-center justify-between gap-2 select-none shrink-0 transition-colors">
+          {/* Left: Window controls & Title */}
+          <div className="flex items-center gap-2 min-w-0">
             <div className="flex items-center gap-1.5 shrink-0">
-              <span
-                className={clsx(
-                  "w-2.5 h-2.5 rounded-full transition-colors",
-                  !isRunning
-                    ? "bg-zinc-600"
-                    : isPaused
-                    ? "bg-amber-500 ring-2 ring-amber-500/30"
-                    : "bg-emerald-500 ring-2 ring-emerald-500/30 animate-pulse"
-                )}
-              />
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
             </div>
 
-            <div className="flex items-center gap-2 min-w-0 text-xs font-mono">
-              <span className="font-semibold text-zinc-200">
+            <div className="flex items-center gap-1.5 min-w-0 ml-1">
+              <Terminal className="w-3.5 h-3.5 text-ink dark:text-accent shrink-0" />
+              <span className="text-xs font-semibold text-ink dark:text-zinc-200 truncate">
                 {isFullscreen ? '终端全屏控制台' : '终端控制台'}
               </span>
-              <span className="text-[11px] text-zinc-400 font-mono hidden xs:inline truncate">
-                {filteredLogs.length} / {parsedLogs.length} 行
-              </span>
+
+              {/* Status pill badge */}
               {isPaused ? (
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-sans shrink-0 font-medium">
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                   滚屏已暂停
                 </span>
               ) : isRunning ? (
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-sans shrink-0 font-medium hidden sm:inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                   实时流
                 </span>
-              ) : null}
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-zinc-500/15 text-zinc-500 dark:text-zinc-400 font-mono shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
+                  已停止
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Right: Integrated Terminal Actions (Pause, Copy, Download, Fullscreen) */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Pause / Resume */}
+          {/* Right: Integrated Terminal Actions */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Auto-scroll toggle (滚屏 / 暂停) */}
             <button
               type="button"
               onClick={() => {
@@ -458,34 +476,49 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 if (isRunning) setIsPaused(!isPaused);
               }}
               disabled={!isRunning}
-              data-tooltip={!isRunning ? '应用未运行，暂无实时日志流' : isPaused ? '点击恢复自动滚屏' : '点击暂停滚屏'}
+              title={!isRunning ? '应用未运行，暂无实时日志流' : isPaused ? '点击恢复自动滚屏' : '点击暂停滚屏'}
               className={clsx(
-                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
+                "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
                 !isRunning
-                  ? "bg-zinc-800/50 text-zinc-500 cursor-not-allowed opacity-50"
-                  : isPaused
-                  ? "bg-amber-500/20 text-amber-300 shadow-sm font-semibold"
-                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
+                  ? "text-ink-faint dark:text-zinc-500 bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 opacity-50 cursor-not-allowed"
+                  : !isPaused
+                  ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/60 border border-emerald-500/20 dark:border-emerald-500/30 hover:bg-emerald-500/20 dark:hover:bg-emerald-900/60"
+                  : "text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-950/60 border border-amber-500/20 dark:border-amber-500/30 hover:bg-amber-500/20 dark:hover:bg-amber-900/60"
               )}
             >
-              {isPaused ? <Play className="w-3.5 h-3.5 text-amber-300" weight="fill" /> : <Pause className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{isPaused ? '继续' : '暂停'}</span>
+              <span
+                className={clsx(
+                  "w-1.5 h-1.5 rounded-full shrink-0",
+                  !isRunning ? "bg-zinc-500" : !isPaused ? "bg-emerald-500 dark:bg-emerald-400 animate-pulse" : "bg-amber-500 dark:bg-amber-400"
+                )}
+              />
+              <span>{!isPaused ? '滚屏' : '暂停'}</span>
+            </button>
+
+            {/* Clear */}
+            <button
+              type="button"
+              onClick={handleClear}
+              title="清空当前日志视图"
+              className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
+            >
+              <Trash className="w-3 h-3 shrink-0" />
+              <span>清空</span>
             </button>
 
             {/* Copy */}
             <button
               type="button"
               onClick={handleCopy}
-              data-tooltip="复制当前日志"
-              className={clsx(
-                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
-                copied
-                  ? "bg-emerald-500/20 text-emerald-300 font-semibold"
-                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
-              )}
+              title="复制当前日志"
+              className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" weight="bold" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copied ? '已复制' : '复制'}</span>
+              {copied ? (
+                <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400 shrink-0" />
+              ) : (
+                <Copy className="w-3 h-3 shrink-0" />
+              )}
+              <span>{copied ? '已复制' : '复制'}</span>
             </button>
 
             {/* Download */}
@@ -495,33 +528,33 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                 triggerHaptic();
                 handleDownload();
               }}
-              data-tooltip="下载日志文本"
-              className="min-h-[30px] px-2.5 py-1 bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 text-xs font-medium rounded-lg transition-colors flex items-center gap-1 cursor-pointer select-none active:scale-95"
+              title="下载日志文本"
+              className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
             >
-              <DownloadSimple className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">下载</span>
+              <DownloadSimple className="w-3 h-3 shrink-0" />
+              <span>下载</span>
             </button>
 
-            {/* Fullscreen Toggle Button */}
+            {/* Fullscreen */}
             <button
               type="button"
               onClick={toggleFullscreen}
-              data-tooltip={isFullscreen ? '退出全屏 (Esc)' : '全屏日志模式'}
+              title={isFullscreen ? '退出全屏 (Esc)' : '全屏日志模式'}
               className={clsx(
-                "min-h-[30px] px-2.5 py-1 text-xs font-medium rounded-lg transition-all flex items-center gap-1 cursor-pointer select-none active:scale-95",
+                "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
                 isFullscreen
-                  ? "bg-accent text-accent-contrast shadow-sm font-semibold"
-                  : "bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300"
+                  ? "text-accent bg-accent/10 border border-accent/30 font-semibold"
+                  : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08]"
               )}
             >
               {isFullscreen ? (
                 <>
-                  <ArrowsInSimple className="w-3.5 h-3.5" weight="bold" />
+                  <ArrowsInSimple className="w-3 h-3 shrink-0" weight="bold" />
                   <span>退出全屏</span>
                 </>
               ) : (
                 <>
-                  <ArrowsOutSimple className="w-3.5 h-3.5" weight="bold" />
+                  <ArrowsOutSimple className="w-3 h-3 shrink-0" weight="bold" />
                   <span>全屏</span>
                 </>
               )}
@@ -529,43 +562,60 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
           </div>
         </div>
 
-        {/* Terminal Screen Body (Pure Black, Monospace, Auto-wrapping, Smooth Scrolling) */}
+        {/* Terminal Screen Body (Auto-wrapping, Smooth Scrolling, Theme-adaptive) */}
         <div
           ref={terminalScrollRef}
-          className="p-3 sm:p-4 font-mono text-xs overflow-y-auto space-y-1 text-zinc-200 select-text flex-1 leading-relaxed"
+          className="p-3 sm:p-4 font-mono text-xs overflow-y-auto space-y-1 text-ink dark:text-zinc-200 select-text flex-1 leading-relaxed bg-paper-1/40 dark:bg-[#0d1117] transition-colors"
         >
           {filteredLogs.length === 0 ? (
-            <div className="py-24 sm:py-28 text-center text-zinc-500 text-xs font-mono">
-              {search
-                ? `未找到包含 "${search}" 的日志条目`
-                : !isRunning
-                ? `[vessel] ${new Date().toISOString()} No runtime logs yet or containers are currently stopped.`
-                : '暂无容器输出日志，正在等待首批标准输出管道流...'}
+            <div className="text-ink-muted dark:text-zinc-500 py-20 text-center space-y-2 select-none">
+              <Terminal className="w-8 h-8 mx-auto text-ink-faint mb-2" />
+              <p className="text-xs">
+                {search
+                  ? `未找到包含「${search}」的日志条目`
+                  : !isRunning
+                  ? '当前容器已停止运行，暂无实时日志流。'
+                  : '暂无容器输出日志，正在等待首批标准输出管道流...'}
+              </p>
+              {clearedOffset > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setClearedOffset(0)}
+                  className="text-xs text-ink dark:text-zinc-200 font-semibold hover:underline cursor-pointer"
+                >
+                  恢复已清空的 {clearedOffset} 行历史日志
+                </button>
+              )}
             </div>
           ) : (
             filteredLogs.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-2 hover:bg-white/[0.04] px-1.5 py-0.5 rounded transition-colors text-[11.5px] leading-relaxed group"
+                className="flex items-start gap-2 hover:bg-paper-3/50 dark:hover:bg-white/[0.02] px-1 -mx-1 py-0.5 rounded transition-colors text-[11.5px] leading-relaxed group"
               >
+                {/* Line number */}
+                <span className="text-ink-faint dark:text-zinc-600 select-none text-[10px] tabular-nums shrink-0 pt-0.5 w-6 text-right font-mono">
+                  {idx + 1}
+                </span>
+
                 {/* Left Level Indicator Bar */}
-                <div
-                  className={`w-1 self-stretch rounded-full flex-shrink-0 ${
-                    item.level === 'error'
-                      ? 'bg-rose-500'
-                      : item.level === 'warn'
-                      ? 'bg-amber-500 dark:bg-amber-400'
-                      : item.level === 'debug'
-                      ? 'bg-purple-500 dark:bg-purple-400'
-                      : item.level === 'info'
-                      ? 'bg-blue-500 dark:bg-blue-400'
-                      : 'bg-white/10 dark:bg-zinc-800'
-                  }`}
-                />
+                {item.level !== 'none' && (
+                  <div
+                    className={`w-0.5 self-stretch rounded-full flex-shrink-0 ${
+                      item.level === 'error'
+                        ? 'bg-rose-500'
+                        : item.level === 'warn'
+                        ? 'bg-amber-500 dark:bg-amber-400'
+                        : item.level === 'debug'
+                        ? 'bg-purple-500 dark:bg-purple-400'
+                        : 'bg-blue-500 dark:bg-blue-400'
+                    }`}
+                  />
+                )}
 
                 {/* Timestamp Column */}
                 {item.timestamp && (
-                  <span className="text-zinc-500 flex-shrink-0 select-none tabular-nums text-[11px] whitespace-nowrap">
+                  <span className="text-ink-faint dark:text-zinc-500 flex-shrink-0 select-none tabular-nums text-[11px] whitespace-nowrap font-mono">
                     {item.timestamp}
                   </span>
                 )}
@@ -575,28 +625,28 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
                   <span
                     className={`text-[10px] font-sans px-1.5 py-0.2 rounded font-medium flex-shrink-0 select-none ${
                       item.level === 'error'
-                        ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                        ? 'bg-rose-500/15 text-rose-600 dark:bg-rose-950 dark:text-rose-300 border border-rose-500/20 dark:border-rose-800'
                         : item.level === 'warn'
-                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                        ? 'bg-amber-500/15 text-amber-600 dark:bg-amber-950 dark:text-amber-300 border border-amber-500/20 dark:border-amber-800'
                         : item.level === 'debug'
-                        ? 'bg-purple-950 text-purple-300 border border-purple-800'
-                        : 'bg-blue-950 text-blue-300 border border-blue-800'
+                        ? 'bg-purple-500/15 text-purple-600 dark:bg-purple-950 dark:text-purple-300 border border-purple-500/20 dark:border-purple-800'
+                        : 'bg-blue-500/15 text-blue-600 dark:bg-blue-950 dark:text-blue-300 border border-blue-500/20 dark:border-blue-800'
                     }`}
                   >
                     {item.level === 'error' ? '错误' : item.level === 'warn' ? '警告' : item.level === 'debug' ? '调试' : '正常'}
                   </span>
                 )}
 
-                {/* Log Text Content with Automatic Mobile Word-wrapping */}
+                {/* Log Text Content */}
                 <span
-                  className={`flex-1 whitespace-pre-wrap break-all ${
+                  className={`flex-1 whitespace-pre-wrap break-all font-mono ${
                     item.level === 'error'
-                      ? 'text-rose-400'
+                      ? 'text-rose-600 dark:text-rose-400'
                       : item.level === 'warn'
-                      ? 'text-amber-300'
+                      ? 'text-amber-600 dark:text-amber-300'
                       : item.level === 'debug'
-                      ? 'text-purple-300'
-                      : 'text-zinc-300'
+                      ? 'text-purple-600 dark:text-purple-300'
+                      : 'text-ink dark:text-zinc-300'
                   }`}
                 >
                   {item.content}
@@ -607,17 +657,46 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
           <div ref={logsEndRef} />
         </div>
 
-        {/* Terminal Bottom Weak Status Bar */}
-        <div className="px-4 py-2 bg-black/50 flex items-center justify-between text-[11px] text-zinc-500 font-mono select-none shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+        {/* Terminal Window Footer */}
+        <div className="px-4 py-2 bg-paper-3 dark:bg-[#161b22] border-t border-zinc-200/50 dark:border-white/5 flex items-center justify-between text-xs text-ink-muted dark:text-zinc-400 font-mono text-[11px] select-none shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] transition-colors">
           <div className="flex items-center gap-2 truncate pr-2">
-            <span className="truncate">
+            <span>
               服务: {selectedService === 'all' ? '所有服务聚合' : selectedService}
             </span>
-            {isPaused && <span className="text-amber-400 font-sans font-medium shrink-0">(滚屏已暂停)</span>}
+            <span className="text-ink-faint">·</span>
+            <span>共输出 {filteredLogs.length} 行运行时日志</span>
+            {clearedOffset > 0 && (
+              <button
+                type="button"
+                onClick={() => setClearedOffset(0)}
+                className="text-ink dark:text-zinc-200 font-medium hover:underline cursor-pointer"
+              >
+                (已隐藏 {clearedOffset} 行，点击恢复)
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-3 text-zinc-500 shrink-0">
+          <div className="flex items-center gap-1.5 text-ink-muted dark:text-zinc-400 shrink-0">
+            <span
+              className={clsx(
+                "w-1.5 h-1.5 rounded-full",
+                !isRunning
+                  ? "bg-zinc-500"
+                  : isPaused
+                  ? "bg-amber-500"
+                  : "bg-emerald-500 animate-pulse"
+              )}
+            />
+            <span className="hidden xs:inline">
+              {!isRunning ? '管道离线' : isPaused ? '滚屏暂停' : '实时管道'}
+            </span>
+            <span className="text-ink-faint">·</span>
             <span className="hidden sm:inline">tail -n {limit}</span>
-            <span>{search ? `匹配: "${search}"` : '实时管道'}</span>
+            {search ? (
+              <>
+                <span className="text-ink-faint hidden sm:inline">·</span>
+                <span className="truncate max-w-[120px]">匹配: "{search}"</span>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
@@ -871,7 +950,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
               <button
                 type="button"
                 onClick={() => setActiveSheet(null)}
-                className="w-full min-h-[44px] bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer"
+                className="btn-vessel-secondary w-full min-h-[44px] text-xs font-medium rounded-xl cursor-pointer"
               >
                 关闭
               </button>

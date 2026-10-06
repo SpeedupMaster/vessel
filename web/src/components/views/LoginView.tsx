@@ -129,7 +129,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 placeholder="admin"
                 disabled={loading}
                 autoFocus
-                className="w-full pl-10 pr-3.5 py-3 min-h-[48px] rounded-xl bg-paper-3 focus:bg-paper-4 text-base sm:text-xs text-ink placeholder-ink-faint focus:outline-none transition-colors disabled:opacity-50"
+                className="w-full pl-10 pr-3.5 py-3 min-h-[48px] rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 text-base sm:text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm disabled:opacity-50"
               />
             </div>
           </div>
@@ -151,7 +151,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 disabled={loading}
-                className="w-full pl-10 pr-12 py-3 min-h-[48px] rounded-xl bg-paper-3 focus:bg-paper-4 text-base sm:text-xs text-ink placeholder-ink-faint focus:outline-none transition-colors disabled:opacity-50 font-mono"
+                className="w-full pl-10 pr-12 py-3 min-h-[48px] rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 text-base sm:text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm disabled:opacity-50 font-mono"
               />
               <button
                 type="button"

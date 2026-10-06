@@ -138,8 +138,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Daemon & Telemetry Status Footer - Frameless card container */}
-        <div className="m-3 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-paper-3/40 rounded-2xl flex-shrink-0 space-y-3 font-sans text-xs">
+        {/* Daemon & Telemetry Status Footer - Hidden on desktop since desktop header already displays real-time telemetry */}
+        <div className="md:hidden m-3 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-paper-3/40 rounded-2xl flex-shrink-0 space-y-3 font-sans text-xs">
           {/* Docker Status */}
           <div className="flex items-center justify-between">
             <span className="text-ink-muted text-[11px]">Docker 引擎</span>

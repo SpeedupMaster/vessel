@@ -38,6 +38,10 @@ import {
   Key,
   X,
   CaretRight,
+  Code,
+  MagicWand,
+  ArrowsInSimple,
+  ArrowsOutSimple,
 } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
@@ -164,9 +168,32 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedUUID, setCopiedUUID] = useState(false);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
+  const [isDeploymentFullscreen, setIsDeploymentFullscreen] = useState(false);
   const [clearedLogOffset, setClearedLogOffset] = useState(0);
   const [copiedTerminalLogs, setCopiedTerminalLogs] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Exit fullscreen deployment log on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDeploymentFullscreen) {
+        setIsDeploymentFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDeploymentFullscreen]);
+
+  // Lock body scroll when in fullscreen deployment logs
+  useEffect(() => {
+    if (isDeploymentFullscreen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isDeploymentFullscreen]);
 
   // Delete App Modal state (Strict 2-step confirmation)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -596,6 +623,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     };
   }, [isMoreMenuOpen]);
 
+
   // Sync when editing different app
   useEffect(() => {
     if (app && mode === 'edit') {
@@ -881,6 +909,25 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     setTimeout(() => setCopiedYaml(false), 1800);
   };
 
+  const handleFormatYaml = () => {
+    if (!composeYaml.trim()) {
+      toast.error('当前编排内容为空，无法格式化');
+      return;
+    }
+    try {
+      const parsed = YAML.parse(composeYaml);
+      if (typeof parsed !== 'object' || parsed === null) {
+        toast.error('YAML 内容格式不正确，无法格式化');
+        return;
+      }
+      const formatted = YAML.stringify(parsed, { indent: 2 });
+      setComposeYaml(formatted);
+      toast.success('YAML 缩进与排版格式化完成');
+    } catch (err: any) {
+      toast.error(`格式化失败: ${err.message || '存在语法错误'}`);
+    }
+  };
+
   // Unified action flow: Save configuration and trigger deployment together
   const handleSaveAndDeploy = async () => {
     if (!app) return;
@@ -1019,13 +1066,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       lower.includes('panic') ||
       lower.includes('exception')
     ) {
-      return 'text-rose-400 font-medium';
+      return 'text-rose-600 dark:text-rose-400 font-medium';
     }
     if (lower.includes('warn') || lower.includes('warning')) {
-      return 'text-amber-300';
+      return 'text-amber-600 dark:text-amber-300';
     }
     if (line.startsWith('[vessel]') || line.startsWith('==>') || line.startsWith('STEP')) {
-      return 'text-sky-400 font-semibold';
+      return 'text-sky-600 dark:text-sky-400 font-semibold';
     }
     if (
       lower.includes('success') ||
@@ -1034,9 +1081,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       lower.includes('done') ||
       lower.includes('healthy')
     ) {
-      return 'text-emerald-400';
+      return 'text-emerald-600 dark:text-emerald-400';
     }
-    return 'text-zinc-300';
+    return 'text-ink';
   };
 
   return (
@@ -1154,7 +1201,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         type="text"
                         value={tempName}
                         onChange={(e) => setTempName(e.target.value)}
-                        className="bg-paper-3 rounded-xl px-3 py-1 text-sm text-ink font-semibold focus:outline-none focus:ring-1 focus:ring-ink"
+                        className="bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-1 text-sm text-ink font-semibold focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                         autoFocus
                       />
                       <button
@@ -1252,8 +1299,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
         </div>
 
-        {/* Mobile Header Quick Actions Bar (md:hidden) */}
-        {mode === 'edit' && !isDb && (
+        {/* Mobile Header Quick Actions Bar (md:hidden - GENERAL TAB ONLY) */}
+        {mode === 'edit' && !isDb && activeTab === 'general' && (
           <div className="md:hidden flex items-center gap-2 mt-3 overflow-x-auto no-scrollbar scrollbar-none pb-0.5">
             {app?.status !== 'running' && app?.status !== 'deploying' && app?.status !== 'rebuilding' && (
               <>
@@ -1273,21 +1320,19 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   <span>启动应用</span>
                 </button>
 
-                {activeTab !== 'deployments' && activeTab !== 'logs' && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('logs')}
-                    className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
-                  >
-                    <Terminal className="w-3.5 h-3.5 text-accent" />
-                    <span>查看日志</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('logs')}
+                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-accent" />
+                  <span>查看日志</span>
+                </button>
 
                 <button
                   type="button"
                   onClick={() => setIsMoreMenuOpen(true)}
-                  className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
+                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
                 >
                   <span>更多操作</span>
                   <CaretDown className="w-3 h-3 text-ink-muted" />
@@ -1313,16 +1358,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   <span>重新部署</span>
                 </button>
 
-                {activeTab !== 'deployments' && activeTab !== 'logs' && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('logs')}
-                    className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
-                  >
-                    <Terminal className="w-3.5 h-3.5 text-accent" />
-                    <span>查看日志</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('logs')}
+                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-accent" />
+                  <span>查看日志</span>
+                </button>
 
                 <button
                   type="button"
@@ -1336,7 +1379,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsMoreMenuOpen(true)}
-                  className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
+                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
                 >
                   <span>更多操作</span>
                   <CaretDown className="w-3 h-3 text-ink-muted" />
@@ -1354,16 +1397,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   <span>部署执行中...</span>
                 </button>
 
-                {activeTab !== 'deployments' && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('deployments')}
-                    className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
-                  >
-                    <Terminal className="w-3.5 h-3.5" />
-                    <span>部署日志</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('deployments')}
+                  className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>部署日志</span>
+                </button>
               </>
             )}
           </div>
@@ -1410,11 +1451,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               key={key}
               type="button"
               onClick={() => setActiveTab(key)}
-              className={`px-4 py-1.5 text-xs font-medium rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+              className={clsx(
+                "px-4 py-1.5 text-xs font-medium rounded-xl transition-all cursor-pointer whitespace-nowrap select-none",
                 isActive
-                  ? 'bg-paper-3 text-ink font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-3/50'
-              }`}
+                  ? "bg-accent text-accent-contrast font-semibold shadow-sm"
+                  : "text-ink-muted hover:text-ink hover:bg-paper-3/60"
+              )}
             >
               {label}
             </button>
@@ -1527,8 +1569,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         </div>
       )}
 
-      {/* ================= ACTION & CONTROL BAR (EDIT MODE - GENERAL, ENVIRONMENT, LOGS & DOMAINS TABS - DESKTOP ONLY) ================= */}
-      {!isDb && mode === 'edit' && (activeTab === 'general' || activeTab === 'environment' || activeTab === 'logs' || activeTab === 'domains') && (
+      {/* ================= ACTION & CONTROL BAR (EDIT MODE - GENERAL TAB ONLY - DESKTOP ONLY) ================= */}
+      {!isDb && mode === 'edit' && activeTab === 'general' && (
         <div className="hidden md:flex flex-wrap items-center justify-between gap-3 pt-3 pb-1">
           {/* Left: Core State-Driven Actions (Heuristic Principle 2 & Interaction Flow) */}
           <div className="flex flex-wrap items-center gap-2">
@@ -1549,22 +1591,20 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   <span>启动应用</span>
                 </button>
 
-                {activeTab !== 'logs' && (
-                  <button
-                    onClick={() => setActiveTab('logs')}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <Terminal className="w-3.5 h-3.5 text-accent" />
-                    <span>查看日志</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => setActiveTab('logs')}
+                  className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-accent" />
+                  <span>查看日志</span>
+                </button>
 
                 {/* Dropdown for Secondary Actions */}
                 <div className="relative" ref={moreMenuRef}>
                   <button
                     type="button"
                     onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer"
+                    className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
                   >
                     <span>更多操作</span>
                     <CaretDown className="w-3 h-3 text-ink-muted" />
@@ -1630,15 +1670,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   <span>重新部署</span>
                 </button>
 
-                {activeTab !== 'logs' && (
-                  <button
-                    onClick={() => setActiveTab('logs')}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <Terminal className="w-3.5 h-3.5 text-accent" />
-                    <span>查看日志</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => setActiveTab('logs')}
+                  className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-accent" />
+                  <span>查看日志</span>
+                </button>
 
                 <button
                   onClick={() => app && onStop(app.id)}
@@ -1653,7 +1691,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer"
+                    className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
                   >
                     <span>更多操作</span>
                     <CaretDown className="w-3 h-3 text-ink-muted" />
@@ -1779,7 +1817,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-ink-muted mb-1.5">
-                    应用名称 *
+                    应用名称 <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <input
                     type="text"
@@ -1790,7 +1828,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       setTempName(e.target.value);
                     }}
                     placeholder="例如: n8n-automation"
-                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-sm text-ink font-medium focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-ink font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                 </div>
 
@@ -1803,7 +1841,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="例如: 企业级工作流自动化编排与应用管理"
-                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                 </div>
               </div>
@@ -1839,8 +1877,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         <span className="text-[11px] text-ink-faint">部署时自动注册 Caddyfile</span>
                       </div>
 
-                      <div className="flex items-stretch rounded-xl bg-paper-3 focus-within:ring-2 focus-within:ring-accent/20 transition-all overflow-hidden group">
-                        <div className="bg-paper-2 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none group-focus-within:text-accent transition-colors">
+                      <div className="flex items-stretch rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group focus-within:border-zinc-400 dark:focus-within:border-white/30 transition-colors">
+                        <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-zinc-200 dark:border-white/10">
                           <LockKey className="w-3.5 h-3.5" weight="bold" />
                           <span>https://</span>
                         </div>
@@ -1853,7 +1891,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             setDeployDomain(val);
                           }}
                           placeholder="n8n.yourdomain.com"
-                          className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint focus:outline-none"
+                          className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1887,7 +1925,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             value={deployServiceName}
                             onChange={(e) => setDeployServiceName(e.target.value)}
                             placeholder="web"
-                            className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                            className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                           />
                         )}
                       </div>
@@ -1901,7 +1939,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                           value={deployTargetPort}
                           onChange={(e) => setDeployTargetPort(e.target.value)}
                           placeholder="5678"
-                          className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono font-medium focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                          className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                         />
                       </div>
                     </div>
@@ -1910,77 +1948,143 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               </div>
 
               {/* Compose YAML Section */}
-              <div className="pt-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
+              <div className="pt-2 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h4 className="font-semibold text-sm text-ink tracking-tight">Compose 编排定义 (YAML)</h4>
+                    <h4 className="font-semibold text-sm text-ink tracking-tight flex items-center gap-2">
+                      <Code className="w-4 h-4 text-accent" />
+                      <span>Compose 编排定义 (YAML)</span>
+                    </h4>
                     <p className="text-xs text-ink-muted mt-0.5">
-                      声明式管理服务容器镜像、网络与卷挂载
+                      声明式管理多容器服务镜像、网络端口与卷挂载
                     </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {yamlValidation.valid ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full font-medium">
-                        <Check className="w-3 h-3 text-emerald-500" />
-                        YAML 语法有效
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          toast.error(
-                            yamlValidation.error
-                              ? `YAML 语法错误: ${yamlValidation.error}`
-                              : 'YAML 格式有误，请检查缩进与语法规范'
-                          )
-                        }
-                        className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full font-medium cursor-pointer hover:bg-rose-500/20 transition-colors"
-                        title={yamlValidation.error || '点击查看语法错误详情'}
-                      >
-                        <Warning className="w-3 h-3 text-rose-500" />
-                        <span>语法错误</span>
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => setIsPreviewOpen(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-ink-muted hover:text-ink bg-paper-2 hover:bg-paper-3 rounded-xl transition-colors cursor-pointer"
-                    >
-                      <GitBranch className="w-3.5 h-3.5 text-accent" />
-                      <span>预览配置</span>
-                    </button>
                   </div>
                 </div>
 
-                <CodeEditorWithLines
-                  language="yaml"
-                  value={composeYaml}
-                  onChange={setComposeYaml}
-                  onFocus={() => setIsEditorFocused(true)}
-                  onBlur={() => setIsEditorFocused(false)}
-                  placeholder="services:&#10;  app:&#10;    image: ...&#10;    ports:&#10;      - '8080:80'"
-                  minHeight="320px"
-                  maxHeight="45vh"
-                />
+                {/* IDE Card Container */}
+                <div className="rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-paper-2 shadow-subtle">
+                  {/* Card Window Header */}
+                  <div className="px-4 py-2.5 bg-paper-2/80 dark:bg-paper-3/40 border-b border-zinc-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="font-mono text-xs font-semibold text-ink flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-accent" />
+                        <span>docker-compose.yml</span>
+                      </span>
+
+                      {/* YAML Validation Indicator */}
+                      {!composeYaml.trim() ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-paper-3 text-ink-muted rounded-full font-medium">
+                          待填写编排配置
+                        </span>
+                      ) : yamlValidation.valid ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full font-medium">
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          YAML 语法有效
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            toast.error(
+                              yamlValidation.error
+                                ? `YAML 语法错误: ${yamlValidation.error}`
+                                : 'YAML 格式有误，请检查缩进与语法规范'
+                            )
+                          }
+                          className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full font-medium cursor-pointer hover:bg-rose-500/20 transition-colors"
+                          title={yamlValidation.error || '点击查看语法错误详情'}
+                        >
+                          <Warning className="w-3 h-3 text-rose-500" />
+                          <span>语法错误</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap self-end sm:self-auto">
+                      {/* Format YAML Button */}
+                      <button
+                        type="button"
+                        onClick={handleFormatYaml}
+                        disabled={!composeYaml.trim() || !yamlValidation.valid}
+                        data-tooltip={
+                          !composeYaml.trim()
+                            ? '当前为空'
+                            : !yamlValidation.valid
+                            ? '存在语法错误无法格式化'
+                            : '一键整理缩进与排版'
+                        }
+                        className="btn-vessel-secondary flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <MagicWand className="w-3.5 h-3.5 text-accent" />
+                        <span>格式化</span>
+                      </button>
+
+                      {/* Preview Button */}
+                      <button
+                        type="button"
+                        onClick={() => setIsPreviewOpen(true)}
+                        className="btn-vessel-secondary flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg cursor-pointer"
+                      >
+                        <GitBranch className="w-3.5 h-3.5 text-accent" />
+                        <span>预览配置</span>
+                      </button>
+
+                      {/* Copy Button */}
+                      <button
+                        type="button"
+                        onClick={handleCopyYaml}
+                        className="btn-vessel-secondary flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg cursor-pointer"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>{copiedYaml ? '已复制' : '复制'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Code Editor with Borderless & Line Numbers */}
+                  <CodeEditorWithLines
+                    borderless
+                    language="yaml"
+                    value={composeYaml}
+                    onChange={setComposeYaml}
+                    onFocus={() => setIsEditorFocused(true)}
+                    onBlur={() => setIsEditorFocused(false)}
+                    placeholder={`services:\n  web:\n    image: nginx:alpine\n    ports:\n      - "80:80"\n    restart: unless-stopped`}
+                    minHeight="350px"
+                    maxHeight="52vh"
+                  />
+
+                  {/* Card Window Footer */}
+                  <div className="px-4 py-2 bg-paper-2/60 dark:bg-paper-3/20 border-t border-zinc-200/80 dark:border-white/10 flex items-center justify-between text-xs text-ink-muted">
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span>Tab 键缩进 2 格</span>
+                      <span className="text-ink-faint">·</span>
+                      <span>支持 Docker Compose v2 规范</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] font-mono">
+                      <span>已识别 {detectedServices.length} 个服务</span>
+                      <span className="text-ink-faint">·</span>
+                      <span>{composeYaml ? composeYaml.split('\n').length : 0} 行</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Desktop Create Mode Actions Footer */}
-              <div className="hidden md:flex pt-2 items-center justify-between">
+              <div className="hidden md:flex pt-5 mt-6 border-t border-zinc-200/80 dark:border-white/10 items-center justify-between">
                 <button
                   type="button"
                   onClick={onBack}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-2 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-medium text-ink-muted hover:text-ink hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   取消
                 </button>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => handleCreate(false)}
                     disabled={isSubmitting}
-                    className="px-5 py-2 bg-paper-2 hover:bg-paper-3 text-ink font-medium text-xs rounded-xl transition-all active:translate-y-px cursor-pointer"
+                    className="btn-vessel-secondary px-5 py-2.5 rounded-xl transition-all active:translate-y-px"
                   >
                     {isSubmitting ? '保存中...' : '保存应用 (草稿)'}
                   </button>
@@ -1988,10 +2092,19 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     type="button"
                     onClick={() => handleCreate(true)}
                     disabled={isSubmitting}
-                    className="px-5 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 font-semibold text-xs rounded-xl transition-all active:translate-y-px cursor-pointer flex items-center gap-1.5 disabled:cursor-not-allowed"
+                    className="px-6 py-2.5 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 font-semibold text-xs rounded-xl transition-all active:translate-y-px cursor-pointer flex items-center gap-2 disabled:cursor-not-allowed shadow-sm"
                   >
-                    <Play className="w-3.5 h-3.5 text-current" weight="fill" />
-                    <span>{isSubmitting ? '部署中...' : '创建并立即部署'}</span>
+                    {isSubmitting ? (
+                      <>
+                        <CircleNotch className="w-3.5 h-3.5 animate-spin text-current" />
+                        <span>部署中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 text-current" weight="fill" />
+                        <span>创建并立即部署</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2030,7 +2143,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       type="button"
                       onClick={() => app && onRestart(app.id)}
                       disabled={app?.status !== 'running'}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium bg-paper-3 hover:bg-paper-4 text-ink transition-colors disabled:opacity-50 cursor-pointer"
+                      className="btn-vessel-secondary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-50 cursor-pointer"
                     >
                       <ArrowsClockwise className="w-3.5 h-3.5" />
                       <span>重载</span>
@@ -2054,7 +2167,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowTerminalModal(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium bg-paper-3 hover:bg-paper-4 text-ink transition-colors cursor-pointer"
+                      className="btn-vessel-secondary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium cursor-pointer"
                     >
                       <span className="font-mono font-bold text-xs">&gt;_</span>
                       <span>打开终端</span>
@@ -2294,7 +2407,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         value={externalPortInput}
                         onChange={(e) => setExternalPortInput(e.target.value)}
                         placeholder=""
-                        className="w-full bg-paper-3 rounded-xl px-4 py-2.5 text-xs text-ink font-mono focus:bg-paper-4 focus:outline-none transition-colors"
+                        className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                       />
                     </div>
 
@@ -2423,21 +2536,39 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         </button>
                       )}
 
-                      {/* Preview Button (Ghost style) */}
+                      {/* Format Button */}
+                      <button
+                        type="button"
+                        onClick={handleFormatYaml}
+                        disabled={!composeYaml.trim() || !yamlValidation.valid}
+                        data-tooltip={
+                          !composeYaml.trim()
+                            ? '当前为空'
+                            : !yamlValidation.valid
+                            ? '存在语法错误无法格式化'
+                            : '一键整理缩进与排版'
+                        }
+                        className="btn-vessel-secondary flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        <MagicWand className="w-3.5 h-3.5 text-accent" />
+                        <span>格式化</span>
+                      </button>
+
+                      {/* Preview Button */}
                       <button
                         type="button"
                         onClick={() => setIsPreviewOpen(true)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-ink-muted hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer"
+                        className="btn-vessel-secondary flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg cursor-pointer"
                       >
                         <GitBranch className="w-3.5 h-3.5 text-accent" />
                         <span>预览配置</span>
                       </button>
 
-                      {/* Copy Button (Ghost style) */}
+                      {/* Copy Button */}
                       <button
                         type="button"
                         onClick={handleCopyYaml}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs text-ink-muted hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer"
+                        className="btn-vessel-secondary flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg cursor-pointer"
                       >
                         <Copy className="w-3.5 h-3.5" />
                         <span>{copiedYaml ? '已复制' : '复制配置'}</span>
@@ -2520,7 +2651,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             {mode === 'create' && (
               <button
                 onClick={() => setActiveTab('general')}
-                className="px-3 py-1 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                className="btn-vessel-secondary px-3 py-1 text-xs font-medium rounded-lg cursor-pointer"
               >
                 返回基础编排
               </button>
@@ -2545,9 +2676,16 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
 
           {/* Terminal Screen Window Card */}
-          <div className="rounded-2xl bg-[#0d1117] overflow-hidden shadow-lg font-mono">
+          <div
+            className={clsx(
+              "rounded-2xl bg-paper-2 dark:bg-[#0d1117] border border-zinc-200/50 dark:border-white/5 overflow-hidden shadow-lg font-mono transition-colors",
+              isDeploymentFullscreen
+                ? "fixed inset-0 z-50 rounded-none border-0 w-screen h-[100dvh] flex flex-col"
+                : ""
+            )}
+          >
             {/* Terminal Card Window Header */}
-            <div className="px-3.5 sm:px-4 py-2.5 bg-[#161b22] flex items-center justify-between gap-2 select-none">
+            <div className="px-3.5 sm:px-4 py-2.5 bg-paper-3 dark:bg-[#161b22] border-b border-zinc-200/50 dark:border-white/5 flex items-center justify-between gap-2 select-none shrink-0 transition-colors">
               {/* Left: Window controls & Title */}
               <div className="flex items-center gap-2 min-w-0">
                 <div className="flex items-center gap-1 shrink-0">
@@ -2556,12 +2694,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
                 </div>
                 <div className="flex items-center gap-1.5 min-w-0 ml-1">
-                  <Terminal className="w-3.5 h-3.5 text-accent shrink-0" />
-                  <span className="text-xs font-semibold text-zinc-200 truncate">
-                    实时部署输出
+                  <Terminal className="w-3.5 h-3.5 text-ink dark:text-accent shrink-0" />
+                  <span className="text-xs font-semibold text-ink dark:text-zinc-200 truncate">
+                    {isDeploymentFullscreen ? '实时部署全屏输出' : '实时部署输出'}
                   </span>
                   {app.status === 'deploying' || app.status === 'rebuilding' ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-mono shrink-0">
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 font-mono shrink-0">
                       <CircleNotch className="w-2.5 h-2.5 animate-spin" />
                       构建中
                     </span>
@@ -2569,7 +2707,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
               </div>
 
-              {/* Right: Terminal action buttons (ALL WITH whitespace-nowrap and shrink-0) */}
+              {/* Right: Terminal action buttons */}
               <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                 {/* Auto-scroll toggle */}
                 <button
@@ -2577,14 +2715,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   onClick={() => setIsAutoScroll(!isAutoScroll)}
                   title={isAutoScroll ? '自动滚屏已开启，点击暂停' : '自动滚屏已暂停，点击恢复'}
                   className={clsx(
-                    "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0",
+                    "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
                     isAutoScroll
-                      ? "text-emerald-400 bg-emerald-950/60 hover:bg-emerald-900/60"
-                      : "text-zinc-400 hover:text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08]"
+                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/60 border border-emerald-500/20 dark:border-emerald-500/30 hover:bg-emerald-500/20 dark:hover:bg-emerald-900/60"
+                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08]"
                   )}
                 >
-                  <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", isAutoScroll ? "bg-emerald-400 animate-pulse" : "bg-zinc-500")} />
-                  <span className="text-[11px] font-mono">{isAutoScroll ? '滚屏' : '暂停'}</span>
+                  <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", isAutoScroll ? "bg-emerald-500 dark:bg-emerald-400 animate-pulse" : "bg-ink-muted/50 dark:bg-zinc-500")} />
+                  <span>{isAutoScroll ? '滚屏' : '暂停'}</span>
                 </button>
 
                 {/* Clear */}
@@ -2592,10 +2730,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   type="button"
                   onClick={handleClearDeploymentLogs}
                   title="清空当前日志视图"
-                  className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0"
+                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
                 >
                   <Trash className="w-3 h-3 shrink-0" />
-                  <span className="text-[11px] font-mono">清空</span>
+                  <span>清空</span>
                 </button>
 
                 {/* Copy */}
@@ -2603,14 +2741,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   type="button"
                   onClick={handleCopyDeploymentLogs}
                   title="复制全部部署日志"
-                  className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0"
+                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
                 >
                   {copiedTerminalLogs ? (
-                    <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400 shrink-0" />
                   ) : (
                     <Copy className="w-3 h-3 shrink-0" />
                   )}
-                  <span className="text-[11px] font-mono">{copiedTerminalLogs ? '已复制' : '复制'}</span>
+                  <span>{copiedTerminalLogs ? '已复制' : '复制'}</span>
                 </button>
 
                 {/* Redeploy (visible on sm+) */}
@@ -2621,25 +2759,55 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     onDeploy(app.id);
                   }}
                   disabled={app.status === 'deploying' || app.status === 'rebuilding'}
-                  className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-xs text-accent hover:bg-accent/20 rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50"
+                  className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-xs text-ink dark:text-accent hover:bg-paper-2/80 dark:hover:bg-accent/20 border border-zinc-200/50 dark:border-white/10 dark:hover:border-accent/30 rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 font-mono text-[11px]"
                 >
-                  <Play className="w-3 h-3 text-accent" weight="fill" />
+                  <Play className="w-3 h-3 text-current" weight="fill" />
                   <span>重新部署</span>
+                </button>
+
+                {/* Fullscreen Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setIsDeploymentFullscreen(!isDeploymentFullscreen)}
+                  title={isDeploymentFullscreen ? '退出全屏 (Esc)' : '全屏部署日志'}
+                  className={clsx(
+                    "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
+                    isDeploymentFullscreen
+                      ? "text-accent bg-accent/10 border border-accent/30 font-semibold"
+                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08]"
+                  )}
+                >
+                  {isDeploymentFullscreen ? (
+                    <>
+                      <ArrowsInSimple className="w-3 h-3 shrink-0" weight="bold" />
+                      <span>退出全屏</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowsOutSimple className="w-3 h-3 shrink-0" weight="bold" />
+                      <span>全屏</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Terminal Screen Body */}
-            <div className="p-3 sm:p-4 text-xs font-mono leading-[1.65] h-[380px] sm:h-[440px] overflow-y-auto space-y-1 select-text overscroll-contain bg-[#0d1117]">
+            <div
+              className={clsx(
+                "p-3 sm:p-4 text-xs font-mono leading-[1.65] overflow-y-auto space-y-1 select-text overscroll-contain bg-paper-1/40 dark:bg-[#0d1117] transition-colors",
+                isDeploymentFullscreen ? "flex-1 h-auto" : "h-[380px] sm:h-[440px]"
+              )}
+            >
               {displayLogs.length === 0 ? (
-                <div className="text-zinc-500 py-20 text-center space-y-2 select-none">
-                  <Terminal className="w-8 h-8 mx-auto text-zinc-600 mb-2" />
+                <div className="text-ink-muted py-20 text-center space-y-2 select-none">
+                  <Terminal className="w-8 h-8 mx-auto text-ink-faint mb-2" />
                   <p className="text-xs">暂无部署输出。点击「重新部署」启动实时构建管道。</p>
                   {clearedLogOffset > 0 && (
                     <button
                       type="button"
                       onClick={() => setClearedLogOffset(0)}
-                      className="text-xs text-accent hover:underline cursor-pointer"
+                      className="text-xs text-ink dark:text-zinc-200 font-semibold hover:underline cursor-pointer"
                     >
                       恢复已清空的 {clearedLogOffset} 行历史日志
                     </button>
@@ -2647,8 +2815,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
               ) : (
                 displayLogs.map((line, idx) => (
-                  <div key={idx} className={clsx("whitespace-pre-wrap break-all flex items-start gap-2 hover:bg-white/[0.02] px-1 -mx-1 rounded", getLogLineStyle(line))}>
-                    <span className="text-zinc-600 select-none text-[10px] tabular-nums shrink-0 pt-0.5 w-6 text-right font-mono">
+                  <div key={idx} className={clsx("whitespace-pre-wrap break-all flex items-start gap-2 hover:bg-paper-3/50 dark:hover:bg-white/[0.02] px-1 -mx-1 rounded transition-colors", getLogLineStyle(line))}>
+                    <span className="text-ink-faint select-none text-[10px] tabular-nums shrink-0 pt-0.5 w-6 text-right font-mono">
                       {idx + 1}
                     </span>
                     <span className="flex-1 min-w-0 font-mono">
@@ -2661,24 +2829,24 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </div>
 
             {/* Terminal Window Footer */}
-            <div className="px-4 py-2 bg-[#161b22] flex items-center justify-between text-xs text-zinc-400 font-mono text-[11px] select-none">
+            <div className="px-4 py-2 bg-paper-3 dark:bg-[#161b22] border-t border-zinc-200/50 dark:border-white/5 flex items-center justify-between text-xs text-ink-muted dark:text-zinc-400 font-mono text-[11px] select-none shrink-0 transition-colors">
               <div className="flex items-center gap-2">
                 <span>共输出 {displayLogs.length} 行构建日志</span>
                 {clearedLogOffset > 0 && (
                   <button
                     type="button"
                     onClick={() => setClearedLogOffset(0)}
-                    className="text-accent hover:underline cursor-pointer"
+                    className="text-ink dark:text-zinc-200 font-medium hover:underline cursor-pointer"
                   >
                     (已隐藏 {clearedLogOffset} 行，点击恢复)
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-zinc-400">
+              <div className="flex items-center gap-1.5 text-ink-muted dark:text-zinc-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="hidden xs:inline">管道就绪</span>
-                <span className="text-zinc-600">·</span>
-                <span className="text-zinc-500">docker-compose</span>
+                <span className="text-ink-faint">·</span>
+                <span className="text-ink-faint dark:text-zinc-500">docker-compose</span>
               </div>
             </div>
           </div>
@@ -2774,8 +2942,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <span className="text-[11px] text-ink-faint">部署时自动下发至 Caddyfile</span>
                   </div>
 
-                  <div className="flex items-stretch rounded-xl bg-paper-2 focus-within:bg-paper-4/60 transition-colors overflow-hidden group">
-                    <div className="bg-paper-4/60 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none group-focus-within:text-accent transition-colors">
+                  <div className="flex items-stretch rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group focus-within:border-zinc-400 dark:focus-within:border-white/30 transition-colors">
+                    <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-zinc-200 dark:border-white/10">
                       <LockKey className="w-3.5 h-3.5" weight="bold" />
                       <span>https://</span>
                     </div>
@@ -2788,7 +2956,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         setDeployDomain(val);
                       }}
                       placeholder="n8n.yourdomain.com"
-                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint focus:outline-none"
+                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -2829,7 +2997,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         value={deployServiceName}
                         onChange={(e) => setDeployServiceName(e.target.value)}
                         placeholder="web"
-                        className="w-full bg-paper-2 rounded-xl px-3.5 py-2 text-xs text-ink focus:outline-none transition-colors"
+                        className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                       />
                     )}
                   </div>
@@ -2843,7 +3011,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       value={deployTargetPort}
                       onChange={(e) => setDeployTargetPort(e.target.value)}
                       placeholder="5678"
-                      className="w-full bg-paper-2 rounded-xl px-3.5 py-2 text-xs text-ink font-mono font-medium focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                      className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                     />
                   </div>
                 </div>
@@ -2888,24 +3056,24 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setDeployTargetType('internal')}
-                      className={`p-3.5 text-left rounded-xl transition-all relative flex flex-col justify-between cursor-pointer ${
+                      className={`p-3.5 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer border ${
                         deployTargetType === 'internal'
-                          ? 'bg-paper-4/80 shadow-sm'
-                          : 'bg-paper-2 hover:bg-paper-4/40'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-1.5">
-                            <ShieldCheck className={`w-4 h-4 ${deployTargetType === 'internal' ? 'text-accent' : 'text-emerald-500'}`} weight="bold" />
-                            <span className="text-xs font-semibold text-ink">容器内部网络</span>
+                            <ShieldCheck className={`w-4 h-4 ${deployTargetType === 'internal' ? 'text-accent' : 'text-ink-faint'}`} weight="bold" />
+                            <span className={`text-xs font-semibold ${deployTargetType === 'internal' ? 'text-ink' : 'text-ink-muted'}`}>容器内部网络</span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">推荐</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${deployTargetType === 'internal' ? 'bg-accent' : 'bg-paper-4'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${deployTargetType === 'internal' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
                             {deployTargetType === 'internal' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
-                        <p className="text-[11px] text-ink-muted leading-relaxed">
+                        <p className={`text-[11px] leading-relaxed ${deployTargetType === 'internal' ? 'text-ink-muted' : 'text-ink-faint'}`}>
                           基于 Docker 内部服务网络互通，容器端口无需向宿主机暴露更安全
                         </p>
                       </div>
@@ -2914,23 +3082,23 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setDeployTargetType('host')}
-                      className={`p-3.5 text-left rounded-xl transition-all relative flex flex-col justify-between cursor-pointer ${
+                      className={`p-3.5 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer border ${
                         deployTargetType === 'host'
-                          ? 'bg-paper-4/80 shadow-sm'
-                          : 'bg-paper-2 hover:bg-paper-4/40'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-1.5">
-                            <HardDrives className={`w-4 h-4 ${deployTargetType === 'host' ? 'text-accent' : 'text-ink-muted'}`} weight="bold" />
-                            <span className="text-xs font-semibold text-ink">宿主机端口</span>
+                            <HardDrives className={`w-4 h-4 ${deployTargetType === 'host' ? 'text-accent' : 'text-ink-faint'}`} weight="bold" />
+                            <span className={`text-xs font-semibold ${deployTargetType === 'host' ? 'text-ink' : 'text-ink-muted'}`}>宿主机端口</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${deployTargetType === 'host' ? 'bg-accent' : 'bg-paper-4'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${deployTargetType === 'host' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
                             {deployTargetType === 'host' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
-                        <p className="text-[11px] text-ink-muted leading-relaxed">
+                        <p className={`text-[11px] leading-relaxed ${deployTargetType === 'host' ? 'text-ink-muted' : 'text-ink-faint'}`}>
                           代理至主机映射的 localhost 端口，适合本机网络直通场景
                         </p>
                       </div>
@@ -2952,7 +3120,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <button
                 onClick={() => handleCreate(false)}
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer"
+                className="btn-vessel-secondary px-4 py-2 text-xs font-medium rounded-xl cursor-pointer"
               >
                 保存草稿
               </button>
@@ -3309,7 +3477,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDbBackupModal(true)}
-                className="self-end sm:self-center px-3 py-1.5 rounded-xl text-xs text-ink hover:bg-paper-4 bg-paper-3 transition-colors cursor-pointer shrink-0"
+                className="btn-vessel-secondary self-end sm:self-center px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer shrink-0"
               >
                 修改定时计划
               </button>
@@ -3345,7 +3513,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowRestoreDbModal(true)}
-                      className="px-4 py-2 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="btn-vessel-secondary px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
                     >
                       <ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />
                       <span>恢复备份</span>
@@ -3641,7 +3809,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsMoreMenuOpen(false)}
-                className="w-full min-h-[48px] rounded-xl bg-paper-3 hover:bg-paper-4 text-ink text-sm font-semibold flex items-center justify-center transition-colors cursor-pointer mt-1"
+                className="btn-vessel-secondary w-full min-h-[48px] rounded-xl text-sm font-semibold flex items-center justify-center cursor-pointer mt-1"
               >
                 取消
               </button>
@@ -3666,14 +3834,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleDiscardChanges}
-              className="px-3 py-1.5 rounded-xl text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer"
+              className="btn-vessel-ghost px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer"
             >
               放弃
             </button>
             <button
               onClick={handleSaveApp}
               disabled={isSubmitting}
-              className="px-4 py-1.5 rounded-xl text-xs font-medium bg-paper-3 hover:bg-paper-4 text-ink transition-colors cursor-pointer"
+              className="btn-vessel-secondary px-4 py-1.5 rounded-xl text-xs font-medium cursor-pointer"
             >
               {isSubmitting ? '保存中...' : '仅保存'}
             </button>
@@ -3716,7 +3884,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <button
                 type="button"
                 onClick={handleDiscardChanges}
-                className="flex-1 min-h-[42px] px-2 py-2 text-xs font-semibold text-ink-muted hover:text-ink bg-paper-3 hover:bg-paper-4 rounded-xl transition-colors cursor-pointer text-center"
+                className="btn-vessel-ghost flex-1 min-h-[42px] px-2 py-2 text-xs font-semibold rounded-xl cursor-pointer text-center"
               >
                 放弃
               </button>
@@ -3724,7 +3892,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 type="button"
                 onClick={handleSaveApp}
                 disabled={isSubmitting}
-                className="flex-1 min-h-[42px] px-2 py-2 text-xs font-semibold text-ink bg-paper-3 hover:bg-paper-4 rounded-xl transition-colors cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-vessel-secondary flex-1 min-h-[42px] px-2 py-2 text-xs font-semibold rounded-xl cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? '保存中...' : '仅保存'}
               </button>
@@ -3803,7 +3971,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           <div className="pt-2 flex justify-end">
             <button
               onClick={() => setIsPreviewOpen(false)}
-              className="px-4 py-2 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer"
+              className="btn-vessel-secondary px-4 py-2 text-xs font-medium rounded-xl cursor-pointer"
             >
               关闭
             </button>
@@ -3858,7 +4026,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             <button
               type="button"
               onClick={() => setIsFreshVolumesModalOpen(false)}
-              className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-3 sm:hover:bg-paper-4 sm:rounded-xl text-center transition-colors cursor-pointer select-none"
+              className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
             >
               取消并返回
             </button>
@@ -3930,12 +4098,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   </div>
 
                   <div className={clsx(
-                    "flex items-stretch rounded-xl bg-paper-3 transition-colors overflow-hidden group focus-within:ring-2",
+                    "flex items-stretch rounded-xl bg-white dark:bg-paper-3 border shadow-sm overflow-hidden group transition-all",
                     domainError
-                      ? "focus-within:ring-rose-500/20"
-                      : "focus-within:ring-accent/15"
+                      ? "border-rose-500/70"
+                      : "border-zinc-200 dark:border-white/10 focus-within:border-zinc-400 dark:focus-within:border-white/30"
                   )}>
-                    <div className="bg-paper-4/60 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none group-focus-within:text-accent transition-colors shrink-0">
+                    <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-zinc-200 dark:border-white/10 shrink-0">
                       <LockKey className="w-3.5 h-3.5" weight="bold" />
                       <span>https://</span>
                     </div>
@@ -3954,7 +4122,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         if (domainError) setDomainError('');
                       }}
                       placeholder="app.yourdomain.com"
-                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint focus:outline-none min-h-[44px]"
+                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none min-h-[44px]"
                       autoFocus
                     />
                   </div>
@@ -4006,7 +4174,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         value={modalServiceName}
                         onChange={(e) => setModalServiceName(e.target.value)}
                         placeholder="web"
-                        className="w-full min-h-[44px] bg-paper-3 rounded-xl px-3.5 py-2 text-xs text-ink focus:outline-none transition-colors"
+                        className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                       />
                     )}
                   </div>
@@ -4029,8 +4197,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       }}
                       placeholder="8080"
                       className={clsx(
-                        "w-full min-h-[44px] bg-paper-3 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium focus:outline-none transition-colors",
-                        portError && "ring-2 ring-rose-500/20"
+                        "w-full min-h-[44px] bg-white dark:bg-paper-3 border rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none transition-colors shadow-sm",
+                        portError
+                          ? "border-rose-500/70"
+                          : "border-zinc-200 dark:border-white/10 focus:border-zinc-400 dark:focus:border-white/30"
                       )}
                     />
                     {portError && (
@@ -4097,24 +4267,24 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       role="radio"
                       aria-checked={modalTargetType === 'internal'}
                       onClick={() => setModalTargetType('internal')}
-                      className={`p-3.5 sm:p-4 text-left rounded-xl transition-all relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] ${
+                      className={`p-3.5 sm:p-4 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] border ${
                         modalTargetType === 'internal'
-                          ? 'bg-paper-4/80 shadow-sm'
-                          : 'bg-paper-3 hover:bg-paper-4/40'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-1.5">
-                            <ShieldCheck className={`w-4 h-4 ${modalTargetType === 'internal' ? 'text-accent' : 'text-emerald-500'}`} weight="bold" />
-                            <span className="text-xs font-semibold text-ink">容器内部网络</span>
+                            <ShieldCheck className={`w-4 h-4 ${modalTargetType === 'internal' ? 'text-accent' : 'text-ink-faint'}`} weight="bold" />
+                            <span className={`text-xs font-semibold ${modalTargetType === 'internal' ? 'text-ink' : 'text-ink-muted'}`}>容器内部网络</span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">推荐</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${modalTargetType === 'internal' ? 'bg-accent' : 'bg-paper-4'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${modalTargetType === 'internal' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
                             {modalTargetType === 'internal' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
-                        <p className="text-[11px] text-ink-muted leading-relaxed">
+                        <p className={`text-[11px] leading-relaxed ${modalTargetType === 'internal' ? 'text-ink-muted' : 'text-ink-faint'}`}>
                           直通容器服务内网通信，无需向宿主机暴露端口，网络暴露面最小更安全
                         </p>
                       </div>
@@ -4125,23 +4295,23 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       role="radio"
                       aria-checked={modalTargetType === 'host'}
                       onClick={() => setModalTargetType('host')}
-                      className={`p-3.5 sm:p-4 text-left rounded-xl transition-all relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] ${
+                      className={`p-3.5 sm:p-4 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] border ${
                         modalTargetType === 'host'
-                          ? 'bg-paper-4/80 shadow-sm'
-                          : 'bg-paper-3 hover:bg-paper-4/40'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-1.5">
-                            <HardDrives className={`w-4 h-4 ${modalTargetType === 'host' ? 'text-accent' : 'text-ink-muted'}`} weight="bold" />
-                            <span className="text-xs font-semibold text-ink">宿主机端口</span>
+                            <HardDrives className={`w-4 h-4 ${modalTargetType === 'host' ? 'text-accent' : 'text-ink-faint'}`} weight="bold" />
+                            <span className={`text-xs font-semibold ${modalTargetType === 'host' ? 'text-ink' : 'text-ink-muted'}`}>宿主机端口</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${modalTargetType === 'host' ? 'bg-accent' : 'bg-paper-4'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${modalTargetType === 'host' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
                             {modalTargetType === 'host' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
-                        <p className="text-[11px] text-ink-muted leading-relaxed">
+                        <p className={`text-[11px] leading-relaxed ${modalTargetType === 'host' ? 'text-ink-muted' : 'text-ink-faint'}`}>
                           反向代理至主机 127.0.0.1 映射端口，适合需要本地端口调试的场景
                         </p>
                       </div>
@@ -4176,7 +4346,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   type="button"
                   onClick={() => setIsAddDomainModalOpen(false)}
                   disabled={isBindingDomain}
-                  className="w-full sm:w-auto py-2.5 sm:py-2 px-4 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer text-center select-none sm:order-first"
+                  className="btn-vessel-secondary w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl cursor-pointer text-center select-none sm:order-first"
                 >
                   取消
                 </button>
@@ -4282,8 +4452,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   spellCheck={false}
                   autoFocus
                   className={clsx(
-                    "w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-ink font-mono min-h-[46px] transition-all focus:outline-none",
-                    isDeleteConfirmed && "ring-2 ring-rose-500/20"
+                    "w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-ink font-mono min-h-[46px] shadow-sm transition-colors placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/80 dark:focus:border-rose-500/70",
+                    isDeleteConfirmed && "border-rose-500/80"
                   )}
                 />
               </div>
@@ -4363,7 +4533,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 value={restoreConfirmInput}
                 onChange={(e) => setRestoreConfirmInput(e.target.value)}
                 placeholder={app?.id}
-                className="w-full bg-paper-3 rounded-xl px-3.5 py-2 text-xs text-ink font-mono focus:outline-none"
+                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono min-h-[42px] shadow-sm transition-colors placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30"
               />
             </div>
 
@@ -4382,7 +4552,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 type="button"
                 onClick={() => setRestoringBackup(null)}
                 disabled={isRestoringBackup}
-                className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-3 sm:hover:bg-paper-4 sm:rounded-xl text-center transition-colors cursor-pointer select-none"
+                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
               >
                 取消
               </button>
@@ -4420,7 +4590,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 type="button"
                 onClick={() => setDeletingBackup(null)}
                 disabled={isDeletingBackup}
-                className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-3 sm:hover:bg-paper-4 sm:rounded-xl text-center transition-colors cursor-pointer select-none"
+                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
               >
                 取消
               </button>
@@ -4471,7 +4641,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               type="button"
               onClick={() => handleCreate(false)}
               disabled={isSubmitting}
-              className="w-1/3 min-h-[44px] bg-paper-3 hover:bg-paper-4 text-ink font-medium text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-vessel-secondary w-1/3 min-h-[44px] font-medium text-xs rounded-xl cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? '保存中...' : '保存草稿'}
             </button>

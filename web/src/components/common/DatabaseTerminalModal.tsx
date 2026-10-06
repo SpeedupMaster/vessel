@@ -350,40 +350,40 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
       {/* Terminal Window Panel */}
       <div
         ref={panelRef}
-        className="relative w-full max-w-5xl h-[680px] max-h-[92vh] bg-[#0c0d12] rounded-3xl shadow-2xl z-10 flex flex-col overflow-hidden text-zinc-200 font-sans"
+        className="relative w-full max-w-5xl h-[680px] max-h-[92vh] bg-paper-2 dark:bg-[#0c0d12] rounded-3xl shadow-2xl z-10 flex flex-col overflow-hidden text-ink dark:text-zinc-200 font-sans border border-line/40 dark:border-transparent transition-colors"
       >
         {/* Terminal Header */}
-        <div className="px-5 py-3.5 bg-[#12131a] flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="px-5 py-3.5 bg-paper-3 dark:bg-[#12131a] flex items-center justify-between gap-3 flex-shrink-0 transition-colors">
           {/* Left: Window Title & Meta */}
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-zinc-800 flex items-center justify-center text-zinc-300 font-mono text-xs font-bold">
+            <div className="w-6 h-6 rounded-md bg-paper-4 dark:bg-zinc-800 flex items-center justify-center text-ink dark:text-zinc-300 font-mono text-xs font-bold">
               &gt;_
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-xs sm:text-sm text-zinc-100 font-mono tracking-tight">
+              <span className="font-semibold text-xs sm:text-sm text-ink dark:text-zinc-100 font-mono tracking-tight">
                 {app.name}
               </span>
-              <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+              <span className="text-[11px] text-ink-muted dark:text-zinc-400 font-mono hidden sm:inline">
                 数据库终端
               </span>
             </div>
 
             <div className="flex items-center gap-1.5 ml-1">
-              <span className="px-2 py-0.5 rounded-lg text-[11px] font-mono bg-zinc-800 text-zinc-300">
+              <span className="px-2 py-0.5 rounded-lg text-[11px] font-mono bg-paper-4 dark:bg-zinc-800 text-ink dark:text-zinc-300">
                 {dbInfo.name}
               </span>
 
               <span
                 className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-mono font-medium ${
                   isRunning
-                    ? 'bg-emerald-950/50 text-emerald-400'
-                    : 'bg-zinc-800 text-zinc-400'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'
+                    : 'bg-paper-4 dark:bg-zinc-800 text-ink-muted dark:text-zinc-400'
                 }`}
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'
+                    isRunning ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-ink-muted/50 dark:bg-zinc-500'
                   }`}
                 />
                 {isRunning ? '运行中' : '已停止'}
@@ -394,7 +394,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
           {/* Right: Controls & Mode Switch */}
           <div className="flex items-center gap-2">
             {/* Mode Segmented Switcher */}
-            <div className="flex items-center p-1 rounded-xl bg-zinc-900 text-[11px] font-medium font-mono">
+            <div className="flex items-center p-1 rounded-xl bg-paper-4 dark:bg-zinc-900 text-[11px] font-medium font-mono">
               <button
                 type="button"
                 onClick={() => {
@@ -403,11 +403,11 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                 }}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   mode === 'db'
-                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-paper-2 dark:bg-zinc-800 text-ink dark:text-zinc-100 shadow-sm'
+                    : 'text-ink-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
-                <Database className="w-3 h-3 text-emerald-400" />
+                <Database className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
                 <span>数据库 CLI</span>
               </button>
               <button
@@ -418,11 +418,11 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                 }}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                   mode === 'shell'
-                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-paper-2 dark:bg-zinc-800 text-ink dark:text-zinc-100 shadow-sm'
+                    : 'text-ink-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
-                <Terminal className="w-3 h-3 text-cyan-400" />
+                <Terminal className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
                 <span>容器 Shell</span>
               </button>
             </div>
@@ -432,16 +432,16 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowQuickMenu(!showQuickMenu)}
-                className="px-3 py-1.5 text-xs font-mono font-medium text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-xs font-mono font-medium text-ink dark:text-zinc-300 hover:text-ink dark:hover:text-white bg-paper-4 hover:bg-paper-3 dark:bg-zinc-900 dark:hover:bg-zinc-800 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="选择并执行快捷预设指令"
               >
                 <span>快捷指令</span>
-                <CaretDown className={`w-3 h-3 text-zinc-400 transition-transform ${showQuickMenu ? 'rotate-180' : ''}`} />
+                <CaretDown className={`w-3 h-3 text-ink-muted dark:text-zinc-400 transition-transform ${showQuickMenu ? 'rotate-180' : ''}`} />
               </button>
 
               {showQuickMenu && (
-                <div className="absolute right-0 mt-1.5 w-72 bg-[#161720] rounded-2xl shadow-2xl p-1.5 z-30 font-mono text-xs">
-                  <div className="px-3 py-1.5 text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
+                <div className="absolute right-0 mt-1.5 w-72 bg-paper-2 dark:bg-[#161720] border border-line/60 dark:border-zinc-800 rounded-2xl shadow-2xl p-1.5 z-30 font-mono text-xs">
+                  <div className="px-3 py-1.5 text-[10px] text-ink-muted dark:text-zinc-500 uppercase tracking-wider mb-1">
                     {mode === 'db' ? `${dbInfo.name} 预设指令` : '容器系统指令'}
                   </div>
                   {quickCommands.map((item, idx) => (
@@ -449,12 +449,12 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                       key={idx}
                       type="button"
                       onClick={() => handleExecute(item.cmd)}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-800/80 rounded-lg flex flex-col gap-0.5 transition-colors cursor-pointer group"
+                      className="w-full text-left px-3 py-2 hover:bg-paper-3 dark:hover:bg-zinc-800/80 rounded-lg flex flex-col gap-0.5 transition-colors cursor-pointer group"
                     >
-                      <div className="text-zinc-200 group-hover:text-white font-medium text-xs">
+                      <div className="text-ink dark:text-zinc-200 group-hover:text-ink dark:group-hover:text-white font-medium text-xs">
                         {item.label}
                       </div>
-                      <div className="text-[11px] text-emerald-400/90 dark:text-emerald-400 truncate">
+                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate">
                         {item.cmd}
                       </div>
                     </button>
@@ -470,7 +470,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                 setHistory([]);
                 inputRef.current?.focus();
               }}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/70 rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-4 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/70 rounded-lg transition-colors cursor-pointer"
               title="清空屏幕 (Ctrl+L)"
             >
               <Trash className="w-3.5 h-3.5" />
@@ -481,17 +481,17 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
               type="button"
               onClick={handleCopyOutput}
               disabled={history.length === 0}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/70 rounded-lg transition-colors cursor-pointer disabled:opacity-30"
+              className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-4 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/70 rounded-lg transition-colors cursor-pointer disabled:opacity-30"
               title="复制终端输出"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
 
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer ml-0.5"
+              className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-4 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer ml-0.5"
               aria-label="关闭终端"
             >
               <X className="w-4 h-4" />
@@ -502,24 +502,24 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
         {/* Terminal Screen Body */}
         <div
           onClick={() => inputRef.current?.focus()}
-          className="flex-1 bg-[#090a0f] p-4 sm:p-5 font-mono text-xs sm:text-[13px] leading-relaxed overflow-y-auto space-y-2 select-text cursor-text no-scrollbar"
+          className="flex-1 bg-paper-1/40 dark:bg-[#090a0f] p-4 sm:p-5 font-mono text-xs sm:text-[13px] leading-relaxed overflow-y-auto space-y-2 select-text cursor-text no-scrollbar transition-colors"
         >
           {/* CLI Welcome Banner */}
-          <div className="text-zinc-500 text-xs leading-relaxed space-y-0.5 pb-2">
-            <div className="text-zinc-400 font-medium">
+          <div className="text-ink-muted dark:text-zinc-500 text-xs leading-relaxed space-y-0.5 pb-2">
+            <div className="text-ink dark:text-zinc-400 font-semibold">
               Vessel Terminal 1.0 — {dbInfo.name} ({mode === 'db' ? `Interactive ${dbInfo.defaultCli}` : '/bin/sh'})
             </div>
             <div>
-              Target service container: <span className="text-zinc-300">database</span> | Status:{' '}
-              <span className={isRunning ? 'text-emerald-400' : 'text-zinc-400'}>
+              Target service container: <span className="text-ink dark:text-zinc-300 font-medium">database</span> | Status:{' '}
+              <span className={isRunning ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-muted dark:text-zinc-400'}>
                 {isRunning ? 'running' : 'stopped'}
               </span>
             </div>
-            <div className="text-zinc-600">
+            <div className="text-ink-faint dark:text-zinc-600">
               Type &quot;help&quot; for instructions, &quot;\q&quot; or &quot;exit&quot; to leave, or select from &quot;快捷指令&quot; above.
             </div>
             {!isRunning && (
-              <div className="text-amber-500/90 pt-1">
+              <div className="text-amber-600 dark:text-amber-500/90 pt-1">
                 [vessel] 注意: 容器当前未运行，请先在控制台点击「部署」或「启动」容器后再执行命令。
               </div>
             )}
@@ -529,20 +529,20 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
           {history.map((item) => (
             <div key={item.id} className="space-y-1">
               {/* Command line */}
-              <div className="flex items-center gap-2 text-zinc-400 pt-1">
-                <span className="text-zinc-600 text-[10px] select-none font-mono">[{item.time}]</span>
-                <span className={item.prompt.includes('#') ? 'text-emerald-400 font-bold' : 'text-cyan-400 font-bold'}>
+              <div className="flex items-center gap-2 text-ink-muted dark:text-zinc-400 pt-1">
+                <span className="text-ink-faint dark:text-zinc-600 text-[10px] select-none font-mono">[{item.time}]</span>
+                <span className={item.prompt.includes('#') ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-cyan-600 dark:text-cyan-400 font-bold'}>
                   {item.prompt}
                 </span>
-                <span className="text-zinc-100 font-semibold">{item.command}</span>
+                <span className="text-ink dark:text-zinc-100 font-semibold">{item.command}</span>
               </div>
 
               {/* Command output */}
               <div
                 className={`pl-4 whitespace-pre-wrap ${
                   item.isError
-                    ? 'text-rose-400/90 border-l border-rose-500/50 pl-3 my-0.5'
-                    : 'text-zinc-300 leading-relaxed'
+                    ? 'text-rose-600 dark:text-rose-400/90 border-l border-rose-500/50 pl-3 my-0.5'
+                    : 'text-ink dark:text-zinc-300 leading-relaxed'
                 }`}
               >
                 {item.output}
@@ -552,9 +552,9 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
 
           {/* Currently executing indicator */}
           {isExecuting && (
-            <div className="flex items-center gap-2 text-zinc-400 pl-4 py-1">
-              <CircleNotch className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-              <span className="text-xs text-zinc-500 font-mono">执行中...</span>
+            <div className="flex items-center gap-2 text-ink-muted dark:text-zinc-400 pl-4 py-1">
+              <CircleNotch className="w-3.5 h-3.5 animate-spin text-emerald-500 dark:text-emerald-400" />
+              <span className="text-xs text-ink-muted dark:text-zinc-500 font-mono">执行中...</span>
             </div>
           )}
 
@@ -563,10 +563,10 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
         </div>
 
         {/* Terminal Input Bar */}
-        <div className="px-5 py-3.5 bg-[#101117] flex items-center gap-2 flex-shrink-0">
+        <div className="px-5 py-3.5 bg-paper-3 dark:bg-[#101117] flex items-center gap-2 flex-shrink-0 transition-colors">
           <span
             className={`font-mono text-xs font-bold select-none ${
-              mode === 'db' ? 'text-emerald-400' : 'text-cyan-400'
+              mode === 'db' ? 'text-emerald-600 dark:text-emerald-400' : 'text-cyan-600 dark:text-cyan-400'
             }`}
           >
             {currentPrompt}
@@ -584,7 +584,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
                 ? `输入 ${dbInfo.name} 语句 (例: ${quickCommands[0]?.cmd || 'SELECT 1;'})`
                 : '输入 Linux 命令 (例: ls -la, df -h, env)'
             }
-            className="flex-1 bg-transparent border-none text-zinc-100 font-mono text-xs sm:text-[13px] focus:outline-none placeholder:text-zinc-600 disabled:opacity-50"
+            className="flex-1 bg-transparent border-none text-ink dark:text-zinc-100 font-mono text-xs sm:text-[13px] focus:outline-none placeholder:text-ink-faint dark:placeholder:text-zinc-600 disabled:opacity-50"
             autoFocus
           />
 
@@ -592,13 +592,13 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
             type="button"
             onClick={() => handleExecute()}
             disabled={!commandInput.trim() || isExecuting}
-            className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-mono flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:hover:bg-zinc-800 cursor-pointer"
+            className="px-2.5 py-1 rounded-md bg-paper-4 hover:bg-paper-2 text-ink dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 dark:hover:text-white text-xs font-mono flex items-center gap-1.5 transition-colors disabled:opacity-30 disabled:hover:bg-paper-4 dark:disabled:hover:bg-zinc-800 cursor-pointer"
             title="执行命令 (Enter)"
           >
             {isExecuting ? (
-              <CircleNotch className="w-3 h-3 animate-spin text-zinc-400" />
+              <CircleNotch className="w-3 h-3 animate-spin text-ink-muted dark:text-zinc-400" />
             ) : (
-              <Play className="w-3 h-3 text-zinc-300" weight="fill" />
+              <Play className="w-3 h-3 text-ink dark:text-zinc-300" weight="fill" />
             )}
             <span className="text-[11px]">执行</span>
           </button>

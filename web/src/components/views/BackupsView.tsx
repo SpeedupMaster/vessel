@@ -312,8 +312,8 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
-                    R2 S3 API Endpoint *
+                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                    R2 S3 API Endpoint <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <input
                     type="text"
@@ -323,13 +323,13 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
-                    Bucket 存储桶名称 *
+                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                    Bucket 存储桶名称 <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <input
                     type="text"
@@ -339,13 +339,13 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
-                    Access Key ID *
+                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                    Access Key ID <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <input
                     type="text"
@@ -355,13 +355,13 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
-                    Secret Access Key *
+                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                    Secret Access Key <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -372,12 +372,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
-                      className="w-full bg-paper-3 rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                      className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                     />
                     <button
                       type="button"
                       onClick={() => setShowSecret(!showSecret)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5 cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5 cursor-pointer rounded-lg hover:bg-paper-3"
                       title={showSecret ? '隐藏密钥' : '显示密钥'}
                     >
                       {showSecret ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -387,7 +387,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
                 {/* CRON Schedule with Quick-pick Chips */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs uppercase text-ink-muted font-normal">
+                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300">
                     Cron 定时周期表达式
                   </label>
                   <input
@@ -398,12 +398,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                   {/* Quick-pick Chips Container */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
                     <span className="text-[11px] text-ink-muted flex-shrink-0 flex items-center gap-1 mr-0.5">
-                      <Clock className="w-3 h-3 text-ink-muted" />
+                      <Clock className="w-3.5 h-3.5 text-ink-muted" />
                       快捷填入:
                     </span>
                     {BACKUP_CRON_PRESETS.map((preset) => {
@@ -421,8 +421,8 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                           className={clsx(
                             'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
                             isSelected
-                              ? 'bg-accent text-accent-contrast font-medium'
-                              : 'bg-paper-3 text-ink-muted hover:text-ink hover:bg-paper-4'
+                              ? 'bg-accent text-accent-contrast font-medium shadow-sm'
+                              : 'bg-paper-3/80 hover:bg-paper-4 text-ink-muted hover:text-ink border border-zinc-200/50 dark:border-white/5'
                           )}
                         >
                           {preset.label}
@@ -434,8 +434,8 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
                 {/* Retention Count with numeric constraint */}
                 <div>
-                  <label className="block text-xs uppercase text-ink-muted font-normal mb-1.5">
-                    保留版本数 (超过自动清理旧归档)
+                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                    保留版本数 <span className="text-ink-muted font-normal">(超过自动清理旧归档)</span>
                   </label>
                   <NumberInput
                     min={1}
@@ -444,7 +444,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     onChange={setRetentionCount}
                     unit="份"
                   />
-                  <span className="text-[11px] text-ink-faint block mt-1">
+                  <span className="text-[11px] text-ink-faint block mt-1.5">
                     系统将仅保留最新的 {retentionCount} 个备份，超出的旧版本将在下一次备份成功后自动从 R2 清理。
                   </span>
                 </div>
@@ -513,31 +513,39 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         </form>
       </div>
 
-      {/* Backup History Table - Mobile Stacked Layout (Rescue Squished UI) */}
-      <div className="card-vessel overflow-hidden">
-        <div className="flex items-center justify-between pb-3 sm:pb-4">
-          <div className="flex items-center gap-2.5">
-            <h4 className="text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-bold tracking-wider">
-              归档版本历史记录 ({backups.length})
-            </h4>
-            {backups.length > 0 && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted font-mono">
-                保留策略: 最新 {retentionCount} 个
+      {/* Backup History Card */}
+      <div className="card-vessel p-5 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h4 className="text-sm font-semibold text-ink font-sans">
+                归档版本历史记录
+              </h4>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted font-mono font-medium">
+                {backups.length}
               </span>
-            )}
+            </div>
+            <p className="text-xs text-ink-muted mt-1">
+              平台系统级灾备快照与数据库转储归档
+              {backups.length > 0 && (
+                <span className="ml-1 text-ink-faint">
+                  · 自动保留最新 {retentionCount} 份
+                </span>
+              )}
+            </p>
           </div>
         </div>
 
         {backups.length === 0 ? (
-          <div className="py-16 text-center text-ink-muted text-xs">
+          <div className="py-12 text-center text-ink-muted text-xs">
             暂无备份历史。点击上方「立即执行系统快照」或在应用详情中进行备份。
           </div>
         ) : (
-          <div className="space-y-2.5 pt-1">
+          <div className="space-y-3">
             {backups.map((b) => (
               <div
                 key={b.id}
-                className="p-4 sm:p-5 space-y-2.5 rounded-2xl bg-paper-2/60 hover:bg-paper-3/80 transition-colors"
+                className="p-4 sm:p-5 space-y-2.5 rounded-2xl bg-paper-3/40 hover:bg-paper-3/70 transition-colors"
               >
                 {/* 行 1: 标题与状态标签 */}
                 <div className="flex items-start justify-between gap-2.5">
@@ -662,7 +670,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 }}
                 placeholder={deletingBackup.fileName}
                 autoFocus
-                className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono focus:ring-2 focus:ring-rose-500/20 focus:outline-none transition-all"
+                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/70 dark:placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/80 dark:focus:border-rose-500/70 transition-colors shadow-sm"
               />
             </div>
 
@@ -702,7 +710,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 type="button"
                 onClick={() => setDeletingBackup(null)}
                 disabled={isDeleting}
-                className="order-2 sm:order-1 w-full sm:w-auto min-h-[42px] px-4 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 rounded-xl text-center transition-colors cursor-pointer select-none"
+                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto min-h-[42px] px-4 py-2 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
               >
                 取消
               </button>
@@ -771,7 +779,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 }}
                 placeholder="确认恢复 或 RESTORE"
                 autoFocus
-                className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/70 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
               />
             </div>
 
@@ -811,7 +819,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 type="button"
                 onClick={() => setRestoringBackup(null)}
                 disabled={isRestoring}
-                className="order-2 sm:order-1 w-full sm:w-auto min-h-[42px] px-4 py-2 text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 rounded-xl text-center transition-colors cursor-pointer select-none"
+                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto min-h-[42px] px-4 py-2 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
               >
                 取消
               </button>

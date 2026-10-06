@@ -174,9 +174,9 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
           <div className="grid grid-cols-1 gap-2.5">
             {/* Specific Database Option */}
             <label
-              className={`p-3.5 rounded-2xl transition-all cursor-pointer flex items-start gap-3 ${
+              className={`p-3.5 rounded-2xl transition-colors cursor-pointer flex items-start gap-3 ${
                 scope === 'specific'
-                  ? 'bg-paper-3 ring-2 ring-accent'
+                  ? 'bg-paper-3 ring-1 ring-zinc-400 dark:ring-white/30'
                   : 'bg-paper-3/60 hover:bg-paper-3'
               }`}
             >
@@ -204,9 +204,9 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
 
             {/* All Databases Option */}
             <label
-              className={`p-3.5 rounded-2xl transition-all cursor-pointer flex items-start gap-3 ${
+              className={`p-3.5 rounded-2xl transition-colors cursor-pointer flex items-start gap-3 ${
                 scope === 'all'
-                  ? 'bg-paper-3 ring-2 ring-accent'
+                  ? 'bg-paper-3 ring-1 ring-zinc-400 dark:ring-white/30'
                   : 'bg-paper-3/60 hover:bg-paper-3'
               }`}
             >
@@ -278,7 +278,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                 value={customDb}
                 onChange={(e) => setCustomDb(e.target.value)}
                 placeholder="或输入自定义数据库名称 (例如: app_db)"
-                className="w-full bg-paper-4 rounded-xl px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink-faint focus:outline-none transition-colors"
+                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                 required={scope === 'specific'}
               />
             </div>
@@ -346,7 +346,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                     value={cronExpr}
                     onChange={(e) => setCronExpr(e.target.value)}
                     placeholder="0 2 * * *"
-                    className="w-full bg-paper-4 rounded-xl px-3.5 py-2 text-xs font-mono text-ink focus:outline-none transition-colors"
+                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                   <p className="text-[10px] text-accent mt-1 font-sans">
                     {getCronDescription(cronExpr)}
@@ -422,7 +422,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="order-3 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-3 sm:hover:bg-paper-4 sm:rounded-xl text-center transition-colors cursor-pointer select-none"
+            className="btn-vessel-secondary order-3 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
           >
             取消
           </button>

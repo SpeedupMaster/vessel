@@ -139,7 +139,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
         ref={gutterRef}
         aria-hidden="true"
         className={clsx(
-          'select-none py-3 px-3 text-ink-muted text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem]',
+          'select-none py-3 px-3 text-ink-muted text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem] border-r border-zinc-200/60 dark:border-white/5',
           borderless ? 'bg-paper-3/20' : 'bg-paper-2'
         )}
       >
@@ -188,7 +188,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
           autoCorrect="off"
           spellCheck={false}
           className={clsx(
-            'w-full h-full p-3 m-0 bg-transparent font-mono text-xs leading-[1.625rem] resize-none md:resize-y outline-none overflow-auto whitespace-pre font-normal cursor-text',
+            'w-full h-full p-3 m-0 bg-transparent font-mono text-xs leading-[1.625rem] resize-none outline-none overflow-auto whitespace-pre font-normal cursor-text',
             isHighlighting
               ? 'relative z-10 text-transparent caret-ink dark:caret-white selection:bg-accent/25 selection:text-transparent'
               : 'text-ink'

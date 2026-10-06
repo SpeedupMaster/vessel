@@ -346,7 +346,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 }}
                 placeholder={deletingDomain.domain}
                 autoFocus
-                className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/80 dark:focus:border-rose-500/70 transition-colors shadow-sm"
               />
             </div>
 
@@ -386,7 +386,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 type="button"
                 onClick={() => setDeletingDomain(null)}
                 disabled={isDeleting}
-                className="order-2 sm:order-1 w-full sm:w-auto min-h-[44px] px-4 py-2 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl text-center transition-colors cursor-pointer select-none"
+                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto min-h-[44px] px-4 py-2 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
               >
                 取消
               </button>
@@ -460,8 +460,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                       <span className="text-[11px] text-ink-faint">支持主域名或子域名</span>
                     </div>
 
-                    <div className="flex items-stretch rounded-xl bg-paper-3 overflow-hidden group focus-within:ring-1 focus-within:ring-ink transition-all">
-                      <div className="bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none shrink-0">
+                    <div className="flex items-stretch rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group focus-within:border-zinc-400 dark:focus-within:border-white/30 transition-colors">
+                      <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none shrink-0 border-r border-zinc-200 dark:border-white/10">
                         <LockKey className="w-3.5 h-3.5" weight="bold" />
                         <span>https://</span>
                       </div>
@@ -478,7 +478,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                           setDomainInput(val);
                         }}
                         placeholder="app.example.com"
-                        className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint focus:outline-none min-h-[44px]"
+                        className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none min-h-[44px]"
                         autoFocus
                       />
                     </div>
@@ -529,7 +529,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                             value={serviceNameInput}
                             onChange={(e) => setServiceNameInput(e.target.value)}
                             placeholder="例如: web, app, n8n"
-                            className="w-full min-h-[44px] bg-paper-3 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                            className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                           />
                         </div>
 
@@ -545,7 +545,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                             value={targetPortInput}
                             onChange={(e) => setTargetPortInput(e.target.value.replace(/[^0-9]/g, ''))}
                             placeholder="例如: 3000, 5678, 80"
-                            className="w-full min-h-[44px] bg-paper-3 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-colors"
+                            className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                           />
                         </div>
                       </div>
@@ -557,10 +557,10 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                         </label>
                         <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 text-xs">
                           <label
-                            className={`p-3.5 rounded-2xl cursor-pointer flex flex-col gap-1.5 transition-all select-none ${
+                            className={`p-3.5 rounded-2xl cursor-pointer flex flex-col gap-1.5 transition-colors select-none border ${
                               targetTypeInput === 'internal'
-                                ? 'bg-paper-3 text-ink font-medium ring-1 ring-ink/20'
-                                : 'bg-paper-3/40 text-ink-muted hover:bg-paper-3/60'
+                                ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 text-ink shadow-sm'
+                                : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 text-ink-muted hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
                             }`}
                           >
                             <div className="flex items-center gap-2">
@@ -569,20 +569,20 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                                 name="targetType"
                                 checked={targetTypeInput === 'internal'}
                                 onChange={() => setTargetTypeInput('internal')}
-                                className="text-ink focus:ring-ink"
+                                className="text-accent focus:ring-accent"
                               />
-                              <strong className="text-ink text-xs">容器内部网络 (推荐)</strong>
+                              <strong className={`text-xs ${targetTypeInput === 'internal' ? 'text-ink font-semibold' : 'text-ink/75 font-medium'}`}>容器内部网络 (推荐)</strong>
                             </div>
-                            <span className="text-[11px] text-ink-faint pl-5 leading-relaxed">
+                            <span className={`text-[11px] pl-5 leading-relaxed ${targetTypeInput === 'internal' ? 'text-ink-muted' : 'text-ink-faint'}`}>
                               直通 vessel-net 内部网络，宿主机无需暴露端口
                             </span>
                           </label>
 
                           <label
-                            className={`p-3.5 rounded-2xl cursor-pointer flex flex-col gap-1.5 transition-all select-none ${
+                            className={`p-3.5 rounded-2xl cursor-pointer flex flex-col gap-1.5 transition-colors select-none border ${
                               targetTypeInput === 'host'
-                                ? 'bg-paper-3 text-ink font-medium ring-1 ring-ink/20'
-                                : 'bg-paper-3/40 text-ink-muted hover:bg-paper-3/60'
+                                ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 text-ink shadow-sm'
+                                : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 text-ink-muted hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
                             }`}
                           >
                             <div className="flex items-center gap-2">
@@ -591,11 +591,11 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                                 name="targetType"
                                 checked={targetTypeInput === 'host'}
                                 onChange={() => setTargetTypeInput('host')}
-                                className="text-ink focus:ring-ink"
+                                className="text-accent focus:ring-accent"
                               />
-                              <strong className="text-ink text-xs">宿主机端口转发</strong>
+                              <strong className={`text-xs ${targetTypeInput === 'host' ? 'text-ink font-semibold' : 'text-ink/75 font-medium'}`}>宿主机端口转发</strong>
                             </div>
-                            <span className="text-[11px] text-ink-faint pl-5 leading-relaxed">
+                            <span className={`text-[11px] pl-5 leading-relaxed ${targetTypeInput === 'host' ? 'text-ink-muted' : 'text-ink-faint'}`}>
                               代理至 127.0.0.1 映射端口
                             </span>
                           </label>
@@ -621,7 +621,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                     type="button"
                     onClick={() => setIsAddOpen(false)}
                     disabled={loading}
-                    className="w-full sm:w-auto min-h-[44px] px-4 bg-paper-3 hover:bg-paper-4 text-ink text-xs font-medium rounded-xl transition-colors cursor-pointer select-none text-center sm:order-first"
+                    className="btn-vessel-secondary w-full sm:w-auto min-h-[44px] px-4 text-xs font-medium rounded-xl cursor-pointer select-none text-center sm:order-first"
                   >
                     取消
                   </button>

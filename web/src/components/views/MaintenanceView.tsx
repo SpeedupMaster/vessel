@@ -273,8 +273,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
               {/* Retention hours with numeric keypad constraint */}
               <div className="pt-1">
-                <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
-                  未使用镜像安全冷却保留期 (小时):
+                <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                  未使用镜像安全冷却保留期 (小时)
                 </label>
                 <NumberInput
                   min={1}
@@ -282,15 +282,15 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   onChange={setUnusedRetentionHours}
                   unit="小时"
                 />
-                <span className="text-[11px] text-ink-muted/70 dark:text-zinc-500 block mt-1">
+                <span className="text-[11px] text-ink-faint block mt-1.5">
                   只有超过该时长且未被任何容器引用的镜像才会被清理，防止误删热备镜像。
                 </span>
               </div>
 
               {/* CRON expression with quick-pick chips */}
               <div className="space-y-1.5 pt-1">
-                <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal">
-                  定时清理 Cron 表达式:
+                <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300">
+                  定时清理 Cron 表达式
                 </label>
                 <input
                   type="text"
@@ -300,12 +300,12 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   value={pruneSchedule}
                   onChange={(e) => setPruneSchedule(e.target.value)}
                   placeholder="0 4 * * 0"
-                  className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                  className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                 />
                 {/* Horizontal Quick-pick Chips */}
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                  <span className="text-[11px] text-ink-muted/70 flex-shrink-0 flex items-center gap-1 mr-0.5">
-                    <Clock className="w-3 h-3 text-ink-muted/80" />
+                  <span className="text-[11px] text-ink-muted flex-shrink-0 flex items-center gap-1 mr-0.5">
+                    <Clock className="w-3.5 h-3.5 text-ink-muted" />
                     快捷填入:
                   </span>
                   {PRUNE_PRESETS.map((preset) => {
@@ -321,10 +321,10 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                           }
                         }}
                         className={clsx(
-                          'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0',
+                          'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
                           isSelected
                             ? 'bg-accent text-accent-contrast shadow-sm font-medium'
-                            : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink'
+                            : 'bg-paper-3/80 hover:bg-paper-4 text-ink-muted hover:text-ink border border-zinc-200/50 dark:border-white/5'
                         )}
                       >
                         {preset.label}
@@ -401,8 +401,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
               {/* CRON expression with quick-pick chips */}
               <div className="space-y-1.5 pt-1">
-                <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal">
-                  巡检周期 Cron 表达式:
+                <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300">
+                  巡检周期 Cron 表达式
                 </label>
                 <input
                   type="text"
@@ -412,7 +412,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   value={checkSchedule}
                   onChange={(e) => setCheckSchedule(e.target.value)}
                   placeholder="0 */6 * * *"
-                  className="w-full bg-paper-3 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:outline-none focus:ring-1 focus:ring-ink transition-all"
+                  className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                 />
                 {/* Horizontal Quick-pick Chips */}
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
@@ -433,10 +433,10 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                           }
                         }}
                         className={clsx(
-                          'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0',
+                          'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
                           isSelected
                             ? 'bg-accent text-accent-contrast shadow-sm font-medium'
-                            : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink'
+                            : 'bg-paper-3/80 hover:bg-paper-4 text-ink-muted hover:text-ink border border-zinc-200/50 dark:border-white/5'
                         )}
                       >
                         {preset.label}

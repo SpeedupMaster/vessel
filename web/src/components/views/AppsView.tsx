@@ -234,7 +234,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索受管应用 (名称 / ID)..."
-              className="w-full min-h-[44px] bg-paper-2 rounded-xl pl-10 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-ink font-sans transition-colors"
+              className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-10 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 font-sans transition-colors shadow-sm"
             />
             {search && (
               <button

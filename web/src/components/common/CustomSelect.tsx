@@ -103,17 +103,17 @@ export function CustomSelect<T extends string | number = string>({
 
   // Sizing for default variant
   const sizeClasses = {
-    xs: 'px-2 py-1 text-[11px]',
-    sm: 'px-2.5 py-1.5 text-xs',
-    md: 'px-3.5 py-2 text-xs',
+    xs: 'px-2 py-1 min-h-[32px] text-[11px]',
+    sm: 'px-2.5 py-1.5 min-h-[36px] text-xs',
+    md: 'px-3.5 py-2 min-h-[44px] text-xs sm:text-sm',
   }[size];
 
   // Base Trigger classes
   let triggerClasses = '';
   if (isPill) {
-    triggerClasses = `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer select-none focus:outline-none ${
+    triggerClasses = `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer select-none focus:outline-none ${
       isOpen
-        ? 'bg-paper-4 ring-2 ring-accent'
+        ? 'bg-paper-4 ring-1 ring-zinc-400 dark:ring-white/30'
         : 'bg-paper-3 hover:bg-paper-4'
     } ${disabled ? 'opacity-50 cursor-not-allowed bg-paper-2' : ''} ${buttonClassName}`;
   } else if (isGhost) {
@@ -122,8 +122,10 @@ export function CustomSelect<T extends string | number = string>({
     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`;
   } else {
     // Default form input mode
-    triggerClasses = `w-full bg-paper-3 hover:bg-paper-4/60 focus:bg-paper-4 rounded-xl flex items-center justify-between gap-2 text-left font-medium transition-colors cursor-pointer focus:outline-none ${
-      isOpen ? 'ring-2 ring-accent' : ''
+    triggerClasses = `w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm rounded-xl flex items-center justify-between gap-2 text-left font-medium transition-colors cursor-pointer focus:outline-none ${
+      isOpen
+        ? 'border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20'
+        : 'hover:border-zinc-300 dark:hover:border-white/20'
     } ${disabled ? 'opacity-60 cursor-not-allowed bg-paper-2' : ''} ${sizeClasses} ${buttonClassName}`;
   }
 

@@ -210,10 +210,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isCurrentEmpty}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder-ink-faint focus:outline-none font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none font-mono transition-colors',
                     isCurrentEmpty
-                      ? 'bg-rose-500/10'
-                      : 'bg-paper-3 focus:bg-paper-4'
+                      ? 'bg-rose-500/10 border border-rose-500/50 focus:border-rose-500/80 dark:focus:border-rose-500/70'
+                      : 'bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm focus:border-zinc-400 dark:focus:border-white/30'
                   )}
                 />
                 <button
@@ -261,10 +261,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isNewEmpty || isNewTooShort}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder-ink-faint focus:outline-none font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none font-mono transition-colors',
                     isNewEmpty || isNewTooShort
-                      ? 'bg-rose-500/10'
-                      : 'bg-paper-3 focus:bg-paper-4'
+                      ? 'bg-rose-500/10 border border-rose-500/50 focus:border-rose-500/80 dark:focus:border-rose-500/70'
+                      : 'bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm focus:border-zinc-400 dark:focus:border-white/30'
                   )}
                 />
                 <button
@@ -315,10 +315,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isConfirmEmpty || isConfirmMismatch}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder-ink-faint focus:outline-none font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none font-mono transition-colors',
                     isConfirmEmpty || isConfirmMismatch
-                      ? 'bg-rose-500/10'
-                      : 'bg-paper-3 focus:bg-paper-4'
+                      ? 'bg-rose-500/10 border border-rose-500/50 focus:border-rose-500/80 dark:focus:border-rose-500/70'
+                      : 'bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm focus:border-zinc-400 dark:focus:border-white/30'
                   )}
                 />
                 <button
@@ -391,7 +391,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDiscardConfirm(false)}
-                className="min-h-[36px] px-3 text-xs font-medium rounded-xl text-ink bg-paper-3 hover:bg-paper-4 transition-colors cursor-pointer"
+                className="btn-vessel-secondary min-h-[36px] px-3 text-xs font-medium rounded-xl cursor-pointer"
               >
                 继续编辑
               </button>
