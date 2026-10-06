@@ -63,13 +63,13 @@ export class DockerService {
     app: AppItem,
     onLog?: (chunk: string) => void
   ): Promise<{ success: boolean; error?: string }> {
-    const { composePath, appDir } = this.prepareAppFiles(app);
+    const { composePath, appDir, envPath } = this.prepareAppFiles(app);
 
     return new Promise((resolve) => {
       onLog?.(`[vessel] Initiating deployment for ${app.name} (${app.id})...\n`);
       onLog?.(`[vessel] Working directory: ${appDir}\n`);
 
-      const child = spawn('docker', ['compose', '-f', composePath, 'up', '-d', '--remove-orphans'], {
+      const child = spawn('docker', ['compose', '-f', composePath, '--env-file', envPath, 'up', '-d', '--remove-orphans'], {
         cwd: appDir,
         shell: true,
       });
@@ -187,7 +187,7 @@ export class DockerService {
    * Pull latest images and rebuild if requested
    */
   public async pullAndRebuild(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
-    const { composePath, appDir } = this.prepareAppFiles(app);
+    const { composePath, appDir, envPath } = this.prepareAppFiles(app);
     return new Promise((resolve) => {
       onLog?.(`[vessel] Pulling updated images for ${app.name}...\n`);
       const child = spawn('docker', ['compose', '-f', composePath, 'pull'], {
@@ -200,7 +200,7 @@ export class DockerService {
 
       child.on('close', async () => {
         onLog?.(`[vessel] Re-launching containers with new images...\n`);
-        const upChild = spawn('docker', ['compose', '-f', composePath, 'up', '-d', '--force-recreate'], {
+        const upChild = spawn('docker', ['compose', '-f', composePath, '--env-file', envPath, 'up', '-d', '--force-recreate'], {
           cwd: appDir,
           shell: true,
         });
@@ -221,7 +221,7 @@ export class DockerService {
    * Fresh volumes rebuild: docker compose down -v followed by docker compose up -d --build
    */
   public async freshVolumesRebuild(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
-    const { composePath, appDir } = this.prepareAppFiles(app);
+    const { composePath, appDir, envPath } = this.prepareAppFiles(app);
     return new Promise((resolve) => {
       onLog?.(`[vessel] ⚠️ Fresh Volumes triggered: destroying persistent volumes for ${app.name}...\n`);
       onLog?.(`[vessel] Executing: docker compose down -v --remove-orphans\n`);
@@ -235,7 +235,7 @@ export class DockerService {
 
       downChild.on('close', async () => {
         onLog?.(`[vessel] Starting clean deployment: docker compose up -d --build\n`);
-        const upChild = spawn('docker', ['compose', '-f', composePath, 'up', '-d', '--build'], {
+        const upChild = spawn('docker', ['compose', '-f', composePath, '--env-file', envPath, 'up', '-d', '--build'], {
           cwd: appDir,
           shell: true,
         });

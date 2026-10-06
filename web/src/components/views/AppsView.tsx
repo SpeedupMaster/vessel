@@ -409,6 +409,11 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onCreateDatabase={async (appData) => {
           const created = await onCreateApp(appData);
           if (created?.id) {
+            try {
+              await onDeploy(created.id);
+            } catch (err) {
+              console.warn('[Database] Auto-deploy deferred:', err);
+            }
             navigateTo('detail', created.id);
           }
           return created;

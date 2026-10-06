@@ -170,6 +170,12 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
     const finalDbName = dbName.trim() || currentOption.defaultDbName || 'app_db';
     const finalDbUser = dbUser.trim() || currentOption.defaultUser || 'root';
 
+    // Prevent MySQL/MariaDB official images from failing due to user being root
+    if ((selectedType === 'mysql' || selectedType === 'mariadb') && finalDbUser.toLowerCase() === 'root') {
+      setError(`${currentOption.label} 官方镜像限制：Database User 不能设置为 "root"（root 用户密码已由下方独立的 Database Root password 管理）。请指定其他普通用户名（如 ${currentOption.defaultUser}）或保持默认。`);
+      return;
+    }
+
     // Assemble Docker Compose YAML and .env
     let composeYaml = '';
     let envContent = '';
@@ -181,7 +187,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
     image: \${POSTGRES_IMAGE:-${imageToUse}}
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "\${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: \${POSTGRES_DB:-${finalDbName}}
       POSTGRES_USER: \${POSTGRES_USER:-${finalDbUser}}
@@ -193,6 +199,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
 POSTGRES_DB=${finalDbName}
 POSTGRES_USER=${finalDbUser}
 POSTGRES_PASSWORD=${dbPassword}
+POSTGRES_PORT=5432
 `;
         break;
 
@@ -202,7 +209,7 @@ POSTGRES_PASSWORD=${dbPassword}
     image: \${MONGO_IMAGE:-${imageToUse}}
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "\${MONGO_PORT:-27017}:27017"
     environment:
       MONGO_INITDB_DATABASE: \${MONGO_INITDB_DATABASE:-${finalDbName}}
       MONGO_INITDB_ROOT_USERNAME: \${MONGO_INITDB_ROOT_USERNAME:-${finalDbUser}}
@@ -214,6 +221,7 @@ POSTGRES_PASSWORD=${dbPassword}
 MONGO_INITDB_DATABASE=${finalDbName}
 MONGO_INITDB_ROOT_USERNAME=${finalDbUser}
 MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
+MONGO_PORT=27017
 `;
         break;
 
@@ -223,12 +231,14 @@ MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
     image: \${MARIADB_IMAGE:-${imageToUse}}
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "\${MARIADB_PORT:-3306}:3306"
     environment:
       MARIADB_DATABASE: \${MARIADB_DATABASE:-${finalDbName}}
       MARIADB_USER: \${MARIADB_USER:-${finalDbUser}}
       MARIADB_PASSWORD: \${MARIADB_PASSWORD}
       MARIADB_ROOT_PASSWORD: \${MARIADB_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: \${MARIADB_ROOT_PASSWORD}
+      MARIADB_ROOT_HOST: "%"
     volumes:
       - ./data:/var/lib/mysql
 `;
@@ -237,6 +247,8 @@ MARIADB_DATABASE=${finalDbName}
 MARIADB_USER=${finalDbUser}
 MARIADB_PASSWORD=${dbPassword}
 MARIADB_ROOT_PASSWORD=${dbRootPassword}
+MYSQL_ROOT_PASSWORD=${dbRootPassword}
+MARIADB_PORT=3306
 `;
         break;
 
@@ -246,12 +258,13 @@ MARIADB_ROOT_PASSWORD=${dbRootPassword}
     image: \${MYSQL_IMAGE:-${imageToUse}}
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "\${MYSQL_PORT:-3306}:3306"
     environment:
       MYSQL_DATABASE: \${MYSQL_DATABASE:-${finalDbName}}
       MYSQL_USER: \${MYSQL_USER:-${finalDbUser}}
       MYSQL_PASSWORD: \${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
     volumes:
       - ./data:/var/lib/mysql
 `;
@@ -260,6 +273,7 @@ MYSQL_DATABASE=${finalDbName}
 MYSQL_USER=${finalDbUser}
 MYSQL_PASSWORD=${dbPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
+MYSQL_PORT=3306
 `;
         break;
 
@@ -269,13 +283,14 @@ MYSQL_ROOT_PASSWORD=${dbRootPassword}
     image: \${REDIS_IMAGE:-${imageToUse}}
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "\${REDIS_PORT:-6379}:6379"
     command: redis-server --requirepass \${REDIS_PASSWORD}
     volumes:
       - ./data:/data
 `;
         envContent = `REDIS_IMAGE=${imageToUse}
 REDIS_PASSWORD=${dbPassword}
+REDIS_PORT=6379
 `;
         break;
 
@@ -285,7 +300,7 @@ REDIS_PASSWORD=${dbPassword}
     image: \${LIBSQL_IMAGE:-${imageToUse}}
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "\${LIBSQL_PORT:-8080}:8080"
     environment:
       SQLD_AUTH_TOKEN: \${SQLD_AUTH_TOKEN}
     volumes:
@@ -293,6 +308,7 @@ REDIS_PASSWORD=${dbPassword}
 `;
         envContent = `LIBSQL_IMAGE=${imageToUse}
 SQLD_AUTH_TOKEN=${dbPassword}
+LIBSQL_PORT=8080
 `;
         break;
     }
