@@ -35,18 +35,24 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
 }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   const memUsedGb = metrics.memUsedBytes / (1024 * 1024 * 1024);
   const memTotalGb = metrics.memTotalBytes / (1024 * 1024 * 1024);
   const isDockerOnline = metrics.dockerStatus === 'running';
 
-  // Close menu on click outside
+  // Close menu on click outside (check both desktop and mobile containers)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
+      const target = e.target as Node;
+      if (
+        (desktopMenuRef.current && desktopMenuRef.current.contains(target)) ||
+        (mobileMenuRef.current && mobileMenuRef.current.contains(target))
+      ) {
+        return;
       }
+      setUserMenuOpen(false);
     };
     if (userMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
@@ -105,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* User Account / Profile Button (Touch Target >= 44x44px) */}
         {user && (
-          <div className="relative" ref={menuRef}>
+          <div className="relative" ref={mobileMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="min-w-[44px] min-h-[44px] flex items-center justify-end p-1 rounded-lg text-ink transition-colors cursor-pointer select-none"
@@ -118,7 +124,10 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Dropdown (Right-aligned anchor, safe from viewport edges) */}
             {userMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-paper-2 border border-line shadow-xl py-1 z-30 animate-fade-in font-sans origin-top-right">
+              <div
+                onMouseDown={(e) => e.stopPropagation()}
+                className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-paper-2 border border-line shadow-xl py-1 z-30 animate-fade-in font-sans origin-top-right"
+              >
                 <div className="px-3.5 py-2.5 border-b border-line">
                   <p className="text-xs font-semibold text-ink truncate">{user.username}</p>
                   <p className="text-[10px] text-ink-muted">超级管理员</p>
@@ -126,6 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="py-1">
                   {onOpenChangePassword && (
                     <button
+                      type="button"
                       onClick={() => {
                         setUserMenuOpen(false);
                         onOpenChangePassword();
@@ -138,6 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
                   {onLogout && (
                     <button
+                      type="button"
                       onClick={() => {
                         setUserMenuOpen(false);
                         onLogout();
@@ -244,8 +255,9 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Admin User Account Dropdown */}
             {user && (
-              <div className="relative">
+              <div className="relative" ref={desktopMenuRef}>
                 <button
+                  type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-line bg-paper-2 hover:bg-paper-3 text-ink text-xs transition-colors cursor-pointer select-none"
                 >
@@ -257,7 +269,10 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-52 rounded-xl bg-paper-2 border border-line shadow-xl py-1 z-30 animate-fade-in font-sans">
+                  <div
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="absolute right-0 mt-2 w-52 rounded-xl bg-paper-2 border border-line shadow-xl py-1 z-30 animate-fade-in font-sans"
+                  >
                     {/* User Profile Overview */}
                     <div className="px-3.5 py-2.5 border-b border-line">
                       <div className="flex items-center gap-2">
@@ -275,6 +290,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="py-1">
                       {onOpenChangePassword && (
                         <button
+                          type="button"
                           onClick={() => {
                             setUserMenuOpen(false);
                             onOpenChangePassword();
@@ -288,6 +304,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                       {onLogout && (
                         <button
+                          type="button"
                           onClick={() => {
                             setUserMenuOpen(false);
                             onLogout();
