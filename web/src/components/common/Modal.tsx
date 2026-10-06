@@ -34,6 +34,7 @@ export const Modal: React.FC<ModalProps> = ({
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       if (backdropRef.current && panelRef.current) {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
         gsap.fromTo(
           backdropRef.current,
           { opacity: 0 },
@@ -41,8 +42,8 @@ export const Modal: React.FC<ModalProps> = ({
         );
         gsap.fromTo(
           panelRef.current,
-          { opacity: 0, scale: 0.96, y: 15 },
-          { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: 'back.out(1.2)' }
+          { opacity: 0, scale: isMobile ? 1 : 0.96, y: isMobile ? 40 : 15 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: isMobile ? 'power3.out' : 'back.out(1.2)' }
         );
       }
     } else {
@@ -67,33 +68,37 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen || !mounted) return null;
 
   const modalElement = (
-    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 overflow-y-auto`}>
+    <div className={`fixed inset-0 ${zIndex} flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 overflow-y-auto`}>
       {/* Backdrop */}
       <div
         ref={backdropRef}
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 dark:bg-black/75 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/50 dark:bg-black/75 backdrop-blur-sm transition-opacity"
       />
 
-      {/* Modal Panel */}
+      {/* Modal / Bottom Sheet Panel */}
       <div
         ref={panelRef}
-        className={`relative w-full ${maxWidth} bg-paper border border-line rounded-xl shadow-floating p-6 sm:p-7 z-10 flex flex-col max-h-[90vh] overflow-hidden`}
+        className={`relative w-full ${maxWidth} bg-paper border-t sm:border border-line rounded-t-2xl sm:rounded-2xl shadow-floating p-5 sm:p-7 z-10 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-7`}
       >
-        <div className="flex items-start justify-between pb-4 border-b border-line">
-          <div>
-            <h3 className="text-lg font-semibold text-ink font-sans tracking-tight">{title}</h3>
-            {subtitle && <p className="text-xs text-ink-muted mt-0.5">{subtitle}</p>}
+        {/* Mobile Grab Handle */}
+        <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto -mt-1.5 mb-3 sm:hidden shrink-0" />
+
+        <div className="flex items-start justify-between pb-3.5 sm:pb-4 border-b border-line shrink-0">
+          <div className="min-w-0 pr-3">
+            <h3 className="text-base sm:text-lg font-semibold text-ink font-sans tracking-tight truncate sm:whitespace-normal">{title}</h3>
+            {subtitle && <p className="text-xs text-ink-muted mt-0.5 truncate sm:whitespace-normal">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="text-ink-muted hover:text-ink p-1 rounded hover:bg-paper-3 transition-colors"
+            aria-label="关闭"
+            className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 text-ink-muted hover:text-ink p-1.5 sm:p-1 rounded-lg hover:bg-paper-3 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pt-4 px-1.5 pb-1">{children}</div>
+        <div className="flex-1 overflow-y-auto pt-3.5 sm:pt-4 px-0.5 sm:px-1.5 pb-1">{children}</div>
       </div>
     </div>
   );

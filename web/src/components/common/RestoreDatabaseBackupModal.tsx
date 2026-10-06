@@ -122,6 +122,10 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
     e.preventDefault();
     if (isSubmitting) return;
 
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([30, 50, 60]);
+    }
+
     setIsSubmitting(true);
     try {
       const dbTarget = targetDb.trim() || undefined;
@@ -374,15 +378,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         </div>
 
         {/* Actions */}
-        <div className="pt-2 flex items-center justify-end gap-3 border-t border-line">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
-          >
-            取消
-          </button>
+        <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 border-t border-line">
           <Button8State
             size="sm"
             variant="primary"
@@ -393,9 +389,18 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
               (sourceType === 'upload' && !selectedFile)
             }
             icon={<ArrowsClockwise className="w-3.5 h-3.5" />}
+            className="order-1 sm:order-2 w-full sm:w-auto min-h-[44px] sm:min-h-0"
           >
             确认恢复备份
           </Button8State>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+          >
+            取消
+          </button>
         </div>
       </form>
     </Modal>

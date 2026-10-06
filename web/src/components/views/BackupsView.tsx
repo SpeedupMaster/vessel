@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import clsx from 'clsx';
 import {
   CloudArrowUp,
   CheckCircle,
@@ -11,6 +12,12 @@ import {
   EyeSlash,
   Warning,
   CircleNotch,
+  FileArchive,
+  Clock,
+  FloppyDiskBack,
+  Info,
+  CaretDown,
+  CaretUp,
 } from '@phosphor-icons/react';
 import { R2Config, BackupRecord } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
@@ -30,6 +37,14 @@ interface BackupsViewProps {
   onRestoreBackup?: (id: string) => Promise<any>;
 }
 
+const BACKUP_CRON_PRESETS = [
+  { label: '每天 03:00', expr: '0 3 * * *' },
+  { label: '每天 04:00', expr: '0 4 * * *' },
+  { label: '每 12 小时', expr: '0 */12 * * *' },
+  { label: '每周日 03:00', expr: '0 3 * * 0' },
+  { label: '周一/四 03:00', expr: '0 3 * * 1,4' },
+];
+
 export const BackupsView: React.FC<BackupsViewProps> = ({
   r2Config,
   backups,
@@ -41,6 +56,8 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   onRestoreBackup,
 }) => {
   const { toast } = useNotification();
+  const [isTipsExpanded, setIsTipsExpanded] = useState(false);
+
   const [enabled, setEnabled] = useState(r2Config?.enabled ?? false);
   const [endpoint, setEndpoint] = useState(r2Config?.endpoint || '');
   const [bucketName, setBucketName] = useState(r2Config?.bucketName || '');
@@ -73,6 +90,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
   const handleConfirmDeleteBackup = async () => {
     if (!deletingBackup || !isBackupDeleteConfirmed || isDeleting) return;
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([30, 50, 60]);
+    }
     setIsDeleting(true);
     try {
       if (onDeleteBackup) {
@@ -90,12 +110,16 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
   const isRestoreConfirmed = Boolean(
     restoringBackup &&
-      (restoreConfirmInput.trim().toUpperCase() === 'RESTORE' ||
+      (restoreConfirmInput.trim() === '确认恢复' ||
+        restoreConfirmInput.trim().toUpperCase() === 'RESTORE' ||
         restoreConfirmInput.trim().toLowerCase() === restoringBackup.fileName.trim().toLowerCase())
   );
 
   const handleConfirmRestore = async () => {
     if (!restoringBackup || !isRestoreConfirmed || isRestoring) return;
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([30, 50, 60]);
+    }
     setIsRestoring(true);
     try {
       if (onRestoreBackup) {
@@ -112,6 +136,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   };
 
   const handleTest = async () => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(15);
+    }
     setIsTesting(true);
     setTestResult(null);
     try {
@@ -137,6 +164,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(15);
+    }
     setIsSaving(true);
     try {
       await onSaveConfig({
@@ -157,6 +187,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   };
 
   const handleManualBackup = async () => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([20, 40]);
+    }
     setIsBackingUp(true);
     toast.info('正在创建系统快照并同步上传 R2...');
     try {
@@ -170,6 +203,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   };
 
   const handleDownload = (record: BackupRecord) => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
     if (onDownloadBackup) {
       onDownloadBackup(record.id, record.fileName);
     } else {
@@ -179,29 +215,58 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   };
 
   return (
-    <div className="space-y-8">
-      {/* Page Header (De-boxed, modern SaaS standard) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle">
+    <div className="space-y-6 sm:space-y-8">
+      {/* Page Header (De-boxed, modern SaaS standard with compressed mobile footprint) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle mt-0.5">
             <CloudArrowUp className="w-5 h-5 text-accent" weight="bold" />
           </div>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h2 className="font-semibold text-lg text-ink tracking-tight font-sans">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-semibold text-base sm:text-lg text-ink tracking-tight font-sans">
                 Cloudflare R2 远程对象存储灾备配置
               </h2>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
                 {enabled ? '自动灾备已启用' : '自动化备份未开启'}
               </span>
             </div>
-            <p className="text-xs text-ink-muted mt-1.5 max-w-2xl leading-relaxed">
-              将平台 SQLite 数据、全部 Compose 编排文件以及应用数据卷定时压缩归档并上传至 Cloudflare R2，实现异地高可靠灾难恢复。
-            </p>
+
+            {/* Compressed 1-line description with collapsible detailed explanation */}
+            <div className="mt-1">
+              <p className="text-xs text-ink-muted leading-relaxed inline">
+                将平台数据、编排文件与数据卷定时压缩归档上传至 Cloudflare R2。
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsTipsExpanded(!isTipsExpanded)}
+                className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline font-medium ml-1 cursor-pointer select-none"
+              >
+                <span>{isTipsExpanded ? '收起说明' : '详细说明'}</span>
+                {isTipsExpanded ? (
+                  <CaretUp className="w-3 h-3" weight="bold" />
+                ) : (
+                  <CaretDown className="w-3 h-3" weight="bold" />
+                )}
+              </button>
+            </div>
+
+            {/* Collapsible Guidance Box */}
+            {isTipsExpanded && (
+              <div className="mt-2.5 p-3 rounded-xl bg-paper-2/80 dark:bg-white/[0.03] border border-line/80 dark:border-white/[0.08] text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
+                <div className="flex items-center gap-1.5 font-medium text-ink">
+                  <Info className="w-3.5 h-3.5 text-accent flex-shrink-0" weight="fill" />
+                  <span>异地高可靠灾难恢复机制</span>
+                </div>
+                <p className="leading-relaxed">
+                  系统定时将平台 SQLite 数据、全部 Compose 编排文件以及应用数据卷定时压缩归档并上传至 Cloudflare R2，实现异地高可靠灾难恢复与秒级快照回滚。
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Secondary Action: Ghost / Subtle Button (avoiding primary CTA competition) */}
+        {/* Manual snapshot trigger action */}
         <div className="flex items-center gap-3 shrink-0">
           <Button8State
             variant="secondary"
@@ -209,6 +274,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             icon={<Lightning className="w-4 h-4 text-amber-500" weight="fill" />}
             state={isBackingUp ? 'loading' : 'default'}
             onClick={handleManualBackup}
+            className="w-full sm:w-auto min-h-[40px]"
           >
             立即执行系统快照
           </Button8State>
@@ -216,16 +282,18 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
       </div>
 
       {/* Configuration Form Card */}
-      <div className="card-vessel p-6 sm:p-7 shadow-subtle">
+      <div className="card-vessel p-5 sm:p-7 shadow-subtle">
         <form onSubmit={handleSave} className="space-y-6">
           {/* Modern Toggle Switch Row (De-boxed) */}
-          <div className="flex items-center justify-between pb-5 border-b border-line/50 dark:border-white/[0.06]">
+          <div className="flex items-center justify-between pb-5 border-b border-line/50 dark:border-white/[0.06] gap-4">
             <div>
               <h4 className="text-sm font-semibold text-ink font-sans">
                 开启 Cloudflare R2 定时自动化备份任务
               </h4>
               <p className="text-xs text-ink-muted mt-0.5">
-                定时将平台核心数据库与 Compose 编排文件打包并自动推送至指定的 R2 Bucket 存储桶
+                {enabled
+                  ? '定时将平台核心数据库与 Compose 编排文件打包并自动推送至指定的 R2 Bucket 存储桶'
+                  : '已关闭自动备份任务。平台仅保留手动快照或应用内按需备份。'}
               </p>
             </div>
 
@@ -233,7 +301,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
               type="button"
               role="switch"
               aria-checked={enabled}
-              onClick={() => setEnabled(!enabled)}
+              onClick={() => {
+                setEnabled(!enabled);
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  navigator.vibrate(15);
+                }
+              }}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                 enabled ? 'bg-accent' : 'bg-paper-3 dark:bg-white/[0.12]'
               }`}
@@ -246,143 +319,218 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             </button>
           </div>
 
-          {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
-                R2 S3 API Endpoint *
-              </label>
-              <input
-                type="text"
-                value={endpoint}
-                onChange={(e) => setEndpoint(e.target.value)}
-                placeholder="https://<account_id>.r2.cloudflarestorage.com"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
+          {/* Form Fields Grid - Progressive Disclosure: Only rendered when enabled */}
+          {enabled ? (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                    R2 S3 API Endpoint *
+                  </label>
+                  <input
+                    type="text"
+                    value={endpoint}
+                    onChange={(e) => setEndpoint(e.target.value)}
+                    placeholder="https://<account_id>.r2.cloudflarestorage.com"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
-                Bucket 存储桶名称 *
-              </label>
-              <input
-                type="text"
-                value={bucketName}
-                onChange={(e) => setBucketName(e.target.value)}
-                placeholder="vessel-backups"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                    Bucket 存储桶名称 *
+                  </label>
+                  <input
+                    type="text"
+                    value={bucketName}
+                    onChange={(e) => setBucketName(e.target.value)}
+                    placeholder="vessel-backups"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
-                Access Key ID *
-              </label>
-              <input
-                type="text"
-                value={accessKeyId}
-                onChange={(e) => setAccessKeyId(e.target.value)}
-                placeholder="R2 API Token Access Key"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                    Access Key ID *
+                  </label>
+                  <input
+                    type="text"
+                    value={accessKeyId}
+                    onChange={(e) => setAccessKeyId(e.target.value)}
+                    placeholder="R2 API Token Access Key"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
-                Secret Access Key *
-              </label>
-              <div className="relative">
-                <input
-                  type={showSecret ? 'text' : 'password'}
-                  value={secretAccessKey}
-                  onChange={(e) => setSecretAccessKey(e.target.value)}
-                  placeholder="留空则保持现有密钥不变"
-                  className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-10 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecret(!showSecret)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1"
-                  title={showSecret ? '隐藏密钥' : '显示密钥'}
+                <div>
+                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                    Secret Access Key *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showSecret ? 'text' : 'password'}
+                      value={secretAccessKey}
+                      onChange={(e) => setSecretAccessKey(e.target.value)}
+                      placeholder="留空则保持现有密钥不变"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecret(!showSecret)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5"
+                      title={showSecret ? '隐藏密钥' : '显示密钥'}
+                    >
+                      {showSecret ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* CRON Schedule with Quick-pick Chips */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal">
+                    Cron 定时周期表达式
+                  </label>
+                  <input
+                    type="text"
+                    value={cronSchedule}
+                    onChange={(e) => setCronSchedule(e.target.value)}
+                    placeholder="0 3 * * *"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  />
+                  {/* Quick-pick Chips Container */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                    <span className="text-[11px] text-ink-muted/70 flex-shrink-0 flex items-center gap-1 mr-0.5">
+                      <Clock className="w-3 h-3 text-ink-muted/80" />
+                      快捷填入:
+                    </span>
+                    {BACKUP_CRON_PRESETS.map((preset) => {
+                      const isSelected = cronSchedule.trim() === preset.expr;
+                      return (
+                        <button
+                          key={preset.expr}
+                          type="button"
+                          onClick={() => {
+                            setCronSchedule(preset.expr);
+                            if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                              navigator.vibrate(10);
+                            }
+                          }}
+                          className={clsx(
+                            'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 border',
+                            isSelected
+                              ? 'bg-accent text-white border-accent shadow-sm font-medium'
+                              : 'bg-paper-2/80 hover:bg-paper-3 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-ink-muted hover:text-ink border-line/60 dark:border-white/[0.08]'
+                          )}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Retention Count with numeric constraint */}
+                <div>
+                  <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                    保留版本数 (超过自动清理旧归档)
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={retentionCount}
+                    onChange={(e) => setRetentionCount(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
+                    min={1}
+                    max={30}
+                    className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  />
+                  <span className="text-[11px] text-ink-muted/70 dark:text-zinc-500 block mt-1">
+                    系统将仅保留最新的 {retentionCount} 个备份，超出的旧版本将在下一次备份成功后自动从 R2 清理。
+                  </span>
+                </div>
+              </div>
+
+              {/* Test feedback banner */}
+              {testResult && (
+                <div
+                  className={`p-3.5 rounded-lg text-xs flex items-center gap-2.5 ${
+                    testResult.success
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                      : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                  }`}
                 >
-                  {showSecret ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  {testResult.success ? (
+                    <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" weight="fill" />
+                  ) : (
+                    <WarningCircle className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
+                  )}
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+
+              {/* Action Buttons: Stack vertically on mobile, horizontal on desktop */}
+              <div className="pt-4 border-t border-line/50 dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <Button8State
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  state={isTesting ? 'loading' : 'default'}
+                  onClick={handleTest}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  测试 R2 连通性
+                </Button8State>
+
+                <Button8State
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  icon={<FloppyDiskBack className="w-4 h-4" weight="bold" />}
+                  state={isSaving ? 'loading' : 'default'}
+                  className="w-full sm:w-auto min-h-[44px]"
+                >
+                  保存备份策略
+                </Button8State>
               </div>
             </div>
-
-            <div>
-              <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
-                Cron 定时周期表达式
-              </label>
-              <input
-                type="text"
-                value={cronSchedule}
-                onChange={(e) => setCronSchedule(e.target.value)}
-                placeholder="0 3 * * * (每日凌晨3点)"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
-                保留版本数 (超过自动清理旧归档)
-              </label>
-              <input
-                type="number"
-                value={retentionCount}
-                onChange={(e) => setRetentionCount(Number(e.target.value))}
-                min={1}
-                max={30}
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* Test feedback */}
-          {testResult && (
-            <div
-              className={`p-3.5 rounded-lg text-xs flex items-center gap-2.5 ${
-                testResult.success
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                  : 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
-              }`}
-            >
-              {testResult.success ? (
-                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" weight="fill" />
-              ) : (
-                <WarningCircle className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
-              )}
-              <span>{testResult.message}</span>
+          ) : (
+            /* Progressive Disclosure: Collapsed state actions */
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span className="text-xs text-ink-muted">
+                保存后将停用系统的 CRON 定时灾备任务。
+              </span>
+              <Button8State
+                type="submit"
+                variant="primary"
+                size="md"
+                state={isSaving ? 'loading' : 'default'}
+                className="w-full sm:w-auto min-h-[44px]"
+              >
+                保存配置更改
+              </Button8State>
             </div>
           )}
-
-          {/* Action Row: Single Primary Button */}
-          <div className="pt-4 border-t border-line/50 dark:border-white/[0.06] flex items-center justify-between">
-            <Button8State
-              type="button"
-              variant="secondary"
-              size="sm"
-              state={isTesting ? 'loading' : 'default'}
-              onClick={handleTest}
-            >
-              测试 R2 连通性
-            </Button8State>
-
-            <Button8State
-              type="submit"
-              variant="primary"
-              size="sm"
-              state={isSaving ? 'loading' : 'default'}
-            >
-              保存备份策略
-            </Button8State>
-          </div>
         </form>
       </div>
 
-      {/* Backup History Table */}
+      {/* Backup History Table - Mobile Stacked Layout (Rescue Squished UI) */}
       <div className="card-vessel overflow-hidden shadow-subtle">
-        <div className="p-5 flex items-center justify-between">
+        <div className="p-4 sm:p-5 flex items-center justify-between border-b border-line/50 dark:border-white/[0.06]">
           <div className="flex items-center gap-2.5">
             <h4 className="text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-bold tracking-wider">
               归档版本历史记录 ({backups.length})
@@ -404,32 +552,44 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             {backups.map((b) => (
               <div
                 key={b.id}
-                className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-paper-2/50 dark:hover:bg-white/[0.02] transition-colors"
+                className="p-4 sm:p-5 space-y-2.5 hover:bg-paper-2/40 dark:hover:bg-white/[0.02] transition-colors"
               >
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-semibold text-ink dark:text-zinc-100 text-sm font-sans">{b.targetName}</span>
-                    <Badge variant={b.type === 'system' ? 'accent' : b.type === 'app_db' ? 'running' : 'default'}>
-                      {b.type === 'system' ? '系统级快照' : b.type === 'app_db' ? '数据库转储' : '应用卷备份'}
-                    </Badge>
+                {/* 行 1: 标题与状态标签 */}
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                    <span className="font-semibold text-ink dark:text-zinc-100 text-sm font-sans truncate">
+                      {b.targetName}
+                    </span>
                     {b.databaseName && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
                         {b.databaseName === 'all' ? '全部数据库' : `库: ${b.databaseName}`}
                       </span>
                     )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                    <Badge variant={b.type === 'system' ? 'accent' : b.type === 'app_db' ? 'running' : 'default'}>
+                      {b.type === 'system' ? '系统级快照' : b.type === 'app_db' ? '数据库转储' : '应用卷备份'}
+                    </Badge>
                     <Badge variant="running">已同步 R2</Badge>
                   </div>
-                  <p className="text-ink-muted/80 dark:text-zinc-500 font-mono text-[11px] truncate max-w-lg">{b.fileName}</p>
                 </div>
 
-                <div className="flex items-center gap-4 text-ink-muted/80 dark:text-zinc-400">
-                  <div className="flex items-center gap-4 text-xs font-mono">
-                    <span>{formatBytes(b.fileSizeBytes)}</span>
-                    <span className="text-ink-muted/60 dark:text-zinc-600 font-sans">•</span>
-                    <span className="font-sans">{new Date(b.createdAt).toLocaleString()}</span>
-                  </div>
+                {/* 行 2: 文件名 (等宽字体，允许 break-all，绝不撑破卡片) */}
+                <div className="text-xs font-mono text-ink-muted/90 dark:text-zinc-400 break-all select-all flex items-start gap-1.5">
+                  <FileArchive className="w-3.5 h-3.5 text-ink-muted/70 flex-shrink-0 mt-0.5" />
+                  <span>{b.fileName}</span>
+                </div>
 
-                  <div className="flex items-center gap-2 pl-2">
+                {/* 行 3: 元数据 (尺寸与时间) */}
+                <div className="flex items-center gap-2 text-xs text-ink-muted/80 dark:text-zinc-400 font-mono">
+                  <span>{formatBytes(b.fileSizeBytes)}</span>
+                  <span className="w-1 h-1 bg-ink-muted/40 dark:bg-white/20 rounded-full"></span>
+                  <span className="font-sans">{new Date(b.createdAt).toLocaleString()}</span>
+                </div>
+
+                {/* 行 4: 独立的操作栏 (Action Bar) - 彻底解决文字折行竖排灾难 */}
+                <div className="pt-3 border-t border-line/40 dark:border-white/[0.04] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
                     <Button8State
                       size="sm"
                       variant="secondary"
@@ -438,6 +598,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                         setRestoringBackup(b);
                         setRestoreConfirmInput('');
                       }}
+                      className="min-h-[36px] px-3 text-xs whitespace-nowrap"
                     >
                       恢复
                     </Button8State>
@@ -447,21 +608,23 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       variant="secondary"
                       icon={<DownloadSimple className="w-3.5 h-3.5" />}
                       onClick={() => handleDownload(b)}
+                      className="min-h-[36px] px-3 text-xs whitespace-nowrap"
                     >
                       下载
                     </Button8State>
-
-                    <button
-                      onClick={() => {
-                        setDeletingBackup(b);
-                        setDeleteBackupInput('');
-                      }}
-                      className="p-2 rounded-lg text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
-                      data-tooltip="删除此备份归档"
-                    >
-                      <Trash className="w-4 h-4" />
-                    </button>
                   </div>
+
+                  {/* 删除按钮推到最右侧 */}
+                  <button
+                    onClick={() => {
+                      setDeletingBackup(b);
+                      setDeleteBackupInput('');
+                    }}
+                    className="p-2 min-h-[36px] min-w-[36px] rounded-lg text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 transition-colors cursor-pointer flex items-center justify-center"
+                    title="删除此备份归档"
+                  >
+                    <Trash className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -498,10 +661,13 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
               <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入文件名 <strong className="text-ink font-semibold select-all font-mono">{deletingBackup.fileName}</strong> 以确认删除：
+                请输入文件名 <strong className="text-ink font-semibold select-none font-mono">{deletingBackup.fileName}</strong> 以确认删除：
               </label>
               <input
                 type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={deleteBackupInput}
                 onChange={(e) => setDeleteBackupInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -516,21 +682,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-4 mt-2 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeletingBackup(null)}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line shadow-subtle transition-colors cursor-pointer"
-              >
-                取消
-              </button>
-
+            <div className="pt-4 mt-2 border-t border-line flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
               {!isBackupDeleteConfirmed ? (
                 <button
                   type="button"
                   disabled
-                  className="px-4 py-2 bg-paper-3 dark:bg-[#21262d] text-ink-muted/50 dark:text-[#8b949e] border border-line/50 dark:border-white/[0.06] text-xs font-medium rounded-lg cursor-not-allowed flex items-center gap-1.5 select-none"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-paper-3 dark:bg-[#21262d] text-ink-muted/50 dark:text-[#8b949e] border border-line/50 dark:border-white/[0.06] text-xs font-medium rounded-xl sm:rounded-lg cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
                 >
                   <Trash className="w-4 h-4 opacity-40" />
                   <span>确认删除备份</span>
@@ -540,7 +697,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   type="button"
                   onClick={handleConfirmDeleteBackup}
                   disabled={isDeleting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-500 dark:bg-[#da3633] dark:hover:bg-[#f85149] text-white font-bold text-xs rounded-lg shadow-md shadow-red-600/25 transition-all flex items-center gap-1.5 active:translate-y-px cursor-pointer"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl sm:rounded-lg shadow-md shadow-red-600/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] sm:active:scale-100 cursor-pointer"
                 >
                   {isDeleting ? (
                     <>
@@ -555,6 +712,15 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   )}
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => setDeletingBackup(null)}
+                disabled={isDeleting}
+                className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+              >
+                取消
+              </button>
             </div>
           </div>
         )}
@@ -604,10 +770,13 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
               <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入 <strong className="text-accent font-semibold font-mono">RESTORE</strong> 或完整文件名 <strong className="text-ink font-semibold select-all font-mono">{restoringBackup.fileName}</strong> 以确认恢复：
+                请输入 <strong className="text-accent font-semibold select-none font-mono">确认恢复</strong> 或 <strong className="text-accent font-semibold font-mono select-none">RESTORE</strong> 以确认执行：
               </label>
               <input
                 type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={restoreConfirmInput}
                 onChange={(e) => setRestoreConfirmInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -615,28 +784,19 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     handleConfirmRestore();
                   }
                 }}
-                placeholder="RESTORE"
+                placeholder="确认恢复 或 RESTORE"
                 autoFocus
                 className="w-full bg-paper border border-line rounded-lg px-3.5 py-2.5 text-xs text-ink font-mono focus:border-accent focus:ring-2 focus:ring-accent/15 focus:outline-none transition-all shadow-subtle"
               />
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-4 mt-2 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setRestoringBackup(null)}
-                disabled={isRestoring}
-                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line shadow-subtle transition-colors cursor-pointer"
-              >
-                取消
-              </button>
-
+            <div className="pt-4 mt-2 border-t border-line flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
               {!isRestoreConfirmed ? (
                 <button
                   type="button"
                   disabled
-                  className="px-4 py-2 bg-paper-3 dark:bg-[#21262d] text-ink-muted/50 dark:text-[#8b949e] border border-line/50 dark:border-white/[0.06] text-xs font-medium rounded-lg cursor-not-allowed flex items-center gap-1.5 select-none"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-paper-3 dark:bg-[#21262d] text-ink-muted/50 dark:text-[#8b949e] border border-line/50 dark:border-white/[0.06] text-xs font-medium rounded-xl sm:rounded-lg cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
                 >
                   <ArrowCounterClockwise className="w-4 h-4 opacity-40" />
                   <span>确认恢复快照</span>
@@ -646,7 +806,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   type="button"
                   onClick={handleConfirmRestore}
                   disabled={isRestoring}
-                  className="px-4 py-2 bg-accent hover:bg-accent/90 text-white font-bold text-xs rounded-lg shadow-md shadow-accent/25 transition-all flex items-center gap-1.5 active:translate-y-px cursor-pointer"
+                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-4 py-2 bg-accent hover:bg-accent/90 text-white font-bold text-xs rounded-xl sm:rounded-lg shadow-md shadow-accent/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] sm:active:scale-100 cursor-pointer"
                 >
                   {isRestoring ? (
                     <>
@@ -661,6 +821,15 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   )}
                 </button>
               )}
+
+              <button
+                type="button"
+                onClick={() => setRestoringBackup(null)}
+                disabled={isRestoring}
+                className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+              >
+                取消
+              </button>
             </div>
           </div>
         )}

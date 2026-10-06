@@ -7,6 +7,8 @@ import 'prismjs/components/prism-bash.js';
 interface CodeEditorWithLinesProps {
   value: string;
   onChange?: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   placeholder?: string;
   minHeight?: string;
   maxHeight?: string;
@@ -28,6 +30,8 @@ function escapeHtml(str: string): string {
 export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
   value,
   onChange,
+  onFocus,
+  onBlur,
   placeholder,
   minHeight = '380px',
   maxHeight,
@@ -174,13 +178,17 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
           onScroll={syncScroll}
           onKeyDown={handleKeyDown}
           readOnly={readOnly}
           placeholder={placeholder}
+          autoCapitalize="off"
+          autoCorrect="off"
           spellCheck={false}
           className={clsx(
-            'w-full h-full p-3 m-0 bg-transparent font-mono text-xs leading-[1.625rem] resize-y outline-none overflow-auto whitespace-pre font-normal cursor-text',
+            'w-full h-full p-3 m-0 bg-transparent font-mono text-xs leading-[1.625rem] resize-none md:resize-y outline-none overflow-auto whitespace-pre font-normal cursor-text',
             isHighlighting
               ? 'relative z-10 text-transparent caret-ink dark:caret-white selection:bg-accent/25 selection:text-transparent'
               : 'text-ink'

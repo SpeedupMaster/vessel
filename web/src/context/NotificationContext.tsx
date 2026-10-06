@@ -80,6 +80,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const handleConfirmClose = (result: boolean) => {
     if (confirmState) {
+      if (result && typeof window !== 'undefined' && 'vibrate' in navigator) {
+        if (confirmState.options.variant === 'danger') {
+          navigator.vibrate([30, 50, 60]);
+        } else {
+          navigator.vibrate(15);
+        }
+      }
       confirmState.resolve(result);
       setConfirmState(null);
     }
@@ -192,20 +199,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               </div>
             )}
 
-            <div className="pt-4 border-t border-line flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleConfirmClose(false)}
-                className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line shadow-subtle transition-colors"
-              >
-                {confirmState.options.cancelText || '取消并返回'}
-              </button>
+            <div className="pt-4 border-t border-line flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => handleConfirmClose(true)}
-                className={`px-5 py-2 font-medium text-xs rounded-lg transition-all shadow-subtle active:translate-y-px flex items-center gap-2 ${
+                className={`order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0 px-5 py-2.5 sm:py-2 font-medium text-xs rounded-xl sm:rounded-lg transition-all shadow-subtle active:scale-[0.98] sm:active:scale-100 flex items-center justify-center gap-2 cursor-pointer ${
                   confirmState.options.variant === 'danger'
-                    ? 'bg-rose-600 hover:bg-rose-700 text-white dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-200 dark:border dark:border-rose-800'
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
                     : 'bg-accent hover:bg-accent-hover text-white'
                 }`}
                 autoFocus
@@ -219,6 +219,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                   {confirmState.options.confirmText ||
                     (confirmState.options.variant === 'danger' ? '确认彻底删除' : '确认')}
                 </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConfirmClose(false)}
+                className="order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
+              >
+                {confirmState.options.cancelText || '取消并返回'}
               </button>
             </div>
           </div>

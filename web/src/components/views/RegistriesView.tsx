@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   GithubLogo,
   Package,
@@ -6,6 +6,11 @@ import {
   WarningCircle,
   ArrowSquareOut,
   Info,
+  Eye,
+  EyeSlash,
+  X,
+  CaretDown,
+  CaretUp,
 } from '@phosphor-icons/react';
 import { RegistryItem } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
@@ -25,6 +30,9 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
   const [formData, setFormData] = useState<Record<string, { username: string; token: string }>>({});
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [feedbackMap, setFeedbackMap] = useState<Record<string, { success: boolean; message: string }>>({});
+  const [showTokenMap, setShowTokenMap] = useState<Record<string, boolean>>({});
+  const [isTipsExpanded, setIsTipsExpanded] = useState(false);
+  const tokenInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const handleInputChange = (id: string, field: 'username' | 'token', val: string) => {
     setFormData((prev) => ({
@@ -35,6 +43,15 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
         token: field === 'token' ? val : prev[id]?.token ?? '',
       },
     }));
+  };
+
+  const toggleShowToken = (id: string) => {
+    setShowTokenMap((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleClearToken = (id: string) => {
+    handleInputChange(id, 'token', '');
+    tokenInputRefs.current[id]?.focus();
   };
 
   const handleSaveAndTest = async (reg: RegistryItem) => {
@@ -53,7 +70,19 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
 
       const testRes = await onTestRegistry(reg.id);
       setFeedbackMap((prev) => ({ ...prev, [reg.id]: testRes }));
+      if (testRes?.success) {
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate([15, 30]);
+        }
+      } else {
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(50);
+        }
+      }
     } catch (e: any) {
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
       setFeedbackMap((prev) => ({
         ...prev,
         [reg.id]: { success: false, message: e.message || '操作失败' },
@@ -64,41 +93,73 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
   };
 
   return (
-    <div className="space-y-8">
-      {/* Page Header (De-boxed, modern SaaS standard) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle">
+    <div className="space-y-6 sm:space-y-8">
+      {/* Page Header (De-boxed, modern SaaS standard with compressed mobile footprint) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle mt-0.5">
             <Package className="w-5 h-5 text-accent" weight="bold" />
           </div>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h2 className="font-semibold text-lg text-ink tracking-tight font-sans">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-semibold text-base sm:text-lg text-ink tracking-tight font-sans">
                 私有镜像凭证中心 (GHCR & Docker Hub)
               </h2>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
+              <span className="text-[11px] px-2 py-0.2 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
                 {registries.filter((r) => r.status === 'connected').length} / {registries.length} 已连接
               </span>
             </div>
-            <p className="text-xs text-ink-muted mt-1.5 max-w-2xl leading-relaxed">
-              绑定 GitHub 个人访问令牌（PAT）或 Docker Hub 凭据，Vessel 将自动注入 Docker
-              运行时的登录鉴权状态，使得受管的 Compose 应用能够免密无缝拉取私有 Registry 镜像。
-            </p>
+
+            {/* Compressed 1-line description with collapsible detailed explanation */}
+            <div className="mt-1">
+              <p className="text-xs text-ink-muted leading-relaxed inline">
+                配置 GitHub Packages 与 Docker Hub 凭证，Compose 应用免密拉取。
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsTipsExpanded(!isTipsExpanded)}
+                className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline font-medium ml-1 cursor-pointer select-none"
+              >
+                <span>{isTipsExpanded ? '收起说明' : '详细说明'}</span>
+                {isTipsExpanded ? (
+                  <CaretUp className="w-3 h-3" weight="bold" />
+                ) : (
+                  <CaretDown className="w-3 h-3" weight="bold" />
+                )}
+              </button>
+            </div>
+
+            {/* Collapsible Guidance Box */}
+            {isTipsExpanded && (
+              <div className="mt-2.5 p-3 rounded-xl bg-paper-2/80 dark:bg-white/[0.03] border border-line/80 dark:border-white/[0.08] text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
+                <div className="flex items-center gap-1.5 font-medium text-ink">
+                  <Info className="w-3.5 h-3.5 text-accent flex-shrink-0" weight="fill" />
+                  <span>自动化鉴权注入机制</span>
+                </div>
+                <p className="text-[11.5px] leading-relaxed">
+                  绑定 GitHub 个人访问令牌（PAT）或 Docker Hub 凭据后，Vessel 将自动注入 Docker 运行时的登录鉴权状态，使得受管的 Compose 应用能够免密无缝拉取私有 Registry 镜像。
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Registries Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
         {registries.map((reg) => {
           const isGHCR = reg.id === 'ghcr';
           const currentUsername = formData[reg.id]?.username ?? reg.username;
           const currentToken = formData[reg.id]?.token ?? '';
           const feedback = feedbackMap[reg.id];
           const isLoading = loadingMap[reg.id];
+          const showToken = Boolean(showTokenMap[reg.id]);
 
           return (
-            <div key={reg.id} className="card-vessel p-6 sm:p-7 flex flex-col justify-between space-y-5 shadow-subtle">
+            <div
+              key={reg.id}
+              className="card-vessel p-5 sm:p-7 flex flex-col justify-between space-y-5 shadow-subtle"
+            >
               <div>
                 <div className="flex items-center justify-between pb-4 border-b border-line/50 dark:border-white/[0.06]">
                   <div className="flex items-center gap-3">
@@ -111,7 +172,9 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-ink">{reg.name}</h4>
-                      <p className="text-[11px] text-ink-muted/80 dark:text-zinc-500 font-mono">{reg.server}</p>
+                      <p className="text-[11px] text-ink-muted/80 dark:text-zinc-500 font-mono">
+                        {reg.server}
+                      </p>
                     </div>
                   </div>
                   <Badge variant={reg.status === 'connected' ? 'connected' : 'unverified'}>
@@ -119,42 +182,101 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                   </Badge>
                 </div>
 
-                <div className="mt-5 space-y-3.5">
+                <div className="mt-5 space-y-4">
+                  {/* 用户名输入框 */}
                   <div>
-                    <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5">
+                    <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-semibold mb-1.5">
                       {isGHCR ? 'GitHub 用户名' : '账号 / 用户名'}
                     </label>
                     <input
                       type="text"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      disabled={isLoading}
                       value={currentUsername}
                       onChange={(e) => handleInputChange(reg.id, 'username', e.target.value)}
-                      placeholder={isGHCR ? '例如: your-github-id' : 'username'}
-                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
+                      placeholder={isGHCR ? '例如: your-github-id' : '例如: docker-username'}
+                      className="w-full min-h-[42px] bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink focus:border-accent focus:outline-none transition-colors shadow-subtle disabled:opacity-60"
                     />
                   </div>
 
+                  {/* 凭证/密码输入框 */}
                   <div>
-                    <label className="block text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-normal mb-1.5 flex items-center justify-between">
-                      <span>{isGHCR ? 'GitHub PAT 令牌 (需包含 read:packages 权限)' : '密码 / 访问令牌'}</span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs uppercase text-ink-muted/80 dark:text-zinc-400 font-semibold">
+                        {isGHCR ? 'GitHub PAT 令牌' : '密码 / 访问令牌'}
+                      </label>
                       {isGHCR && (
                         <a
                           href="https://github.com/settings/tokens"
                           target="_blank"
                           rel="noreferrer"
-                          className="text-accent hover:underline flex items-center gap-1 normal-case text-xs"
+                          className="text-accent hover:underline flex items-center gap-1 text-xs font-normal"
                         >
                           <span>创建 PAT</span>
                           <ArrowSquareOut className="w-3 h-3" />
                         </a>
                       )}
-                    </label>
-                    <input
-                      type="password"
-                      value={currentToken}
-                      onChange={(e) => handleInputChange(reg.id, 'token', e.target.value)}
-                      placeholder={reg.token ? '•••••••••••••••• (已保存，留空保持不变)' : 'ghp_xxxxxxxxxxxx'}
-                      className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink focus:border-accent focus:outline-none transition-colors"
-                    />
+                    </div>
+
+                    <div className="relative flex items-center">
+                      <input
+                        ref={(el) => {
+                          tokenInputRefs.current[reg.id] = el;
+                        }}
+                        type={showToken ? 'text' : 'password'}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        disabled={isLoading}
+                        value={currentToken}
+                        onChange={(e) => handleInputChange(reg.id, 'token', e.target.value)}
+                        placeholder={
+                          reg.token
+                            ? '•••••••••••••••• (已保存，留空保持不变)'
+                            : isGHCR
+                            ? 'ghp_xxxxxxxxxxxx'
+                            : 'dckr_pat_... 或 密码'
+                        }
+                        className="w-full min-h-[42px] bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:border-accent focus:outline-none transition-colors shadow-subtle disabled:opacity-60"
+                      />
+
+                      {/* Actions: Clear (X) + Toggle Visibility (Eye) */}
+                      <div className="absolute right-1.5 flex items-center gap-0.5">
+                        {currentToken && (
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            onClick={() => handleClearToken(reg.id)}
+                            aria-label="清空内容"
+                            className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-2 rounded-md transition-colors cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => toggleShowToken(reg.id)}
+                          aria-label={showToken ? '隐藏令牌' : '显示令牌'}
+                          className="p-1.5 text-ink-muted hover:text-ink hover:bg-paper-2 rounded-md transition-colors cursor-pointer"
+                        >
+                          {showToken ? (
+                            <EyeSlash className="w-4 h-4 text-accent" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Helper text moved below input */}
+                    <p className="text-[11px] text-ink-faint mt-1.5">
+                      {isGHCR
+                        ? '需至少包含 read:packages 权限范围'
+                        : '支持 Docker Hub 账户密码或个人访问令牌 (dckr_pat)'}
+                    </p>
                   </div>
                 </div>
 
@@ -177,14 +299,17 @@ export const RegistriesView: React.FC<RegistriesViewProps> = ({
                 )}
               </div>
 
-              <div className="pt-4 border-t border-line/50 dark:border-white/[0.06] flex justify-end">
+              {/* Full-width submit button filling card padding */}
+              <div className="pt-4 border-t border-line/50 dark:border-white/[0.06]">
                 <Button8State
                   variant="primary"
-                  size="sm"
+                  size="md"
                   state={isLoading ? 'loading' : 'default'}
+                  disabled={isLoading}
                   onClick={() => handleSaveAndTest(reg)}
+                  className="w-full min-h-[44px] text-xs font-semibold shadow-subtle active:scale-[0.99] transition-transform"
                 >
-                  保存并验证登录
+                  {isLoading ? '正在验证鉴权...' : '保存并验证登录'}
                 </Button8State>
               </div>
             </div>

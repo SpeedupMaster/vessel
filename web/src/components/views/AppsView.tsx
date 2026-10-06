@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import {
   Plus,
@@ -11,6 +12,8 @@ import {
   Package,
   X,
   CaretDown,
+  CaretRight,
+  CircleNotch,
   Database,
   Stack,
 } from '@phosphor-icons/react';
@@ -81,20 +84,40 @@ export const AppsView: React.FC<AppsViewProps> = ({
   const [search, setSearch] = useState('');
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
+  const [deployingId, setDeployingId] = useState<string | null>(null);
   const createMenuRef = useRef<HTMLDivElement>(null);
+  const actionSheetRef = useRef<HTMLDivElement>(null);
+
+  const handleDeployApp = async (e: React.MouseEvent, appId: string) => {
+    e.stopPropagation();
+    try {
+      setDeployingId(appId);
+      await onDeploy(appId);
+    } finally {
+      setDeployingId(null);
+    }
+  };
 
   // Close create menu on click outside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (createMenuRef.current && !createMenuRef.current.contains(e.target as Node)) {
-        setIsCreateMenuOpen(false);
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      // Do not close if clicking inside desktop dropdown menu or mobile action sheet
+      if (createMenuRef.current?.contains(target)) {
+        return;
       }
+      if (actionSheetRef.current?.contains(target)) {
+        return;
+      }
+      setIsCreateMenuOpen(false);
     };
     if (isCreateMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [isCreateMenuOpen]);
 
@@ -203,81 +226,171 @@ export const AppsView: React.FC<AppsViewProps> = ({
 
   return (
     <div ref={containerRef} className="space-y-8">
-      {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-faint">
-            <MagnifyingGlass className="w-4 h-4" />
+      {/* Top Action Bar - Sticky on scroll with blur background */}
+      <div className="sticky -top-4 sm:-top-6 md:-top-8 lg:-top-10 z-20 -mx-4 sm:-mx-6 md:-mx-8 lg:-mx-10 px-4 sm:px-6 md:px-8 lg:px-10 py-3 bg-paper/90 backdrop-blur-md border-b border-line/40 transition-all shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="relative flex-1 max-w-md">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-faint">
+              <MagnifyingGlass className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="搜索受管应用 (名称 / ID)..."
+              className="w-full min-h-[44px] bg-paper-2 border border-line rounded-lg pl-9 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent font-sans transition-colors shadow-subtle"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="清除搜索"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-ink-faint hover:text-ink cursor-pointer min-w-[44px] justify-center"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索受管应用 (名称 / ID)..."
-            className="w-full bg-paper border border-line rounded-lg pl-9 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-accent font-sans transition-colors shadow-subtle"
-          />
-          {search && (
+
+          {/* Create App Dropdown / Action Sheet Trigger */}
+          <div className="relative shrink-0" ref={createMenuRef}>
             <button
               type="button"
-              onClick={() => setSearch('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-ink-faint hover:text-ink cursor-pointer"
+              onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
+              className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2 shadow-subtle cursor-pointer transition-all active:translate-y-px"
             >
-              <X className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" weight="bold" />
+              <span>新建应用</span>
+              <CaretDown className={`hidden md:inline-block w-3 h-3 transition-transform duration-200 ${isCreateMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-          )}
-        </div>
 
-        {/* Create App Dropdown Menu (Dokploy style: Compose & Database) */}
-        <div className="relative" ref={createMenuRef}>
-          <button
-            type="button"
-            onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
-            className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg flex items-center gap-2 shadow-subtle cursor-pointer transition-all active:translate-y-px"
-          >
-            <Plus className="w-4 h-4" weight="bold" />
-            <span>新建应用</span>
-            <CaretDown className={`w-3 h-3 transition-transform duration-200 ${isCreateMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
+            {/* Desktop Dropdown Popover (Dokploy style, hidden on mobile) */}
+            {isCreateMenuOpen && (
+              <div className="hidden md:block absolute right-0 mt-2 w-64 rounded-xl bg-paper border border-line shadow-xl py-1.5 z-30 animate-fade-in font-sans">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    navigateTo('create');
+                  }}
+                  className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-2 flex items-center gap-3 transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                    <Stack className="w-4 h-4" weight="bold" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-ink group-hover:text-accent transition-colors">Compose 应用</div>
+                    <div className="text-[11px] text-ink-muted">Docker Compose 自定义编排</div>
+                  </div>
+                </button>
 
-          {isCreateMenuOpen && (
-            <div className="absolute right-0 mt-2 w-60 rounded-xl bg-paper border border-line shadow-xl py-1.5 z-30 animate-fade-in font-sans">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCreateMenuOpen(false);
-                  navigateTo('create');
-                }}
-                className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-2 flex items-center gap-3 transition-colors cursor-pointer group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                  <Stack className="w-4 h-4" weight="bold" />
-                </div>
-                <div>
-                  <div className="font-semibold text-ink group-hover:text-accent transition-colors">Compose 应用</div>
-                  <div className="text-[11px] text-ink-muted">Docker Compose 自定义编排</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCreateMenuOpen(false);
-                  setIsDatabaseModalOpen(true);
-                }}
-                className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-2 flex items-center gap-3 transition-colors cursor-pointer group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                  <Database className="w-4 h-4" weight="bold" />
-                </div>
-                <div>
-                  <div className="font-semibold text-ink group-hover:text-accent transition-colors">Database 数据库</div>
-                  <div className="text-[11px] text-ink-muted">PostgreSQL, MySQL, Redis 等</div>
-                </div>
-              </button>
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    setIsDatabaseModalOpen(true);
+                  }}
+                  className="w-full px-3.5 py-2.5 text-left text-xs text-ink hover:bg-paper-2 flex items-center gap-3 transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                    <Database className="w-4 h-4" weight="bold" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-ink group-hover:text-accent transition-colors">Database 数据库</div>
+                    <div className="text-[11px] text-ink-muted">PostgreSQL, MySQL, Redis 等</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Mobile Action Sheet (dokploy style: Compose & Database Bottom Sheet) */}
+      {typeof document !== 'undefined' &&
+        isCreateMenuOpen &&
+        createPortal(
+          <div
+            className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end"
+            onClick={() => setIsCreateMenuOpen(false)}
+          >
+            <div
+              ref={actionSheetRef}
+              className="w-full bg-paper rounded-t-2xl border-t border-line shadow-2xl p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag Handle Indicator */}
+              <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-1 shrink-0" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-line/40">
+                <div>
+                  <h3 className="text-sm font-semibold text-ink">新建受管应用</h3>
+                  <p className="text-[11px] text-ink-muted">选择要创建的服务类型</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateMenuOpen(false)}
+                  aria-label="关闭面板"
+                  className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-ink-muted hover:text-ink cursor-pointer"
+                >
+                  <X className="w-4 h-4" weight="bold" />
+                </button>
+              </div>
+
+              {/* Action Sheet Options (Height >= 56px each) */}
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsCreateMenuOpen(false);
+                    navigateTo('create');
+                  }}
+                  className="w-full min-h-[56px] p-3 rounded-xl bg-paper-2 hover:bg-paper-3 border border-line flex items-center gap-3.5 transition-all text-left cursor-pointer active:scale-[0.99]"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                    <Stack className="w-5 h-5" weight="bold" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-ink">Compose 应用</div>
+                    <div className="text-xs text-ink-muted truncate">Docker Compose 多容器或单服务自定义编排</div>
+                  </div>
+                  <CaretRight className="w-4 h-4 text-ink-faint shrink-0" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsCreateMenuOpen(false);
+                    setIsDatabaseModalOpen(true);
+                  }}
+                  className="w-full min-h-[56px] p-3 rounded-xl bg-paper-2 hover:bg-paper-3 border border-line flex items-center gap-3.5 transition-all text-left cursor-pointer active:scale-[0.99]"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                    <Database className="w-5 h-5" weight="bold" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-ink">Database 数据库</div>
+                    <div className="text-xs text-ink-muted truncate">快速拉起 PostgreSQL, MySQL, Redis 等数据库</div>
+                  </div>
+                  <CaretRight className="w-4 h-4 text-ink-faint shrink-0" />
+                </button>
+              </div>
+
+              {/* Cancel Button */}
+              <button
+                type="button"
+                onClick={() => setIsCreateMenuOpen(false)}
+                className="w-full min-h-[48px] rounded-xl bg-paper-2 hover:bg-paper-3 text-ink text-sm font-semibold flex items-center justify-center transition-colors cursor-pointer mt-1"
+              >
+                取消
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Applications Grid */}
       {filteredApps.length === 0 ? (
@@ -317,21 +430,23 @@ export const AppsView: React.FC<AppsViewProps> = ({
           {filteredApps.map((app) => (
             <div
               key={app.id}
-              className="card-vessel p-6 sm:p-7 flex flex-col justify-between hover:border-ink-muted/30 dark:hover:border-white/20 transition-all shadow-subtle hover:shadow-card group"
+              onClick={() => navigateTo('detail', app.id)}
+              className="card-vessel p-4 sm:p-6 lg:p-7 flex flex-col justify-between hover:border-ink-muted/30 dark:hover:border-white/20 transition-all shadow-subtle hover:shadow-card group cursor-pointer active:scale-[0.995]"
             >
               <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3
-                      onClick={() => navigateTo('detail', app.id)}
-                      className="font-semibold text-base text-ink tracking-tight hover:text-accent cursor-pointer transition-colors"
+                      className="font-semibold text-base text-ink tracking-tight group-hover:text-accent transition-colors"
                     >
                       {app.name}
                     </h3>
                     <p className="text-[11px] text-ink-faint font-mono mt-0.5">{app.id}</p>
                   </div>
-                  <Badge variant={app.status}>{app.status === 'running' ? '运行中' : app.status === 'stopped' ? '已停止' : app.status}</Badge>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Badge variant={app.status}>{app.status === 'running' ? '运行中' : app.status === 'stopped' ? '已停止' : app.status}</Badge>
+                  </div>
                 </div>
 
                 {/* Content Group (Description + Image Metadata, NO harsh divider) */}
@@ -362,28 +477,38 @@ export const AppsView: React.FC<AppsViewProps> = ({
 
               {/* Quick Actions Footer - 4% Ghost Divider */}
               <div className="mt-5 pt-3.5 border-t border-line/20 dark:border-white/[0.04] flex items-center justify-between gap-2">
-                <button
-                  onClick={() => navigateTo('detail', app.id)}
-                  className="text-xs font-medium text-ink-muted hover:text-accent flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-paper-3 transition-colors cursor-pointer"
+                <div
+                  className="text-xs font-medium text-ink-muted group-hover:text-accent flex items-center gap-1.5 py-1 px-1 rounded-lg transition-colors select-none"
                 >
                   <Code className="w-3.5 h-3.5" />
                   <span>配置与终端</span>
-                </button>
+                  <CaretRight className="w-3 h-3 text-ink-faint group-hover:text-accent group-hover:translate-x-0.5 transition-transform" />
+                </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                   {app.status === 'running' ? (
                     <>
                       <button
-                        onClick={() => onRestart(app.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRestart(app.id);
+                        }}
                         data-tooltip="重启应用"
-                        className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line/60 transition-colors cursor-pointer shadow-subtle"
+                        aria-label="重启应用"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 border border-line/60 transition-colors cursor-pointer shadow-subtle flex items-center justify-center"
                       >
                         <ArrowsClockwise className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => onStop(app.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStop(app.id);
+                        }}
                         data-tooltip="停止容器"
-                        className="p-1.5 rounded-lg text-ink-muted hover:text-white hover:bg-rose-600 hover:border-rose-600 border border-line/60 transition-all cursor-pointer shadow-subtle"
+                        aria-label="停止容器"
+                        className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-2 sm:p-1.5 rounded-lg text-ink-muted hover:text-white hover:bg-rose-600 hover:border-rose-600 border border-line/60 transition-all cursor-pointer shadow-subtle flex items-center justify-center"
                       >
                         <Stop className="w-3.5 h-3.5" />
                       </button>
@@ -391,11 +516,21 @@ export const AppsView: React.FC<AppsViewProps> = ({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => onDeploy(app.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-paper-2 hover:bg-accent text-ink hover:text-white border border-line hover:border-accent transition-all shadow-subtle cursor-pointer active:translate-y-px group/btn"
+                      disabled={deployingId === app.id}
+                      onClick={(e) => handleDeployApp(e, app.id)}
+                      className="min-h-[40px] sm:min-h-[32px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-paper-2 hover:bg-accent text-ink hover:text-white border border-line hover:border-accent transition-all shadow-subtle cursor-pointer active:translate-y-px group/btn disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <Play className="w-3 h-3 text-ink-muted group-hover/btn:text-white transition-colors" weight="fill" />
-                      <span>启动</span>
+                      {deployingId === app.id ? (
+                        <>
+                          <CircleNotch className="w-3.5 h-3.5 animate-spin text-accent group-hover/btn:text-white" />
+                          <span>启动中...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3 h-3 text-ink-muted group-hover/btn:text-white transition-colors" weight="fill" />
+                          <span>启动</span>
+                        </>
+                      )}
                     </button>
                   )}
                 </div>

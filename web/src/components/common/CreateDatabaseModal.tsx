@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowsClockwise,
   Eye,
@@ -8,7 +9,6 @@ import {
   CircleNotch,
 } from '@phosphor-icons/react';
 import { AppItem } from '../../types/index.js';
-import { Modal } from './Modal.js';
 import { Button8State } from './Button8State.js';
 
 export type DatabaseType = 'postgres' | 'mongodb' | 'mariadb' | 'mysql' | 'redis' | 'libsql';
@@ -121,6 +121,10 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const formSectionRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   const currentOption = DATABASE_OPTIONS.find((o) => o.type === selectedType) || DATABASE_OPTIONS[0];
 
   // Initialize or reset defaults when switching database type
@@ -136,8 +140,31 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
     }
   }, [selectedType, isOpen]);
 
+  // Handle ESC key and prevent body scrolling when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen, isSubmitting, onClose]);
+
   const handleSelectType = (type: DatabaseType) => {
     setSelectedType(type);
+    if (typeof window !== 'undefined' && window.innerWidth < 640 && formSectionRef.current) {
+      setTimeout(() => {
+        formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        nameInputRef.current?.focus({ preventScroll: true });
+      }, 80);
+    }
   };
 
   const handleGeneratePassword = () => {
@@ -390,192 +417,255 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
     }
   };
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="创建数据库"
-      subtitle="选择官方数据库引擎"
-      maxWidth="max-w-xl"
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex flex-col sm:items-center sm:justify-center sm:p-4 bg-black/60 sm:bg-black/40 sm:dark:bg-black/75 backdrop-blur-sm animate-fade-in font-sans"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-db-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting) {
+          onClose();
+        }
+      }}
     >
-      <form onSubmit={handleSubmit} className="space-y-6 pt-1 font-sans text-xs">
-        {/* Database Selection Grid (2x3) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {DATABASE_OPTIONS.map((db) => {
-            const isSelected = selectedType === db.type;
-            return (
-              <button
-                key={db.type}
-                type="button"
-                onClick={() => handleSelectType(db.type)}
-                className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center transition-all cursor-pointer ${
-                  isSelected
-                    ? 'border-accent dark:border-accent bg-paper dark:bg-white/[0.04] shadow-sm ring-1 ring-accent'
-                    : 'border-line hover:border-line-hover bg-paper-2 dark:bg-[#16161b]'
-                }`}
-              >
-                <div className="mb-2.5 flex items-center justify-center">{db.icon}</div>
-                <span className="text-xs font-semibold text-ink">{db.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Form Fields Section */}
-        <div className="space-y-4 pt-2 border-t border-line/60">
-          <h4 className="text-sm font-semibold text-ink tracking-tight">填写基础配置</h4>
-
-          {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs">
-              {error}
-            </div>
-          )}
-
-          {/* Name Field */}
+      {/* Modal / Full-screen Container: 100% full-screen on mobile, centered dialog on desktop */}
+      <div
+        className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-xl bg-paper sm:rounded-2xl sm:border sm:border-line sm:shadow-floating flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Sticky Top Header */}
+        <div className="sticky top-0 z-10 bg-paper/95 backdrop-blur-md px-4 sm:px-6 py-3.5 border-b border-line flex items-center justify-between shrink-0">
           <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">实例名称 (Name)</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="例如 my-postgres"
-              className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
-            />
+            <h3 id="create-db-title" className="text-base sm:text-lg font-semibold text-ink tracking-tight font-sans">创建受管数据库</h3>
+            <p className="text-[11px] sm:text-xs text-ink-muted">选择官方数据库引擎并配置连接参数</p>
           </div>
-
-          {/* Database Name (if applicable) */}
-          {currentOption.hasUserAndDb && (
-            <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">初始数据库名称 (Database Name)</label>
-              <input
-                type="text"
-                value={dbName}
-                onChange={(e) => setDbName(e.target.value)}
-                placeholder="例如 app_db"
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
-          )}
-
-          {/* Database User (if applicable) */}
-          {currentOption.hasUserAndDb && (
-            <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">数据库用户名 (Database User)</label>
-              <input
-                type="text"
-                value={dbUser}
-                onChange={(e) => setDbUser(e.target.value)}
-                placeholder={`默认 ${currentOption.defaultUser}`}
-                className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
-              />
-            </div>
-          )}
-
-          {/* Database Password */}
-          <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">数据库密码 (Database Password)</label>
-            <div className="relative flex items-center">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={dbPassword}
-                onChange={(e) => setDbPassword(e.target.value)}
-                placeholder="请输入或点击右侧生成密码"
-                className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-              />
-              <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
-                <button
-                  type="button"
-                  onClick={handleGeneratePassword}
-                  className="p-1 hover:text-ink hover:bg-paper-3 rounded transition-colors cursor-pointer"
-                  title="重新随机生成安全密码"
-                >
-                  <ArrowsClockwise className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="p-1 hover:text-ink hover:bg-paper-3 rounded transition-colors cursor-pointer"
-                  title={showPassword ? '隐藏密码' : '显示密码'}
-                >
-                  {showPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Database Root password (for MariaDB & MySQL) */}
-          {currentOption.hasRootPassword && (
-            <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">Root 管理员密码 (Root Password)</label>
-              <div className="relative flex items-center">
-                <input
-                  type={showRootPassword ? 'text' : 'password'}
-                  value={dbRootPassword}
-                  onChange={(e) => setDbRootPassword(e.target.value)}
-                  placeholder="请输入或点击右侧生成 Root 密码"
-                  className="w-full bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs text-ink font-mono focus:border-accent focus:outline-none transition-colors"
-                />
-                <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
-                  <button
-                    type="button"
-                    onClick={handleGenerateRootPassword}
-                    className="p-1 hover:text-ink hover:bg-paper-3 rounded transition-colors cursor-pointer"
-                    title="重新随机生成 Root 密码"
-                  >
-                    <ArrowsClockwise className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowRootPassword(!showRootPassword)}
-                    className="p-1 hover:text-ink hover:bg-paper-3 rounded transition-colors cursor-pointer"
-                    title={showRootPassword ? '隐藏密码' : '显示密码'}
-                  >
-                    {showRootPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Docker image */}
-          <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Docker 镜像标签 (Docker Image)</label>
-            <input
-              type="text"
-              value={dockerImage}
-              onChange={(e) => setDockerImage(e.target.value)}
-              placeholder={`默认 ${currentOption.defaultImage}`}
-              className="w-full bg-paper border border-line rounded-lg px-3.5 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* Modal Actions */}
-        <div className="pt-4 flex items-center justify-end gap-3 border-t border-line/60">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
+            aria-label="关闭窗口"
+            className="min-w-[44px] min-h-[44px] -mr-2 p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
           >
-            取消
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-5 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <>
-                <CircleNotch className="w-3.5 h-3.5 animate-spin" />
-                <span>创建中...</span>
-              </>
-            ) : (
-              <span>创建数据库</span>
-            )}
+            <X className="w-5 h-5" weight="bold" />
           </button>
         </div>
-      </form>
-    </Modal>
+
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <div
+            ref={scrollBodyRef}
+            className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-6 no-scrollbar pb-24 sm:pb-6"
+          >
+            {/* Database Selection Grid (2 cols on mobile, 3 cols on desktop) */}
+            <div role="radiogroup" aria-label="数据库引擎选择" className="space-y-2">
+              <label className="block text-xs font-semibold text-ink">选择官方数据库引擎</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                {DATABASE_OPTIONS.map((db) => {
+                  const isSelected = selectedType === db.type;
+                  return (
+                    <button
+                      key={db.type}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => handleSelectType(db.type)}
+                      className={`flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-xl border text-center transition-all cursor-pointer select-none active:scale-[0.98] ${
+                        isSelected
+                          ? 'border-accent dark:border-accent bg-paper dark:bg-white/[0.04] shadow-sm ring-2 ring-accent'
+                          : 'border-line hover:border-line-hover bg-paper-2 dark:bg-[#16161b]'
+                      }`}
+                    >
+                      <div className="mb-2 flex items-center justify-center">{db.icon}</div>
+                      <span className="text-xs font-semibold text-ink">{db.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Form Fields Section */}
+            <div ref={formSectionRef} className="space-y-4 pt-3 border-t border-line/60">
+              <h4 className="text-xs sm:text-sm font-semibold text-ink tracking-tight">填写基础配置</h4>
+
+              {error && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs leading-relaxed">
+                  {error}
+                </div>
+              )}
+
+              {/* Name Field */}
+              <div>
+                <label className="block text-xs font-medium text-ink mb-1.5">实例名称 (Name)</label>
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="例如 my-postgres"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
+                />
+              </div>
+
+              {/* Database Name (if applicable) */}
+              {currentOption.hasUserAndDb && (
+                <div>
+                  <label className="block text-xs font-medium text-ink mb-1.5">初始数据库名称 (Database Name)</label>
+                  <input
+                    type="text"
+                    value={dbName}
+                    onChange={(e) => setDbName(e.target.value)}
+                    placeholder="例如 app_db"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
+                  />
+                </div>
+              )}
+
+              {/* Database User (if applicable) */}
+              {currentOption.hasUserAndDb && (
+                <div>
+                  <label className="block text-xs font-medium text-ink mb-1.5">数据库用户名 (Database User)</label>
+                  <input
+                    type="text"
+                    value={dbUser}
+                    onChange={(e) => setDbUser(e.target.value)}
+                    placeholder={`默认 ${currentOption.defaultUser}`}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none transition-colors"
+                  />
+                </div>
+              )}
+
+              {/* Database Password */}
+              <div>
+                <label className="block text-xs font-medium text-ink mb-1.5">数据库密码 (Database Password)</label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={dbPassword}
+                    onChange={(e) => setDbPassword(e.target.value)}
+                    placeholder="请输入或点击右侧生成密码"
+                    autoComplete="new-password"
+                    className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                  />
+                  <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
+                    <button
+                      type="button"
+                      onClick={handleGeneratePassword}
+                      className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                      title="重新随机生成安全密码"
+                      aria-label="生成随机密码"
+                    >
+                      <ArrowsClockwise className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                      title={showPassword ? '隐藏密码' : '显示密码'}
+                      aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                    >
+                      {showPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Database Root password (for MariaDB & MySQL) */}
+              {currentOption.hasRootPassword && (
+                <div>
+                  <label className="block text-xs font-medium text-ink mb-1.5">Root 管理员密码 (Root Password)</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showRootPassword ? 'text' : 'password'}
+                      value={dbRootPassword}
+                      onChange={(e) => setDbRootPassword(e.target.value)}
+                      placeholder="请输入或点击右侧生成 Root 密码"
+                      autoComplete="new-password"
+                      className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono focus:border-accent focus:outline-none transition-colors"
+                    />
+                    <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
+                      <button
+                        type="button"
+                        onClick={handleGenerateRootPassword}
+                        className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                        title="重新随机生成 Root 密码"
+                        aria-label="生成随机 Root 密码"
+                      >
+                        <ArrowsClockwise className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowRootPassword(!showRootPassword)}
+                        className="min-w-[36px] min-h-[36px] p-2 hover:text-ink hover:bg-paper-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                        title={showRootPassword ? '隐藏密码' : '显示密码'}
+                        aria-label={showRootPassword ? '隐藏密码' : '显示密码'}
+                      >
+                        {showRootPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Docker image */}
+              <div>
+                <label className="block text-xs font-medium text-ink mb-1.5">Docker 镜像标签 (Docker Image)</label>
+                <input
+                  type="text"
+                  value={dockerImage}
+                  onChange={(e) => setDockerImage(e.target.value)}
+                  placeholder={`默认 ${currentOption.defaultImage}`}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="w-full min-h-[44px] bg-paper-2 sm:bg-paper border border-line rounded-lg px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none font-mono transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Bottom Action Bar: Mobile Sticky Full-Width / Desktop Dual Buttons */}
+          <div className="sticky bottom-0 z-10 bg-paper/95 backdrop-blur-md px-4 sm:px-6 py-3.5 sm:py-4 border-t border-line pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between sm:justify-end gap-3 shrink-0 shadow-subtle">
+            {/* Desktop Cancel Button (Hidden on Mobile, where top X handles cancel) */}
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="hidden sm:inline-flex px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
+            >
+              取消
+            </button>
+
+            {/* Main Submit Button: 100% width on Mobile, Auto width on Desktop */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto min-h-[48px] sm:min-h-[36px] px-6 py-2.5 sm:py-2 bg-accent hover:bg-accent-hover text-white text-sm sm:text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:translate-y-px"
+            >
+              {isSubmitting ? (
+                <>
+                  <CircleNotch className="w-4 h-4 animate-spin" />
+                  <span>创建中...</span>
+                </>
+              ) : (
+                <span>创建数据库</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
   );
 };

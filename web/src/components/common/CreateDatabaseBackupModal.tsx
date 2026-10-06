@@ -126,6 +126,10 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
   const handleSubmit = async (runNow: boolean = true) => {
     if (isSubmitting) return;
 
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(15);
+    }
+
     const target = scope === 'all' ? 'all' : (customDb.trim() || selectedDb.trim() || 'all');
     const scheduleData: DatabaseBackupSchedule = {
       enabled: enableSchedule,
@@ -391,15 +395,22 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
         </div>
 
         {/* Modal Actions */}
-        <div className="pt-3 border-t border-line flex items-center justify-end gap-2.5">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-paper-2 hover:bg-paper-3 text-ink text-xs font-medium rounded-lg border border-line transition-colors cursor-pointer"
+        <div className="pt-3 border-t border-line flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5">
+          <Button8State
+            size="sm"
+            variant="primary"
+            state={isSubmitting ? 'loading' : 'default'}
+            disabled={isSubmitting || (scope === 'specific' && !customDb.trim())}
+            icon={<CloudArrowUp className="w-4 h-4 text-white" />}
+            onClick={() => handleSubmit(true)}
+            className="order-1 sm:order-3 w-full sm:w-auto min-h-[44px] sm:min-h-0"
           >
-            取消
-          </button>
+            {isSubmitting
+              ? '正在处理...'
+              : enableSchedule
+              ? '立即备份并保存配置'
+              : '立即生成备份'}
+          </Button8State>
 
           {enableSchedule && (
             <Button8State
@@ -409,25 +420,20 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
               disabled={isSubmitting || (scope === 'specific' && !customDb.trim())}
               icon={<FloppyDisk className="w-4 h-4 text-accent" />}
               onClick={() => handleSubmit(false)}
+              className="order-2 sm:order-2 w-full sm:w-auto min-h-[44px] sm:min-h-0"
             >
               仅保存定时配置
             </Button8State>
           )}
 
-          <Button8State
-            size="sm"
-            variant="primary"
-            state={isSubmitting ? 'loading' : 'default'}
-            disabled={isSubmitting || (scope === 'specific' && !customDb.trim())}
-            icon={<CloudArrowUp className="w-4 h-4 text-white" />}
-            onClick={() => handleSubmit(true)}
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="order-3 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium text-ink-muted hover:text-ink sm:bg-paper-2 sm:hover:bg-paper-3 sm:border sm:border-line sm:rounded-lg text-center transition-colors cursor-pointer select-none"
           >
-            {isSubmitting
-              ? '正在处理...'
-              : enableSchedule
-              ? '立即备份并保存配置'
-              : '立即生成备份'}
-          </Button8State>
+            取消
+          </button>
         </div>
       </form>
     </Modal>

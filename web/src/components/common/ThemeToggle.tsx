@@ -88,7 +88,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
             onClick={(e) => setTheme(opt.id, e)}
             data-tooltip={opt.label}
             className={clsx(
-              'relative p-1.5 rounded-[6px] text-xs transition-transform duration-150 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 border active:scale-95',
+              'relative min-w-[36px] min-h-[36px] p-2 rounded-[6px] text-xs transition-transform duration-150 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:ring-1.5 focus-visible:ring-accent/50 border active:scale-95',
               isActive
                 ? 'bg-white dark:bg-neutral-800 text-ink shadow-subtle border-line/60 dark:border-white/10 font-medium'
                 : 'text-ink-faint hover:text-ink-muted hover:bg-paper-2/40 border-transparent'
