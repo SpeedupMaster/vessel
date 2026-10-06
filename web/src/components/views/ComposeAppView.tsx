@@ -7,7 +7,6 @@ import {
   Stop,
   ArrowsClockwise,
   Trash,
-  Code,
   Terminal,
   FileText,
   Package,
@@ -1371,197 +1370,56 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       </div>
       )}
 
-      {/* ================= GLOBAL HORIZONTAL TAB NAVIGATION ================= */}
-      {isDb ? (
-        <div className="flex items-center gap-1 p-1 bg-stone-100/90 dark:bg-white/[0.04] rounded-xl border border-line/40 w-fit overflow-x-auto scrollbar-none -mt-2">
-          {(['general', 'environment', 'logs', 'monitoring', 'backups', 'advanced'] as TabKey[]).map((tabKey) => {
-            const labels: Record<string, string> = {
-              general: '常规',
-              environment: '环境变量',
-              logs: '日志',
-              monitoring: '监控',
-              backups: '备份',
-              advanced: '高级设置',
-            };
-            const isActive = activeTab === tabKey;
-            return (
-              <button
-                key={tabKey}
-                type="button"
-                onClick={() => setActiveTab(tabKey)}
-                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? 'bg-white dark:bg-[#1f1f24] text-ink shadow-sm font-semibold'
-                    : 'text-ink-muted hover:text-ink hover:bg-white/40 dark:hover:bg-white/[0.04]'
-                }`}
-              >
-                {labels[tabKey]}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="border-b border-line/20 dark:border-white/[0.04] flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-1 no-scrollbar scrollbar-none -mt-2">
-          {/* General Tab */}
-        <button
-          onClick={() => setActiveTab('general')}
-          className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'general'
-              ? 'text-accent font-semibold'
-              : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-          }`}
-        >
-          <Code className={`w-3.5 h-3.5 ${activeTab === 'general' ? 'text-accent' : 'text-ink-muted'}`} />
-          <span>基础编排</span>
-          {activeTab === 'general' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-          )}
-        </button>
-
-        {/* Environment Tab */}
-        <button
-          onClick={() => setActiveTab('environment')}
-          className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'environment'
-              ? 'text-accent font-semibold'
-              : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-          }`}
-        >
-          <FileText className={`w-3.5 h-3.5 ${activeTab === 'environment' ? 'text-accent' : 'text-ink-muted'}`} />
-          <span>环境变量 (.env)</span>
-          {activeTab === 'environment' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-          )}
-        </button>
-
-        {/* Mode specific tabs */}
-        {mode === 'create' ? (
-          <>
-            {/* Domains Tab in Create Mode */}
+      {/* ================= GLOBAL HORIZONTAL TAB NAVIGATION (Dokploy Capsule Style) ================= */}
+      <div className="flex items-center gap-1 p-1 bg-stone-100/90 dark:bg-white/[0.04] rounded-xl border border-line/40 w-fit max-w-full overflow-x-auto scrollbar-none no-scrollbar -mt-2">
+        {(
+          isDb
+            ? [
+                { key: 'general' as TabKey, label: '常规' },
+                { key: 'environment' as TabKey, label: '环境变量' },
+                { key: 'logs' as TabKey, label: '日志' },
+                { key: 'monitoring' as TabKey, label: '监控' },
+                { key: 'backups' as TabKey, label: '备份' },
+                { key: 'advanced' as TabKey, label: '高级设置' },
+              ]
+            : mode === 'create'
+            ? [
+                { key: 'general' as TabKey, label: '常规' },
+                { key: 'environment' as TabKey, label: '环境变量' },
+                {
+                  key: 'domains' as TabKey,
+                  label: bindDomainOnDeploy && deployDomain ? '域名 (1)' : '域名',
+                },
+                { key: 'advanced' as TabKey, label: '高级设置' },
+              ]
+            : [
+                { key: 'general' as TabKey, label: '常规' },
+                { key: 'environment' as TabKey, label: '环境变量' },
+                { key: 'deployments' as TabKey, label: '部署日志' },
+                { key: 'containers' as TabKey, label: `容器 (${app?.containers?.length || 0})` },
+                { key: 'domains' as TabKey, label: `域名 (${appDomains.length})` },
+                { key: 'backups' as TabKey, label: `备份 (${appBackups.length})` },
+                { key: 'logs' as TabKey, label: '运行日志' },
+                { key: 'advanced' as TabKey, label: '高级设置' },
+              ]
+        ).map(({ key, label }) => {
+          const isActive = activeTab === key;
+          return (
             <button
-              onClick={() => setActiveTab('domains')}
-              className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'domains'
-                  ? 'text-accent font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? 'bg-white dark:bg-[#1f1f24] text-ink shadow-sm font-semibold'
+                  : 'text-ink-muted hover:text-ink hover:bg-white/40 dark:hover:bg-white/[0.04]'
               }`}
             >
-              <Globe className="w-3.5 h-3.5 text-emerald-500" />
-              <span>
-                域名绑定{' '}
-                {bindDomainOnDeploy && deployDomain ? (
-                  <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded-full border border-emerald-500/20 font-mono">
-                    1
-                  </span>
-                ) : (
-                  '(0)'
-                )}
-              </span>
-              {activeTab === 'domains' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-              )}
+              {label}
             </button>
-          </>
-        ) : (
-          <>
-            {/* Deployments / Terminal Tab */}
-            <button
-              onClick={() => setActiveTab('deployments')}
-              className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'deployments'
-                  ? 'text-accent font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-              }`}
-            >
-              <Terminal className={`w-3.5 h-3.5 ${activeTab === 'deployments' ? 'text-accent' : 'text-ink-muted'}`} />
-              <span>部署日志</span>
-              {activeTab === 'deployments' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-              )}
-            </button>
-
-            {/* Containers Tab */}
-            <button
-              onClick={() => setActiveTab('containers')}
-              className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'containers'
-                  ? 'text-accent font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-              }`}
-            >
-              <Stack className={`w-3.5 h-3.5 ${activeTab === 'containers' ? 'text-accent' : 'text-ink-muted'}`} />
-              <span>容器实例 ({app?.containers?.length || 0})</span>
-              {activeTab === 'containers' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-              )}
-            </button>
-
-            {/* Domains Tab */}
-            <button
-              onClick={() => setActiveTab('domains')}
-              className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'domains'
-                  ? 'text-accent font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5 text-emerald-500" />
-              <span>域名绑定 ({appDomains.length})</span>
-              {activeTab === 'domains' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-              )}
-            </button>
-
-            {/* Backups Tab */}
-            <button
-              onClick={() => setActiveTab('backups')}
-              className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'backups'
-                  ? 'text-accent font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-              }`}
-            >
-              <CloudArrowUp className={`w-3.5 h-3.5 ${activeTab === 'backups' ? 'text-accent' : 'text-ink-muted'}`} />
-              <span>备份存档 ({appBackups.length})</span>
-              {activeTab === 'backups' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-              )}
-            </button>
-
-            {/* Logs Tab */}
-            <button
-              onClick={() => setActiveTab('logs')}
-              className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                activeTab === 'logs'
-                  ? 'text-accent font-semibold'
-                  : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-              }`}
-            >
-              <FileText className={`w-3.5 h-3.5 ${activeTab === 'logs' ? 'text-accent' : 'text-ink-muted'}`} />
-              <span>运行日志</span>
-              {activeTab === 'logs' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-              )}
-            </button>
-          </>
-        )}
-
-        {/* Advanced Tab */}
-        <button
-          onClick={() => setActiveTab('advanced')}
-          className={`px-3.5 py-2.5 text-xs font-medium transition-all relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'advanced'
-              ? 'text-accent font-semibold'
-              : 'text-ink-muted hover:text-ink hover:bg-paper-2/60 rounded-t-lg'
-          }`}
-        >
-          <span>高级设置</span>
-          {activeTab === 'advanced' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" />
-          )}
-        </button>
+          );
+        })}
       </div>
-      )}
 
       {/* ================= MOBILE SECONDARY METADATA & AUTODEPLOY BAR (EDIT MODE) ================= */}
       {!isDb && mode === 'edit' && activeTab === 'general' && (
