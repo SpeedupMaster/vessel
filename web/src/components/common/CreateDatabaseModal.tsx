@@ -192,6 +192,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       POSTGRES_DB: \${POSTGRES_DB:-${finalDbName}}
       POSTGRES_USER: \${POSTGRES_USER:-${finalDbUser}}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./data:/var/lib/postgresql/data
 `;
@@ -200,6 +201,10 @@ POSTGRES_DB=${finalDbName}
 POSTGRES_USER=${finalDbUser}
 POSTGRES_PASSWORD=${dbPassword}
 POSTGRES_PORT=5432
+
+# Database Connection URLs
+DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@localhost:5432/${finalDbName}
+INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@database:5432/${finalDbName}
 `;
         break;
 
@@ -222,6 +227,10 @@ MONGO_INITDB_DATABASE=${finalDbName}
 MONGO_INITDB_ROOT_USERNAME=${finalDbUser}
 MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
 MONGO_PORT=27017
+
+# Database Connection URLs
+MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@localhost:27017/${finalDbName}?authSource=admin
+INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@database:27017/${finalDbName}?authSource=admin
 `;
         break;
 
@@ -238,7 +247,11 @@ MONGO_PORT=27017
       MARIADB_PASSWORD: \${MARIADB_PASSWORD}
       MARIADB_ROOT_PASSWORD: \${MARIADB_ROOT_PASSWORD}
       MYSQL_ROOT_PASSWORD: \${MARIADB_ROOT_PASSWORD}
+      MYSQL_DATABASE: \${MARIADB_DATABASE:-${finalDbName}}
+      MYSQL_USER: \${MARIADB_USER:-${finalDbUser}}
+      MYSQL_PASSWORD: \${MARIADB_PASSWORD}
       MARIADB_ROOT_HOST: "%"
+      MYSQL_ROOT_HOST: "%"
     volumes:
       - ./data:/var/lib/mysql
 `;
@@ -249,6 +262,12 @@ MARIADB_PASSWORD=${dbPassword}
 MARIADB_ROOT_PASSWORD=${dbRootPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
 MARIADB_PORT=3306
+
+# Database Connection URLs
+DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@localhost:3306/${finalDbName}
+DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@localhost:3306/${finalDbName}
+INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
+INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
 `;
         break;
 
@@ -274,6 +293,12 @@ MYSQL_USER=${finalDbUser}
 MYSQL_PASSWORD=${dbPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
 MYSQL_PORT=3306
+
+# Database Connection URLs
+DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@localhost:3306/${finalDbName}
+DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@localhost:3306/${finalDbName}
+INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@database:3306/${finalDbName}
+INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@database:3306/${finalDbName}
 `;
         break;
 
@@ -284,13 +309,17 @@ MYSQL_PORT=3306
     restart: unless-stopped
     ports:
       - "\${REDIS_PORT:-6379}:6379"
-    command: redis-server --requirepass \${REDIS_PASSWORD}
+    command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
     volumes:
       - ./data:/data
 `;
         envContent = `REDIS_IMAGE=${imageToUse}
 REDIS_PASSWORD=${dbPassword}
 REDIS_PORT=6379
+
+# Database Connection URLs
+REDIS_URL=redis://:${dbPassword}@localhost:6379
+INTERNAL_REDIS_URL=redis://:${dbPassword}@database:6379
 `;
         break;
 
@@ -303,12 +332,18 @@ REDIS_PORT=6379
       - "\${LIBSQL_PORT:-8080}:8080"
     environment:
       SQLD_AUTH_TOKEN: \${SQLD_AUTH_TOKEN}
+      SQLD_NODE: "primary"
+      SQLD_HTTP_LISTEN_ADDR: "0.0.0.0:8080"
     volumes:
       - ./data:/var/lib/sqld
 `;
         envContent = `LIBSQL_IMAGE=${imageToUse}
 SQLD_AUTH_TOKEN=${dbPassword}
 LIBSQL_PORT=8080
+
+# Database Connection URLs
+LIBSQL_URL=http://localhost:8080
+INTERNAL_LIBSQL_URL=http://database:8080
 `;
         break;
     }

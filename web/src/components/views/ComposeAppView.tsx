@@ -35,6 +35,8 @@ import {
   CircleNotch,
   DownloadSimple,
   ArrowCounterClockwise,
+  EyeSlash,
+  Key,
 } from '@phosphor-icons/react';
 import { AppItem, ComposeTemplate, DomainItem, BackupRecord } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
@@ -160,6 +162,67 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
   const [deletingBackup, setDeletingBackup] = useState<BackupRecord | null>(null);
   const [isDeletingBackup, setIsDeletingBackup] = useState(false);
+
+  // Database credentials parsed from envContent for managed database apps
+  const [showDbPassword, setShowDbPassword] = useState(false);
+  const [showDbRootPassword, setShowDbRootPassword] = useState(false);
+  const [copiedDbField, setCopiedDbField] = useState<string | null>(null);
+
+  const handleCopyDbField = (text: string, fieldKey: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedDbField(fieldKey);
+    setTimeout(() => setCopiedDbField(null), 2000);
+  };
+
+  const dbInfo = useMemo(() => {
+    const isDb =
+      app?.description?.includes('Database Service') ||
+      app?.composeYaml?.includes('services:\n  database:');
+    if (!isDb) return null;
+
+    const envMap: Record<string, string> = {};
+    (envContent || app?.envContent || '').split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx > 0) {
+          envMap[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+        }
+      }
+    });
+
+    let engine: 'PostgreSQL' | 'MongoDB' | 'MariaDB' | 'MySQL' | 'Redis' | 'libSQL' | 'Database' = 'Database';
+    if (envMap.POSTGRES_DB || envMap.POSTGRES_PASSWORD) engine = 'PostgreSQL';
+    else if (envMap.MONGO_INITDB_ROOT_PASSWORD || envMap.MONGO_INITDB_DATABASE) engine = 'MongoDB';
+    else if (envMap.MARIADB_ROOT_PASSWORD || envMap.MARIADB_DATABASE) engine = 'MariaDB';
+    else if (envMap.MYSQL_ROOT_PASSWORD || envMap.MYSQL_DATABASE) engine = 'MySQL';
+    else if (envMap.REDIS_PASSWORD) engine = 'Redis';
+    else if (envMap.SQLD_AUTH_TOKEN) engine = 'libSQL';
+
+    const dbName = envMap.POSTGRES_DB || envMap.MYSQL_DATABASE || envMap.MARIADB_DATABASE || envMap.MONGO_INITDB_DATABASE || '';
+    const user = envMap.POSTGRES_USER || envMap.MYSQL_USER || envMap.MARIADB_USER || envMap.MONGO_INITDB_ROOT_USERNAME || '';
+    const password = envMap.POSTGRES_PASSWORD || envMap.MYSQL_PASSWORD || envMap.MARIADB_PASSWORD || envMap.MONGO_INITDB_ROOT_PASSWORD || envMap.REDIS_PASSWORD || envMap.SQLD_AUTH_TOKEN || '';
+    const rootPassword = envMap.MYSQL_ROOT_PASSWORD || envMap.MARIADB_ROOT_PASSWORD || '';
+    const port = envMap.POSTGRES_PORT || envMap.MYSQL_PORT || envMap.MARIADB_PORT || envMap.MONGO_PORT || envMap.REDIS_PORT || envMap.LIBSQL_PORT || '';
+    const externalUrl = envMap.DATABASE_URL || envMap.MONGO_URL || envMap.REDIS_URL || envMap.LIBSQL_URL || '';
+    const internalUrl = envMap.INTERNAL_DATABASE_URL || envMap.INTERNAL_MONGO_URL || envMap.INTERNAL_REDIS_URL || envMap.INTERNAL_LIBSQL_URL || '';
+    const rootUrl = envMap.DATABASE_ROOT_URL || '';
+    const internalRootUrl = envMap.INTERNAL_DATABASE_ROOT_URL || '';
+
+    return {
+      engine,
+      dbName,
+      user,
+      password,
+      rootPassword,
+      port,
+      externalUrl,
+      internalUrl,
+      rootUrl,
+      internalRootUrl,
+    };
+  }, [app, envContent]);
 
   const handleAppBackup = async () => {
     if (!app || isBackingUp) return;
@@ -1438,6 +1501,230 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           ) : (
             /* ================= EDIT MODE: UNIFIED WORKSPACE ================= */
             <div className="space-y-6">
+              {/* DATABASE CREDENTIALS & CONNECTION PANEL (Dokploy style) */}
+              {dbInfo && (
+                <div className="rounded-xl border border-line/80 bg-paper-2/70 dark:bg-[#111115] overflow-hidden shadow-subtle font-sans">
+                  <div className="px-5 py-3.5 bg-paper-3/40 dark:bg-white/[0.02] border-b border-line/30 dark:border-white/[0.06] flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                        <Database className="w-4 h-4" weight="bold" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-xs sm:text-sm text-ink tracking-tight">数据库连接与访问凭据</h3>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            {dbInfo.engine}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-ink-muted">
+                          所有配置已作为环境变量写入并生效，支持一键复制凭据与直接连接
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('environment')}
+                      className="text-[11px] text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>前往修改 .env</span>
+                      <ArrowSquareOut className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <div className="p-5 space-y-4">
+                    {/* Connection Strings */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {/* External Connection URL */}
+                      {dbInfo.externalUrl && (
+                        <div className="p-3 rounded-lg bg-paper border border-line/70">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-ink-muted flex items-center gap-1">
+                              <Globe className="w-3 h-3 text-accent" />
+                              外部连接串 (Client / Tools URL)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.externalUrl!, 'ext-url')}
+                              className="text-[11px] text-accent hover:text-accent-hover font-medium flex items-center gap-1 cursor-pointer"
+                            >
+                              {copiedDbField === 'ext-url' ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                  <span className="text-emerald-500">已复制</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>复制</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <div className="font-mono text-xs text-ink bg-paper-2/60 dark:bg-black/30 px-2.5 py-1.5 rounded border border-line/40 truncate select-all">
+                            {dbInfo.externalUrl}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Internal Connection URL */}
+                      {dbInfo.internalUrl && (
+                        <div className="p-3 rounded-lg bg-paper border border-line/70">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-ink-muted flex items-center gap-1">
+                              <Stack className="w-3 h-3 text-emerald-500" />
+                              容器内网络连接串 (Internal Service URL)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.internalUrl!, 'int-url')}
+                              className="text-[11px] text-accent hover:text-accent-hover font-medium flex items-center gap-1 cursor-pointer"
+                            >
+                              {copiedDbField === 'int-url' ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                  <span className="text-emerald-500">已复制</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>复制</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <div className="font-mono text-xs text-ink bg-paper-2/60 dark:bg-black/30 px-2.5 py-1.5 rounded border border-line/40 truncate select-all">
+                            {dbInfo.internalUrl}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Detailed Credentials Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
+                      {/* Database Name */}
+                      {dbInfo.dbName && (
+                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold">
+                            Database Name
+                          </div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono text-xs text-ink font-semibold truncate">{dbInfo.dbName}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.dbName!, 'dbname')}
+                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
+                              title="复制数据库名"
+                            >
+                              {copiedDbField === 'dbname' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Database User */}
+                      {dbInfo.user && (
+                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold">
+                            User
+                          </div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono text-xs text-ink font-semibold truncate">{dbInfo.user}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.user!, 'dbuser')}
+                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
+                              title="复制用户名"
+                            >
+                              {copiedDbField === 'dbuser' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Database Password */}
+                      {dbInfo.password && (
+                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold flex items-center justify-between">
+                            <span>Password</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowDbPassword(!showDbPassword)}
+                              className="text-ink-muted hover:text-ink cursor-pointer"
+                              title={showDbPassword ? '隐藏' : '显示'}
+                            >
+                              {showDbPassword ? <EyeSlash className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono text-xs text-ink truncate">
+                              {showDbPassword ? dbInfo.password : '••••••••••••••••'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.password!, 'dbpass')}
+                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
+                              title="复制密码"
+                            >
+                              {copiedDbField === 'dbpass' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Database Root Password (if applicable) */}
+                      {dbInfo.rootPassword && (
+                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold flex items-center justify-between">
+                            <span className="text-amber-600 dark:text-amber-400">Root Password</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowDbRootPassword(!showDbRootPassword)}
+                              className="text-ink-muted hover:text-ink cursor-pointer"
+                              title={showDbRootPassword ? '隐藏' : '显示'}
+                            >
+                              {showDbRootPassword ? <EyeSlash className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono text-xs text-ink truncate">
+                              {showDbRootPassword ? dbInfo.rootPassword : '••••••••••••••••'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.rootPassword!, 'dbrootpass')}
+                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
+                              title="复制 Root 密码"
+                            >
+                              {copiedDbField === 'dbrootpass' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Port */}
+                      {dbInfo.port && (
+                        <div className="p-2.5 rounded-lg bg-paper border border-line/70">
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider mb-1 font-semibold">
+                            Port
+                          </div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono text-xs text-ink font-semibold">{dbInfo.port}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyDbField(dbInfo.port!, 'dbport')}
+                              className="p-1 text-ink-muted hover:text-ink cursor-pointer"
+                              title="复制端口"
+                            >
+                              {copiedDbField === 'dbport' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* COMPOSE YAML EDITOR WORKSPACE - INDEPENDENT IDE CARD */}
               <div className="rounded-xl border border-line/80 bg-paper-2/60 dark:bg-[#111115] overflow-hidden shadow-subtle">
                 {/* Card Window Header */}
