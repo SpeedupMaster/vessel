@@ -13,7 +13,8 @@ import { MaintenanceView } from './components/views/MaintenanceView.js';
 import { LoginView } from './components/views/LoginView.js';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal.js';
 import { GlobalTooltip } from './components/common/Tooltip.js';
-import { ShieldWarning, X } from '@phosphor-icons/react';
+import { ShieldWarning, X, ArrowClockwise } from '@phosphor-icons/react';
+import { usePWA } from './hooks/usePWA.js';
 
 interface RouteState {
   tab: NavTab;
@@ -24,10 +25,16 @@ interface RouteState {
   } | null;
 }
 
-function parsePath(pathname: string): RouteState {
+function parsePath(pathname: string, search: string = ''): RouteState {
+  const params = new URLSearchParams(search);
+  const tabParam = params.get('tab') as NavTab | null;
+
   const clean = pathname.replace(/\/+$/, '') || '/';
   if (clean === '/login') {
     return { tab: 'overview', isLogin: true, appSubRoute: null };
+  }
+  if (tabParam && ['overview', 'apps', 'domains', 'backups', 'registries', 'maintenance'].includes(tabParam)) {
+    return { tab: tabParam, isLogin: false, appSubRoute: tabParam === 'apps' ? { mode: 'list' } : null };
   }
   if (clean === '/apps/new' || clean === '/apps/create') {
     return { tab: 'apps', isLogin: false, appSubRoute: { mode: 'create' } };
@@ -56,7 +63,8 @@ function parsePath(pathname: string): RouteState {
 
 function MainConsole() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const [route, setRoute] = useState<RouteState>(() => parsePath(window.location.pathname));
+  const { updateAvailable, updateApp } = usePWA();
+  const [route, setRoute] = useState<RouteState>(() => parsePath(window.location.pathname, window.location.search));
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isPasswordWarningDismissed, setIsPasswordWarningDismissed] = useState<boolean>(() => {
     return typeof window !== 'undefined' && sessionStorage.getItem('vessel_dismiss_password_warning') === '1';
@@ -76,7 +84,7 @@ function MainConsole() {
     logsMap,
     subscribeLogs,
     createApp,
-    updateApp,
+    updateApp: updateAppData,
     deleteApp,
     deployApp,
     stopApp,
@@ -116,16 +124,23 @@ function MainConsole() {
   // Listen to browser Back/Forward (popstate)
   useEffect(() => {
     const onPopState = () => {
-      setRoute(parsePath(window.location.pathname));
+      setRoute(parsePath(window.location.pathname, window.location.search));
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  // Normalize root URL to /overview
+  // Normalize root URL to /overview or query tab
   useEffect(() => {
     if (window.location.pathname === '/' || window.location.pathname === '') {
-      window.history.replaceState(null, '', '/overview');
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+      const tab = params.get('tab');
+      if (tab) {
+        window.history.replaceState(null, '', `/${tab}`);
+      } else {
+        window.history.replaceState(null, '', '/overview');
+      }
     }
   }, []);
 
@@ -246,6 +261,27 @@ function MainConsole() {
         {/* Dynamic View Container (Mobile px-4, Desktop md:p-8 lg:p-10) */}
         <main className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 sm:px-6 sm:py-6 md:p-8 lg:p-10">
           <div ref={mainContentRef} className="max-w-7xl mx-auto pb-16">
+            {/* PWA Update Banner */}
+            {updateAvailable && (
+              <div className="mb-6 rounded-2xl bg-paper-2 border border-line shadow-sm p-4 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-sans animate-fade-in">
+                <div className="flex items-center gap-2.5 text-ink min-w-0">
+                  <ArrowClockwise className="w-4 h-4 shrink-0 text-accent animate-spin" />
+                  <span>
+                    <strong>版本更新：</strong> Vessel 控制中心已加载新版本，点击以完成离线缓存与应用更新。
+                  </span>
+                </div>
+                <div className="flex items-center justify-end shrink-0">
+                  <button
+                    type="button"
+                    onClick={updateApp}
+                    className="btn-vessel-primary py-1.5 px-3.5 text-xs font-medium rounded-xl cursor-pointer"
+                  >
+                    立即更新
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Inset Dismissible Security Banner */}
             {user?.isDefaultPassword && !isPasswordWarningDismissed && (
               <div className="mb-6 rounded-2xl bg-amber-500/10 p-4 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-sans animate-fade-in">
@@ -300,7 +336,7 @@ function MainConsole() {
                 subRoute={route.appSubRoute || { mode: 'list' }}
                 onNavigateSubRoute={handleNavigateSubRoute}
                 onCreateApp={createApp}
-                onUpdateApp={updateApp}
+                onUpdateApp={updateAppData}
                 onDeleteApp={deleteApp}
                 onDeploy={deployApp}
                 onStop={stopApp}
@@ -360,7 +396,7 @@ function MainConsole() {
                 onTriggerPrune={triggerPrune}
                 onTriggerCheckUpdates={triggerCheckUpdates}
                 onRebuildApp={rebuildApp}
-                onUpdateApp={updateApp}
+                onUpdateApp={updateAppData}
               />
             )}
           </div>
