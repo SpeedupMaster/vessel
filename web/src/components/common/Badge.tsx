@@ -50,21 +50,21 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, pul
       case 'running':
       case 'active':
       case 'connected':
-        return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+        return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 dark:border-transparent font-medium';
       case 'deploying':
       case 'rebuilding':
       case 'issuing':
-        return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+        return 'bg-amber-500/10 text-amber-800 dark:text-amber-400 border border-amber-500/25 dark:border-transparent font-medium';
       case 'stopped':
       case 'unverified':
-        return 'bg-paper-3 text-ink-muted';
+        return 'bg-paper-3 text-ink-muted border border-zinc-200 dark:border-white/5';
       case 'error':
       case 'expired':
-        return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+        return 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/25 dark:border-transparent font-medium';
       case 'accent':
-        return 'bg-paper-3 text-ink font-semibold';
+        return 'bg-paper-3 text-ink font-semibold border border-zinc-200 dark:border-white/10';
       default:
-        return 'bg-paper-3 text-ink-muted';
+        return 'bg-paper-3 text-ink-muted border border-zinc-200 dark:border-white/5';
     }
   };
 

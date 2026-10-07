@@ -654,7 +654,26 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
               <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入文件名 <strong className="text-ink font-semibold select-none font-mono">{deletingBackup.fileName}</strong> 以确认删除：
+                请输入文件名{' '}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setDeleteBackupInput(deletingBackup.fileName);
+                    if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setDeleteBackupInput(deletingBackup.fileName);
+                    }
+                  }}
+                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
+                  title="点击直接填入"
+                >
+                  {deletingBackup.fileName}
+                </span>{' '}
+                以确认删除：
               </label>
               <input
                 type="text"
@@ -763,7 +782,45 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
               <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入 <strong className="text-ink font-semibold select-none font-mono">确认恢复</strong> 或 <strong className="text-ink font-semibold font-mono select-none">RESTORE</strong> 以确认执行：
+                请输入{' '}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setRestoreConfirmInput('确认恢复');
+                    if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setRestoreConfirmInput('确认恢复');
+                    }
+                  }}
+                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
+                  title="点击直接填入「确认恢复」"
+                >
+                  确认恢复
+                </span>{' '}
+                或{' '}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setRestoreConfirmInput('RESTORE');
+                    if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setRestoreConfirmInput('RESTORE');
+                    }
+                  }}
+                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
+                  title="点击直接填入「RESTORE」"
+                >
+                  RESTORE
+                </span>{' '}
+                以确认执行：
               </label>
               <input
                 type="text"

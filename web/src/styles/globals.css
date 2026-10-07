@@ -342,7 +342,7 @@ html.dark .btn-vessel-ghost:hover,
 .btn-vessel-secondary {
   background-color: #ffffff;
   color: var(--color-ink);
-  border: 1px solid var(--color-line);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: var(--radius-md);
   padding: 0.5rem 1.125rem;
   font-size: 0.75rem;
@@ -351,7 +351,7 @@ html.dark .btn-vessel-ghost:hover,
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   user-select: none;
@@ -359,8 +359,8 @@ html.dark .btn-vessel-ghost:hover,
 
 .btn-vessel-secondary:hover,
 .btn-vessel-secondary.is-hover {
-  background-color: var(--color-paper-2);
-  border-color: rgba(0, 0, 0, 0.12);
+  background-color: var(--color-paper-3);
+  border-color: rgba(0, 0, 0, 0.22);
   color: var(--color-ink);
 }
 
@@ -376,31 +376,33 @@ html.dark .btn-vessel-ghost:hover,
 
 html.dark .btn-vessel-secondary,
 .dark .btn-vessel-secondary {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(255, 255, 255, 0.05);
   color: var(--color-ink);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
 }
 
 html.dark .btn-vessel-secondary:hover,
 .dark .btn-vessel-secondary:hover {
   background-color: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.25);
   color: #ffffff;
 }
 
 /* Card & Surface Utilities */
 .card-vessel {
   background-color: var(--color-paper-2);
-  border: 1px solid var(--color-line-subtle);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
   transition: box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html.dark .card-vessel,
 .dark .card-vessel {
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: var(--color-paper-2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.35);
 }
 
 /* Only explicitly interactive card elements get hover background change */

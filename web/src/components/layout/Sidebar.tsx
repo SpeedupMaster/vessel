@@ -82,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         aria-label="导航菜单"
         className={clsx(
           'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-paper-2 flex flex-col h-screen select-none transition-transform duration-250 ease-out',
-          'md:static md:translate-x-0 md:w-64 md:flex-shrink-0 md:z-auto',
+          'md:static md:translate-x-0 md:w-64 md:flex-shrink-0 md:z-auto md:border-r md:border-line',
           isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
         )}
       >

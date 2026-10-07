@@ -330,7 +330,26 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
               <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入完整域名 <strong className="text-ink font-semibold select-none font-mono">{deletingDomain.domain}</strong> 以确认解绑：
+                请输入完整域名{' '}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setDeleteDomainInput(deletingDomain.domain);
+                    if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setDeleteDomainInput(deletingDomain.domain);
+                    }
+                  }}
+                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
+                  title="点击直接填入"
+                >
+                  {deletingDomain.domain}
+                </span>{' '}
+                以确认解绑：
               </label>
               <input
                 type="text"

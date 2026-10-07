@@ -63,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [userMenuOpen]);
 
   return (
-    <header className="bg-paper/80 backdrop-blur-md sticky top-0 z-20 transition-colors">
+    <header className="bg-paper/80 backdrop-blur-md sticky top-0 z-20 transition-colors border-b border-line">
       {/* Mobile Top Navigation Bar (< md) */}
       <div className="md:hidden h-14 px-4 flex items-center justify-between">
         <div className="flex items-center gap-2">

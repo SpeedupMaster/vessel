@@ -49,19 +49,19 @@ export class CleanerService {
         logLines.push(`Unused images older than ${hours}h pruned.`);
       } catch {}
 
-      // If in dev environment where docker might not have reclaimed actual bytes, report a friendly simulated clean if 0
-      if (totalFreedBytes === 0) {
-        totalFreedBytes = 142 * 1024 * 1024; // 142MB default benchmark
-      }
-
       config.lastPruneAt = new Date().toISOString();
       config.lastFreedBytes = totalFreedBytes;
       db.set('maintenance', { ...config });
 
+      const freedMb = (totalFreedBytes / 1024 / 1024).toFixed(1);
+      const summary = totalFreedBytes > 0
+        ? `成功安全释放 ${freedMb} MB 磁盘空间。`
+        : '磁盘已处于最佳状态，未发现需要释放的无用镜像或历史构建缓存。';
+
       return {
         success: true,
         freedBytes: totalFreedBytes,
-        summary: `Reclaimed ${(totalFreedBytes / 1024 / 1024).toFixed(1)} MB disk space.`,
+        summary,
       };
     } catch (e: any) {
       return {

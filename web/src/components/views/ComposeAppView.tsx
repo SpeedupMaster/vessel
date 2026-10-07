@@ -4424,15 +4424,30 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </label>
 
                 {/* Target Identifier Display */}
-                <div className="p-3 rounded-xl bg-paper-3 flex items-center justify-between select-none">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setDeleteConfirmInput(targetAppId);
+                    if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setDeleteConfirmInput(targetAppId);
+                    }
+                  }}
+                  className="p-3 rounded-xl bg-paper-3 hover:bg-paper-4/80 border border-transparent hover:border-zinc-200/60 dark:hover:border-white/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.99] group select-none"
+                  title="点击直接填入"
+                >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-ink-muted text-xs shrink-0">目标标识:</span>
-                    <span className="font-mono font-bold text-sm text-ink tracking-wide select-none bg-paper-4 px-2 py-0.5 rounded truncate">
+                    <span className="font-mono font-bold text-sm text-ink group-hover:text-accent tracking-wide bg-paper-4 px-2 py-0.5 rounded truncate transition-colors">
                       {targetAppId}
                     </span>
                   </div>
-                  <span className="text-[10px] text-rose-500 dark:text-rose-400 font-medium select-none shrink-0">
-                    不可撤销
+                  <span className="text-[10px] text-accent font-medium group-hover:underline shrink-0">
+                    点击直接填入
                   </span>
                 </div>
 
@@ -4523,7 +4538,28 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
             <div className="space-y-2 pt-1 text-xs">
               <label className="block text-ink-muted leading-relaxed">
-                请输入应用标识 <strong className="text-ink font-semibold select-none font-mono">{app?.id}</strong> 以确认恢复：
+                请输入应用标识{' '}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (app?.id) {
+                      setRestoreConfirmInput(app.id);
+                      if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && app?.id) {
+                      e.preventDefault();
+                      setRestoreConfirmInput(app.id);
+                    }
+                  }}
+                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
+                  title="点击直接填入"
+                >
+                  {app?.id}
+                </span>{' '}
+                以确认恢复：
               </label>
               <input
                 type="text"

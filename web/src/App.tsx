@@ -356,6 +356,8 @@ function MainConsole() {
                 onSaveMaintenance={saveMaintenance}
                 onTriggerPrune={triggerPrune}
                 onTriggerCheckUpdates={triggerCheckUpdates}
+                onRebuildApp={rebuildApp}
+                onUpdateApp={updateApp}
               />
             )}
           </div>

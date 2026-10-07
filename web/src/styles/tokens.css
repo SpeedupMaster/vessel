@@ -5,39 +5,39 @@
  */
 
 :root {
-  /* Surface hierarchy - Clean Light with subtle natural steps */
-  --color-paper: #ffffff;
-  --color-paper-2: #f8fafc;
-  --color-paper-3: #f1f5f9;
-  --color-paper-4: #e2e8f0;
+  /* Surface hierarchy - Clean Light with crisp, modern contrast (Linear / Vercel Standard) */
+  --color-paper: #f8fafc;        /* App Canvas / Page Background (Soft Slate) */
+  --color-paper-2: #ffffff;      /* Cards, Panels, Modals, Navbars (Pure White) */
+  --color-paper-3: #f1f5f9;      /* Inner Wells, Filter Chips, Inset Containers */
+  --color-paper-4: #e2e8f0;      /* Hover wells, active borders */
 
-  /* Ink / Typography */
-  --color-ink: #09090b;
-  --color-ink-muted: #64748b;
-  --color-ink-faint: #94a3b8;
+  /* Ink / Typography - high readability, passing WCAG AAA / AA */
+  --color-ink: #09090b;          /* Primary Text (Deep Charcoal/Black) */
+  --color-ink-muted: #475569;    /* Secondary Text / Subtitles (Slate-600, contrast > 6:1) */
+  --color-ink-faint: #64748b;    /* Microcopy / Timestamps / Notes (Slate-500, contrast > 4.5:1) */
 
-  /* Micro hairline & borders - ultra-subtle, borderless feel */
-  --color-line: rgba(0, 0, 0, 0.05);
-  --color-line-subtle: rgba(0, 0, 0, 0.02);
+  /* Micro hairline & borders - visible, crisp demarcation */
+  --color-line: rgba(0, 0, 0, 0.09);          /* Standard element borders */
+  --color-line-subtle: rgba(0, 0, 0, 0.05);   /* Subtle inner dividers */
   --color-focus: #09090b;
 
   /* Primary Accent: Vercel Monochrome (Black on Light) */
   --color-accent: #09090b;
   --color-accent-hover: #27272a;
   --color-accent-contrast: #ffffff;
-  --color-accent-muted: rgba(0, 0, 0, 0.05);
+  --color-accent-muted: rgba(0, 0, 0, 0.06);
   --color-accent-glow: rgba(0, 0, 0, 0.08);
 
   /* Semantic Telemetry States (Light Mode) */
-  --color-emerald: #059669;
+  --color-emerald: #047857;
   --color-emerald-bg: #ecfdf5;
   --color-emerald-border: #a7f3d0;
 
-  --color-amber: #d97706;
+  --color-amber: #b45309;
   --color-amber-bg: #fffbeb;
   --color-amber-border: #fde68a;
 
-  --color-crimson: #dc2626;
+  --color-crimson: #b91c1c;
   --color-crimson-bg: #fef2f2;
   --color-crimson-border: #fecaca;
 
@@ -69,11 +69,11 @@ html.dark {
   /* Ink / Typography */
   --color-ink: #f4f4f5;
   --color-ink-muted: #a1a1aa;
-  --color-ink-faint: #52525b;
+  --color-ink-faint: #71717a;
 
   /* Micro hairline & borders - ultra-subtle, borderless feel */
-  --color-line: rgba(255, 255, 255, 0.05);
-  --color-line-subtle: rgba(255, 255, 255, 0.02);
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-subtle: rgba(255, 255, 255, 0.04);
   --color-focus: #ffffff;
 
   /* Primary Accent: Vercel Monochrome (Crisp White on Dark) */
