@@ -85,6 +85,7 @@ function MainConsole() {
     freshVolumesApp,
     backupApp,
     createDomain,
+    updateDomain,
     deleteDomain,
     renewDomain,
     saveR2Config,
@@ -313,6 +314,7 @@ function MainConsole() {
                 onDeleteBackup={deleteBackup}
                 onSubscribeLogs={subscribeLogs}
                 onCreateDomain={createDomain}
+                onUpdateDomain={updateDomain}
                 onDeleteDomain={deleteDomain}
                 onRenewDomain={renewDomain}
               />
@@ -323,6 +325,7 @@ function MainConsole() {
                 domains={domains}
                 apps={apps}
                 onCreateDomain={createDomain}
+                onUpdateDomain={updateDomain}
                 onDeleteDomain={deleteDomain}
                 onRenewDomain={renewDomain}
               />

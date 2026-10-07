@@ -14,6 +14,8 @@ import {
   CaretDown,
   CaretUp,
   ShieldCheck,
+  CheckCircle,
+  PencilSimple,
 } from '@phosphor-icons/react';
 import { DomainItem, AppItem } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
@@ -26,6 +28,7 @@ interface DomainsViewProps {
   domains: DomainItem[];
   apps: AppItem[];
   onCreateDomain: (domain: Partial<DomainItem>) => Promise<any>;
+  onUpdateDomain?: (id: string, domainData: Partial<DomainItem>) => Promise<any>;
   onDeleteDomain: (id: string) => Promise<any>;
   onRenewDomain: (id: string) => Promise<any>;
 }
@@ -34,11 +37,13 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   domains,
   apps,
   onCreateDomain,
+  onUpdateDomain,
   onDeleteDomain,
   onRenewDomain,
 }) => {
   const { toast } = useNotification();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingDomain, setEditingDomain] = useState<DomainItem | null>(null);
   const [isTipsExpanded, setIsTipsExpanded] = useState(false);
   const [domainInput, setDomainInput] = useState('');
   const [appIdInput, setAppIdInput] = useState(apps[0]?.id || 'vessel-system');
@@ -92,9 +97,9 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   // Set of appIds that already have an active domain binding
   const boundAppIds = new Set(domains.map((d) => d.appId));
 
-  // Available options: filter out any app or system that already has a domain bound
+  // Available options: filter out any app or system that already has a domain bound (unless editing it)
   const availableAppOptions = [
-    ...(!boundAppIds.has('vessel-system')
+    ...(!boundAppIds.has('vessel-system') || editingDomain?.appId === 'vessel-system'
       ? [
           {
             value: 'vessel-system',
@@ -104,7 +109,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
         ]
       : []),
     ...apps
-      .filter((a) => !boundAppIds.has(a.id))
+      .filter((a) => !boundAppIds.has(a.id) || editingDomain?.appId === a.id)
       .map((a) => ({
         value: a.id,
         label: a.name,
@@ -113,6 +118,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   ];
 
   const handleOpenAdd = () => {
+    setEditingDomain(null);
+    setDomainInput('');
     if (availableAppOptions.length === 0) {
       toast.info('所有应用与控制台均已绑定独立域名路由。如需更换，请先解绑原域名。');
       return;
@@ -122,25 +129,50 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
     setIsAddOpen(true);
   };
 
+  const handleOpenEdit = (dom: DomainItem) => {
+    setEditingDomain(dom);
+    setDomainInput(dom.domain);
+    setAppIdInput(dom.appId);
+    setServiceNameInput(dom.serviceName || (dom.appId === 'vessel-system' ? 'vessel' : 'web'));
+    setTargetPortInput(String(dom.targetPort || (dom.appId === 'vessel-system' ? 3900 : 3000)));
+    setTargetTypeInput(dom.targetType || (dom.appId === 'vessel-system' ? 'host' : 'internal'));
+    setIsAddOpen(true);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanDomain = domainInput.trim().replace(/^https?:\/\//i, '');
+    const cleanDomain = domainInput.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
     if (!cleanDomain || !appIdInput || !targetPortInput) return;
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([20, 40]);
     }
     setLoading(true);
     try {
-      await onCreateDomain({
-        domain: cleanDomain,
-        appId: appIdInput,
-        serviceName: serviceNameInput,
-        targetPort: Number(targetPortInput),
-        targetType: targetTypeInput,
-      });
-      setIsAddOpen(false);
-      setDomainInput('');
-      toast.success(`域名 ${cleanDomain} 绑定成功！Caddy 正在自动化签发 SSL 证书`);
+      if (editingDomain && onUpdateDomain) {
+        await onUpdateDomain(editingDomain.id, {
+          domain: cleanDomain,
+          appId: appIdInput,
+          serviceName: serviceNameInput,
+          targetPort: Number(targetPortInput),
+          targetType: targetTypeInput,
+        });
+        setIsAddOpen(false);
+        setEditingDomain(null);
+        setDomainInput('');
+        toast.success(`域名 ${cleanDomain} 配置已更新！Caddy 路由已同步重载`);
+      } else {
+        await onCreateDomain({
+          domain: cleanDomain,
+          appId: appIdInput,
+          serviceName: serviceNameInput,
+          targetPort: Number(targetPortInput),
+          targetType: targetTypeInput,
+        });
+        setIsAddOpen(false);
+        setEditingDomain(null);
+        setDomainInput('');
+        toast.success(`域名 ${cleanDomain} 绑定成功！Caddy 正在自动化签发 SSL 证书`);
+      }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -275,6 +307,16 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {onUpdateDomain && (
+                      <Button8State
+                        size="sm"
+                        variant="secondary"
+                        icon={<PencilSimple className="w-3.5 h-3.5" />}
+                        onClick={() => handleOpenEdit(d)}
+                      >
+                        编辑
+                      </Button8State>
+                    )}
                     <Button8State
                       size="sm"
                       variant="secondary"
@@ -305,53 +347,36 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
       <Modal
         isOpen={Boolean(deletingDomain)}
         onClose={() => !isDeleting && setDeletingDomain(null)}
-        title={
-          <div className="flex items-center gap-2 text-ink font-semibold">
-            <Trash className="w-5 h-5 text-rose-500" weight="bold" />
-            <span>危险操作：确认解绑域名路由</span>
-          </div>
-        }
+        title="解绑域名路由"
         subtitle={deletingDomain ? `域名绑定: https://${deletingDomain.domain}` : ''}
-        maxWidth="max-w-lg"
+        maxWidth="max-w-md"
       >
         {deletingDomain && (
-          <div className="space-y-4">
-            {/* Warning Message Box */}
-            <div className="p-4 rounded-2xl bg-rose-500/10 text-xs space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-sm text-ink dark:text-rose-200">
-                <Warning className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
-                <span>此操作不可撤回，请务必谨慎！</span>
-              </div>
-              <p className="text-ink-muted leading-relaxed">
-                解绑后将立即清除 Caddy 配置文件中该域名的规则块并重载服务。外部流量将无法再通过此域名访问目标容器或控制台。
-              </p>
-            </div>
+          <div className="space-y-4 font-sans text-xs">
+            <p className="text-ink-muted leading-relaxed">
+              解绑后将立即清除反向代理服务中该域名的路由规则块并重载 Caddy。外部流量将无法再通过此域名访问容器服务。<strong>此操作无法撤销。</strong>
+            </p>
 
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
-              <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入完整域名{' '}
-                <span
-                  role="button"
-                  tabIndex={0}
+              <label htmlFor="delete-domain-input" className="flex items-center justify-between text-ink-muted">
+                <span>
+                  请输入完整域名 <strong className="font-mono font-semibold text-ink select-all">{deletingDomain.domain}</strong> 以确认：
+                </span>
+                <button
+                  type="button"
                   onClick={() => {
                     setDeleteDomainInput(deletingDomain.domain);
                     if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setDeleteDomainInput(deletingDomain.domain);
-                    }
-                  }}
-                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
-                  title="点击直接填入"
+                  className="text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer select-none underline decoration-dotted underline-offset-2"
                 >
-                  {deletingDomain.domain}
-                </span>{' '}
-                以确认解绑：
+                  快速填入
+                </button>
               </label>
+
               <input
+                id="delete-domain-input"
                 type="text"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -365,50 +390,30 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 }}
                 placeholder={deletingDomain.domain}
                 autoFocus
-                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/80 dark:focus:border-rose-500/70 transition-colors shadow-sm"
+                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
               />
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
-              {!isDomainDeleteConfirmed ? (
-                <button
-                  type="button"
-                  disabled
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[44px] px-4 py-2 bg-paper-3 text-ink-muted/50 text-xs font-medium rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
-                >
-                  <Trash className="w-4 h-4 opacity-40" />
-                  <span>确认解绑域名</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleConfirmDeleteDomain}
-                  disabled={isDeleting}
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[44px] px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
-                >
-                  {isDeleting ? (
-                    <>
-                      <CircleNotch className="w-4 h-4 animate-spin text-white" />
-                      <span>正在解绑...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash className="w-4 h-4 text-white" weight="bold" />
-                      <span>确认解绑域名</span>
-                    </>
-                  )}
-                </button>
-              )}
-
+            <div className="pt-3 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setDeletingDomain(null)}
                 disabled={isDeleting}
-                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto min-h-[44px] px-4 py-2 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
+                className="btn-vessel-secondary px-4 py-2 text-xs font-medium rounded-xl cursor-pointer select-none"
               >
                 取消
               </button>
+              <Button8State
+                size="sm"
+                variant="danger"
+                state={isDeleting ? 'loading' : 'default'}
+                disabled={!isDomainDeleteConfirmed || isDeleting}
+                onClick={handleConfirmDeleteDomain}
+                className="rounded-xl px-4 py-2 text-xs font-medium"
+              >
+                确认解绑
+              </Button8State>
             </div>
           </div>
         )}
@@ -426,6 +431,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
             onClick={(e) => {
               if (e.target === e.currentTarget && !loading) {
                 setIsAddOpen(false);
+                setEditingDomain(null);
               }
             }}
           >
@@ -448,16 +454,23 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                       id="add-domain-title"
                       className="text-base sm:text-lg font-semibold text-ink tracking-tight font-sans truncate"
                     >
-                      绑定域名与配置 HTTPS 路由
+                      {editingDomain ? '编辑域名路由配置' : '绑定域名与配置 HTTPS 路由'}
                     </h3>
                     <p className="text-[11px] sm:text-xs text-ink-muted truncate">
-                      反向代理至指定的 Compose 容器或控制台
+                      {editingDomain
+                        ? `当前配置: ${editingDomain.domain}`
+                        : '反向代理至指定的 Compose 容器或控制台'}
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => !loading && setIsAddOpen(false)}
+                  onClick={() => {
+                    if (!loading) {
+                      setIsAddOpen(false);
+                      setEditingDomain(null);
+                    }
+                  }}
                   disabled={loading}
                   aria-label="关闭窗口"
                   className="min-w-[44px] min-h-[44px] -mr-2 p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer shrink-0"
@@ -634,11 +647,16 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                     icon={loading ? undefined : <ShieldCheck className="w-4 h-4" weight="bold" />}
                     className="w-full sm:w-auto min-h-[44px] text-xs font-semibold rounded-xl"
                   >
-                    {loading ? '证书申请中...' : '确认绑定并自动签发证书'}
+                    {loading
+                      ? (editingDomain ? '正在同步配置...' : '证书申请中...')
+                      : (editingDomain ? '保存修改并同步反代路由' : '确认绑定并自动签发证书')}
                   </Button8State>
                   <button
                     type="button"
-                    onClick={() => setIsAddOpen(false)}
+                    onClick={() => {
+                      setIsAddOpen(false);
+                      setEditingDomain(null);
+                    }}
                     disabled={loading}
                     className="btn-vessel-secondary w-full sm:w-auto min-h-[44px] px-4 text-xs font-medium rounded-xl cursor-pointer select-none text-center sm:order-first"
                   >

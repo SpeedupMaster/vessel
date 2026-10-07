@@ -278,7 +278,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                 value={customDb}
                 onChange={(e) => setCustomDb(e.target.value)}
                 placeholder="或输入自定义数据库名称 (例如: app_db)"
-                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                 required={scope === 'specific'}
               />
             </div>
@@ -346,9 +346,9 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                     value={cronExpr}
                     onChange={(e) => setCronExpr(e.target.value)}
                     placeholder="0 2 * * *"
-                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs font-mono text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
-                  <p className="text-[10px] text-accent mt-1 font-sans">
+                  <p className="text-[10px] text-accent mt-1.5 font-sans">
                     {getCronDescription(cronExpr)}
                   </p>
                 </div>
@@ -363,8 +363,9 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                     value={retentionCount}
                     onChange={setRetentionCount}
                     unit="份"
+                    className="w-full h-10"
                   />
-                  <p className="text-[10px] text-ink-faint mt-1 font-sans">
+                  <p className="text-[10px] text-ink-faint mt-1.5 font-sans">
                     最多保留最新 {retentionCount} 份，自动轮转清理旧版本
                   </p>
                 </div>

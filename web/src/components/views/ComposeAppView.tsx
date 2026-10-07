@@ -42,6 +42,7 @@ import {
   MagicWand,
   ArrowsInSimple,
   ArrowsOutSimple,
+  Archive,
 } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
@@ -53,6 +54,7 @@ import { Modal } from '../common/Modal.js';
 import { DatabaseTerminalModal } from '../common/DatabaseTerminalModal.js';
 import { CreateDatabaseBackupModal } from '../common/CreateDatabaseBackupModal.js';
 import { RestoreDatabaseBackupModal } from '../common/RestoreDatabaseBackupModal.js';
+import { RestoreAppBackupModal } from '../common/RestoreAppBackupModal.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { Switch } from '../common/Switch.js';
 import { LogsPanel } from './LogsPanel.js';
@@ -81,6 +83,7 @@ interface ComposeAppViewProps {
   onDeleteBackup?: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
   onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
+  onUpdateDomain?: (id: string, domainData: Partial<DomainItem>) => Promise<any>;
   onDeleteDomain?: (id: string) => Promise<any>;
   onRenewDomain?: (id: string) => Promise<any>;
 }
@@ -107,6 +110,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   onDeleteBackup,
   onSubscribeLogs,
   onCreateDomain,
+  onUpdateDomain,
   onDeleteDomain,
   onRenewDomain,
 }) => {
@@ -151,6 +155,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
   // Domain binding modal (edit mode or quick action)
   const [isAddDomainModalOpen, setIsAddDomainModalOpen] = useState(false);
+  const [editingDomain, setEditingDomain] = useState<DomainItem | null>(null);
   const [modalDomain, setModalDomain] = useState('');
   const [modalServiceName, setModalServiceName] = useState('');
   const [modalTargetPort, setModalTargetPort] = useState('');
@@ -221,6 +226,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [showTerminalModal, setShowTerminalModal] = useState(false);
   const [showDbBackupModal, setShowDbBackupModal] = useState(false);
   const [showRestoreDbModal, setShowRestoreDbModal] = useState(false);
+  const [showRestoreAppFileModal, setShowRestoreAppFileModal] = useState(false);
 
   const handleCopyDbField = (text: string, fieldKey: string) => {
     if (!text) return;
@@ -571,6 +577,18 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     }
   };
 
+  const handleRestoreAppFile = async (appId: string, file: File) => {
+    if (!onRestoreDatabaseFromFile) return;
+    try {
+      toast.info(`正在上传并还原 ${file.name}...`);
+      await onRestoreDatabaseFromFile(appId, file);
+      toast.success(`备份文件 ${file.name} 已成功恢复生效！`);
+    } catch (err: any) {
+      toast.error(`导入恢复失败: ${err.message || '未知错误'}`);
+      throw err;
+    }
+  };
+
   const handleConfirmDeleteBackup = async () => {
     if (!deletingBackup || !onDeleteBackup || isDeletingBackup) return;
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
@@ -701,6 +719,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
   // Open Add Domain Modal handler with intelligent defaults
   const openAddDomainModal = () => {
+    setEditingDomain(null);
     const defaultSrv = detectedServices[0]?.name || 'web';
     const defaultPort = detectedServices[0]?.ports[0] ? String(detectedServices[0].ports[0]) : '80';
     setModalServiceName(defaultSrv);
@@ -713,10 +732,25 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     setIsAddDomainModalOpen(true);
   };
 
-  // Submit Add Domain Modal
+  // Open Edit Domain Modal handler
+  const openEditDomainModal = (dom: DomainItem) => {
+    setEditingDomain(dom);
+    setModalDomain(dom.domain);
+    setModalServiceName(dom.serviceName || detectedServices[0]?.name || 'web');
+    setModalTargetPort(String(dom.targetPort || detectedServices[0]?.ports[0] || '80'));
+    setModalTargetType(dom.targetType || 'internal');
+    setDomainError('');
+    setPortError('');
+    setRecentFilledPort(null);
+    setIsAddDomainModalOpen(true);
+  };
+
+  // Submit Add / Edit Domain Modal
   const handleModalBindDomain = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!app || !onCreateDomain) return;
+    if (!app) return;
+    if (!editingDomain && !onCreateDomain) return;
+    if (editingDomain && !onUpdateDomain) return;
 
     setDomainError('');
     setPortError('');
@@ -741,21 +775,32 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
     setIsBindingDomain(true);
     try {
-      await onCreateDomain({
-        domain: cleanDomain,
-        appId: app.id,
-        serviceName: modalServiceName.trim() || 'web',
-        targetPort: portNum,
-        targetType: modalTargetType,
-      });
-      toast.success(`域名 ${cleanDomain} 绑定成功！Caddy 正在自动化签发 SSL 证书`);
+      if (editingDomain && onUpdateDomain) {
+        await onUpdateDomain(editingDomain.id, {
+          domain: cleanDomain,
+          serviceName: modalServiceName.trim() || 'web',
+          targetPort: portNum,
+          targetType: modalTargetType,
+        });
+        toast.success(`域名 ${cleanDomain} 配置已更新！Caddy 路由已同步重载`);
+      } else if (onCreateDomain) {
+        await onCreateDomain({
+          domain: cleanDomain,
+          appId: app.id,
+          serviceName: modalServiceName.trim() || 'web',
+          targetPort: portNum,
+          targetType: modalTargetType,
+        });
+        toast.success(`域名 ${cleanDomain} 绑定成功！Caddy 正在自动化签发 SSL 证书`);
+      }
       setIsAddDomainModalOpen(false);
+      setEditingDomain(null);
       setModalDomain('');
       setDomainError('');
       setPortError('');
       setRecentFilledPort(null);
     } catch (err: any) {
-      toast.error(`绑定域名失败: ${err.message}`);
+      toast.error(`${editingDomain ? '更新域名失败' : '绑定域名失败'}: ${err.message}`);
     } finally {
       setIsBindingDomain(false);
     }
@@ -3233,6 +3278,18 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 sm:self-center self-end pl-11 sm:pl-0">
+                    {onUpdateDomain && (
+                      <button
+                        type="button"
+                        onClick={() => openEditDomainModal(dom)}
+                        className="px-3 py-1.5 rounded-xl text-ink-muted hover:text-ink hover:bg-paper-3 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="编辑域名路由"
+                      >
+                        <PencilSimple className="w-3.5 h-3.5" />
+                        <span>编辑</span>
+                      </button>
+                    )}
+
                     {onRenewDomain && (
                       <button
                         onClick={async () => {
@@ -3436,16 +3493,20 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 {isDb ? '新建备份' : '立即备份此应用'}
               </Button8State>
 
-              {isDb && (
-                <Button8State
-                  size="sm"
-                  variant="secondary"
-                  icon={<ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />}
-                  onClick={() => setShowRestoreDbModal(true)}
-                >
-                  恢复备份
-                </Button8State>
-              )}
+              <Button8State
+                size="sm"
+                variant="secondary"
+                icon={<ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />}
+                onClick={() => {
+                  if (isDb) {
+                    setShowRestoreDbModal(true);
+                  } else {
+                    setShowRestoreAppFileModal(true);
+                  }
+                }}
+              >
+                恢复备份
+              </Button8State>
             </div>
           </div>
 
@@ -3521,8 +3582,34 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="py-14 text-center text-ink-muted text-xs">
-                  暂无此应用的独立备份归档。点击右上角即可立即将编排与数据卷上传至 R2。
+                <div className="py-14 flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="w-11 h-11 rounded-2xl bg-paper-3 text-ink-muted flex items-center justify-center">
+                    <Archive className="w-5 h-5 text-ink-muted" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-ink">暂无此应用的独立备份归档</p>
+                    <p className="text-[11px] text-ink-muted max-w-sm leading-relaxed">
+                      点击「立即备份」可将 Compose 编排、.env 与持久化数据卷打包归档，或直接从本地上传备份包还原
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleAppBackup}
+                      className="px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-current" weight="bold" />
+                      <span>立即备份此应用</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowRestoreAppFileModal(true)}
+                      className="btn-vessel-secondary px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />
+                      <span>从本地备份包恢复</span>
+                    </button>
+                  </div>
                 </div>
               )
             ) : (
@@ -4044,6 +4131,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           onClick={(e) => {
             if (e.target === e.currentTarget && !isBindingDomain) {
               setIsAddDomainModalOpen(false);
+              setEditingDomain(null);
             }
           }}
         >
@@ -4063,16 +4151,19 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
                 <div className="min-w-0">
                   <h3 id="bind-domain-title" className="text-base sm:text-lg font-semibold text-ink tracking-tight font-sans truncate">
-                    绑定公网域名与 SSL 路由
+                    {editingDomain ? '编辑域名路由配置' : '绑定公网域名与 SSL 路由'}
                   </h3>
                   <p className="text-[11px] sm:text-xs text-ink-muted truncate">
-                    受管服务: {app?.name || name || '当前应用'}
+                    {editingDomain ? `当前配置: ${editingDomain.domain}` : `受管服务: ${app?.name || name || '当前应用'}`}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsAddDomainModalOpen(false)}
+                onClick={() => {
+                  setIsAddDomainModalOpen(false);
+                  setEditingDomain(null);
+                }}
                 disabled={isBindingDomain}
                 aria-label="关闭窗口"
                 className="min-w-[44px] min-h-[44px] -mr-2 p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer shrink-0"
@@ -4331,12 +4422,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   {isBindingDomain ? (
                     <>
                       <CircleNotch className="w-4 h-4 animate-spin" />
-                      <span>正在配置 Caddy 并签发证书...</span>
+                      <span>{editingDomain ? '正在同步配置并重载 Caddy...' : '正在配置 Caddy 并签发证书...'}</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4" weight="bold" />
-                      <span>确认绑定并自动签发证书</span>
+                      <span>{editingDomain ? '保存修改并同步反代路由' : '确认绑定并自动签发证书'}</span>
                     </>
                   )}
                 </button>
@@ -4344,7 +4435,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 {/* Cancel Button */}
                 <button
                   type="button"
-                  onClick={() => setIsAddDomainModalOpen(false)}
+                  onClick={() => {
+                    setIsAddDomainModalOpen(false);
+                    setEditingDomain(null);
+                  }}
                   disabled={isBindingDomain}
                   className="btn-vessel-secondary w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl cursor-pointer text-center select-none sm:order-first"
                 >
@@ -4357,161 +4451,80 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         document.body
       )}
 
-      {/* ================= STRICT DELETE APP ACTION SHEET (BOTTOM SHEET ON MOBILE / CENTERED MODAL ON DESKTOP) ================= */}
-      {app && isDeleteModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 bg-black/70 sm:bg-black/50 backdrop-blur-sm animate-fade-in font-sans"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-app-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !isDeleting) {
-              setIsDeleteModalOpen(false);
-            }
-          }}
+      {/* ================= STRICT DELETE APP CONFIRMATION MODAL ================= */}
+      {app && isDeleteModalOpen && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+          title={`彻底删除应用「${app.name}」`}
+          subtitle="此操作无法撤销，所有关联容器与配置将被清除"
+          maxWidth="max-w-md"
         >
-          {/* Bottom Sheet / Modal Dialog Container */}
-          <div
-            className="w-full sm:max-w-md bg-paper-2 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Mobile Grab Handle */}
-            <div className="w-10 h-1 bg-ink/20 rounded-full mx-auto my-2.5 sm:hidden shrink-0" />
+          <div className="space-y-4 font-sans text-xs">
+            <p className="text-ink-muted leading-relaxed">
+              将立即执行 <code className="font-mono bg-paper-3 dark:bg-white/5 border border-zinc-200/80 dark:border-white/10 px-1.5 py-0.5 rounded text-ink font-semibold">docker compose down</code> 销毁所有关联容器与虚拟网络，并彻底清除本地配置文件与持久化元数据。
+            </p>
 
-            {/* Header */}
-            <div className="px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                  <Trash className="w-4 h-4" weight="bold" />
-                </div>
-                <div className="min-w-0">
-                  <h3 id="delete-app-title" className="text-sm sm:text-base font-semibold text-ink tracking-tight font-sans truncate">
-                    危险操作：确认彻底删除应用
-                  </h3>
-                  <p className="text-[11px] text-ink-muted truncate">
-                    受管服务: {app.name} ({app.id})
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => !isDeleting && setIsDeleteModalOpen(false)}
-                disabled={isDeleting}
-                aria-label="关闭窗口"
-                className="min-w-[40px] min-h-[40px] -mr-2 p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer shrink-0"
-              >
-                <X className="w-5 h-5" weight="bold" />
-              </button>
-            </div>
-
-            {/* Scrollable / Padded Body */}
-            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
-              {/* Warning Alert Box */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-500/10 text-xs space-y-2">
-                <div className="flex items-center gap-2 font-semibold text-sm text-rose-700 dark:text-rose-300">
-                  <Warning className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
-                  <span>此操作不可撤回，请务必谨慎！</span>
-                </div>
-                <p className="text-ink-muted leading-relaxed">
-                  删除后将立即执行 <code className="font-mono bg-paper-3 px-1.5 py-0.5 rounded text-ink font-semibold">docker compose down</code> 销毁所有关联容器与网络，并彻底清理本地编排配置文件。
-                </p>
-              </div>
-
-              {/* Target Identifier Prompt */}
-              <div className="space-y-2 pt-1">
-                <label className="block text-xs text-ink-muted leading-relaxed">
-                  请输入应用标识确认删除：
-                </label>
-
-                {/* Target Identifier Display */}
-                <div
-                  role="button"
-                  tabIndex={0}
+            {/* Target Identifier Input with Clean Minimalist Prompt */}
+            <div className="space-y-2 pt-1">
+              <label htmlFor="delete-app-confirm-input" className="flex items-center justify-between text-ink-muted">
+                <span>
+                  请输入 <strong className="font-mono font-semibold text-ink select-all">{targetAppId}</strong> 以确认：
+                </span>
+                <button
+                  type="button"
                   onClick={() => {
                     setDeleteConfirmInput(targetAppId);
                     if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setDeleteConfirmInput(targetAppId);
-                    }
-                  }}
-                  className="p-3 rounded-xl bg-paper-3 hover:bg-paper-4/80 border border-transparent hover:border-zinc-200/60 dark:hover:border-white/10 flex items-center justify-between cursor-pointer transition-all active:scale-[0.99] group select-none"
-                  title="点击直接填入"
+                  className="text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer select-none underline decoration-dotted underline-offset-2"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-ink-muted text-xs shrink-0">目标标识:</span>
-                    <span className="font-mono font-bold text-sm text-ink group-hover:text-accent tracking-wide bg-paper-4 px-2 py-0.5 rounded truncate transition-colors">
-                      {targetAppId}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-accent font-medium group-hover:underline shrink-0">
-                    点击直接填入
-                  </span>
-                </div>
-
-                {/* Input Verification Field with Native Mobile Attributes */}
-                <input
-                  type="text"
-                  value={deleteConfirmInput}
-                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && isDeleteConfirmed && !isDeleting) {
-                      handleConfirmDeleteApp();
-                    }
-                  }}
-                  placeholder={`输入 ${targetAppId}`}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoFocus
-                  className={clsx(
-                    "w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-ink font-mono min-h-[46px] shadow-sm transition-colors placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/80 dark:focus:border-rose-500/70",
-                    isDeleteConfirmed && "border-rose-500/80"
-                  )}
-                />
-              </div>
-
-              {/* Actions: Stacked Buttons Layout */}
-              <div className="flex flex-col gap-2.5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-1">
-                <button
-                  type="button"
-                  disabled={!isDeleteConfirmed || isDeleting}
-                  onClick={handleConfirmDeleteApp}
-                  className={clsx(
-                    "w-full min-h-[48px] py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 select-none shadow-sm cursor-pointer active:scale-[0.99]",
-                    !isDeleteConfirmed
-                      ? "bg-paper-3 text-ink-muted/40 cursor-not-allowed"
-                      : "bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-md shadow-rose-600/25"
-                  )}
-                >
-                  {isDeleting ? (
-                    <>
-                      <CircleNotch className="w-4 h-4 animate-spin text-white" />
-                      <span>正在彻底销毁容器与资源...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash className="w-4 h-4 text-white" weight="bold" />
-                      <span>确认彻底删除应用</span>
-                    </>
-                  )}
+                  快速填入
                 </button>
+              </label>
 
-                <button
-                  type="button"
-                  onClick={() => !isDeleting && setIsDeleteModalOpen(false)}
-                  disabled={isDeleting}
-                  className="w-full py-2.5 text-ink-muted hover:text-ink active:text-ink font-medium text-xs transition-colors cursor-pointer select-none text-center"
-                >
-                  取消
-                </button>
-              </div>
+              <input
+                id="delete-app-confirm-input"
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && isDeleteConfirmed && !isDeleting) {
+                    handleConfirmDeleteApp();
+                  }
+                }}
+                placeholder={targetAppId}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoFocus
+                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="pt-3 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => !isDeleting && setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="btn-vessel-secondary px-4 py-2 text-xs font-medium rounded-xl cursor-pointer select-none"
+              >
+                取消
+              </button>
+              <Button8State
+                size="sm"
+                variant="danger"
+                state={isDeleting ? 'loading' : 'default'}
+                disabled={!isDeleteConfirmed || isDeleting}
+                onClick={handleConfirmDeleteApp}
+                className="rounded-xl px-4 py-2 text-xs font-medium"
+              >
+                彻底删除
+              </Button8State>
             </div>
           </div>
-        </div>,
-        document.body
+        </Modal>
       )}
 
       {/* Danger Modal: Confirm App Restore */}
@@ -4519,49 +4532,38 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         <Modal
           isOpen={!!restoringBackup}
           onClose={() => !isRestoringBackup && setRestoringBackup(null)}
-          title={restoringBackup.type === 'app_db' || isDb ? '⚠️ 确认恢复数据库快照' : '⚠️ 确认恢复应用快照'}
+          title={restoringBackup.type === 'app_db' || isDb ? '恢复数据库快照' : '恢复应用快照'}
           subtitle={`快照归档: ${restoringBackup.fileName}`}
           maxWidth="max-w-md"
         >
-          <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-amber-500/10 text-xs space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-sm text-ink">
-                <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
-                <span>{restoringBackup.type === 'app_db' || isDb ? '数据库快照还原风险警示' : '快照恢复风险警示'}</span>
-              </div>
-              <p className="text-ink-muted leading-relaxed">
-                {restoringBackup.type === 'app_db' || isDb
-                  ? `恢复操作将直接将 SQL 转储/数据流导入正在运行的数据库容器中，覆盖现有 ${restoringBackup.databaseName && restoringBackup.databaseName !== 'all' ? `「${restoringBackup.databaseName}」` : '相应'} 数据库内容。`
-                  : `恢复操作将使用快照归档覆盖当前应用 ${app?.name} 的本地 Compose 编排配置、.env 环境变量与数据卷。`}
-              </p>
-            </div>
+          <div className="space-y-4 font-sans text-xs">
+            <p className="text-ink-muted leading-relaxed">
+              {restoringBackup.type === 'app_db' || isDb
+                ? `该操作将直接将 SQL 转储数据导入正在运行的数据库容器中，覆盖现有 ${restoringBackup.databaseName && restoringBackup.databaseName !== 'all' ? `「${restoringBackup.databaseName}」` : '相应'} 数据库内容。`
+                : `该操作将使用快照归档覆盖当前应用 ${app?.name} 的本地 Compose 编排配置、.env 环境变量与数据卷。`}
+            </p>
 
-            <div className="space-y-2 pt-1 text-xs">
-              <label className="block text-ink-muted leading-relaxed">
-                请输入应用标识{' '}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (app?.id) {
+            <div className="space-y-2 pt-1">
+              <label htmlFor="restore-app-confirm-input" className="flex items-center justify-between text-ink-muted">
+                <span>
+                  请输入应用标识 <strong className="font-mono font-semibold text-ink select-all">{app?.id}</strong> 以确认：
+                </span>
+                {app?.id && (
+                  <button
+                    type="button"
+                    onClick={() => {
                       setRestoreConfirmInput(app.id);
                       if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ' ') && app?.id) {
-                      e.preventDefault();
-                      setRestoreConfirmInput(app.id);
-                    }
-                  }}
-                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
-                  title="点击直接填入"
-                >
-                  {app?.id}
-                </span>{' '}
-                以确认恢复：
+                    }}
+                    className="text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer select-none underline decoration-dotted underline-offset-2"
+                  >
+                    快速填入
+                  </button>
+                )}
               </label>
+
               <input
+                id="restore-app-confirm-input"
                 type="text"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -4569,29 +4571,29 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 value={restoreConfirmInput}
                 onChange={(e) => setRestoreConfirmInput(e.target.value)}
                 placeholder={app?.id}
-                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono min-h-[42px] shadow-sm transition-colors placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30"
+                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
               />
             </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
+            <div className="pt-3 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setRestoringBackup(null)}
+                disabled={isRestoringBackup}
+                className="btn-vessel-secondary px-4 py-2 text-xs font-medium rounded-xl cursor-pointer select-none"
+              >
+                取消
+              </button>
               <Button8State
                 size="sm"
                 variant="primary"
                 state={isRestoringBackup ? 'loading' : 'default'}
                 disabled={restoreConfirmInput !== app?.id || isRestoringBackup}
                 onClick={handleConfirmRestoreBackup}
-                className="order-1 sm:order-2 w-full sm:w-auto min-h-[46px] sm:min-h-0"
+                className="rounded-xl px-4 py-2 text-xs font-medium"
               >
-                确认恢复快照
+                确认恢复
               </Button8State>
-              <button
-                type="button"
-                onClick={() => setRestoringBackup(null)}
-                disabled={isRestoringBackup}
-                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto py-2.5 sm:py-2 px-4 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
-              >
-                取消
-              </button>
             </div>
           </div>
         </Modal>
@@ -4656,6 +4658,22 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           backups={backups}
           onRestoreRecord={handleRestoreDbRecord}
           onRestoreFile={handleRestoreDbFile}
+        />
+      )}
+
+      {/* Restore Application Backup Modal (Compose apps) */}
+      {showRestoreAppFileModal && app && (
+        <RestoreAppBackupModal
+          isOpen={showRestoreAppFileModal}
+          onClose={() => setShowRestoreAppFileModal(false)}
+          app={app}
+          backups={backups}
+          onRestoreRecord={async (recordId) => {
+            if (onRestoreBackup) {
+              await onRestoreBackup(recordId);
+            }
+          }}
+          onRestoreFile={handleRestoreAppFile}
         />
       )}
 

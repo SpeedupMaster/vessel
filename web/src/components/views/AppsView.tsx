@@ -48,6 +48,7 @@ interface AppsViewProps {
   onDeleteBackup?: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
   onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
+  onUpdateDomain?: (id: string, domainData: Partial<DomainItem>) => Promise<any>;
   onDeleteDomain?: (id: string) => Promise<any>;
   onRenewDomain?: (id: string) => Promise<any>;
 }
@@ -74,6 +75,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
   onDeleteBackup,
   onSubscribeLogs,
   onCreateDomain,
+  onUpdateDomain,
   onDeleteDomain,
   onRenewDomain,
 }) => {
@@ -214,6 +216,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onDeleteBackup={onDeleteBackup}
         onSubscribeLogs={onSubscribeLogs}
         onCreateDomain={onCreateDomain}
+        onUpdateDomain={onUpdateDomain}
         onDeleteDomain={onDeleteDomain}
         onRenewDomain={onRenewDomain}
       />

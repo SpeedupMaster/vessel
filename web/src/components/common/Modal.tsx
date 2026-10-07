@@ -79,7 +79,7 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal / Bottom Sheet Panel */}
       <div
         ref={panelRef}
-        className={`relative w-full ${maxWidth} bg-paper-2 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-7 z-10 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-7`}
+        className={`relative w-full ${maxWidth} bg-paper-2 border border-line dark:border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-7 z-10 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-7`}
       >
         {/* Mobile Grab Handle */}
         <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto -mt-1.5 mb-3 sm:hidden shrink-0" />

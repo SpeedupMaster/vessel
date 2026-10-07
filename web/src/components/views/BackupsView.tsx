@@ -398,7 +398,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
                   />
                   {/* Quick-pick Chips Container */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
@@ -742,87 +742,50 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
       <Modal
         isOpen={Boolean(restoringBackup)}
         onClose={() => !isRestoring && setRestoringBackup(null)}
-        title={
-          <div className="flex items-center gap-2 text-ink font-semibold">
-            <ArrowCounterClockwise className="w-5 h-5 text-accent" weight="bold" />
-            <span>高危操作：确认从快照恢复数据与编排</span>
-          </div>
-        }
+        title="恢复快照数据"
         subtitle={restoringBackup ? `目标快照: ${restoringBackup.targetName} (${restoringBackup.fileName})` : ''}
-        maxWidth="max-w-lg"
+        maxWidth="max-w-md"
       >
         {restoringBackup && (
-          <div className="space-y-4">
-            {/* Warning Message Box */}
-            <div className="p-4 rounded-2xl bg-amber-500/[0.08] text-xs space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-sm text-ink dark:text-amber-200">
-                <Warning className="w-4 h-4 text-amber-500 flex-shrink-0" weight="fill" />
-                <span>{restoringBackup.type === 'app_db' ? '数据库快照还原警示！' : '快照回滚将覆盖当前数据与容器编排！'}</span>
-              </div>
-              <p className="text-ink-muted leading-relaxed">
-                {restoringBackup.type === 'app_db'
-                  ? '执行恢复后，将把该原生转储流直接导入至目标容器：'
-                  : '执行恢复后，将解压该快照并全面还原系统：'}
-              </p>
-              {restoringBackup.type === 'app_db' ? (
-                <ul className="list-disc list-inside text-ink-muted space-y-1 pl-1">
-                  <li>将把数据恢复至当前运行中的数据库容器</li>
-                  <li>{restoringBackup.databaseName && restoringBackup.databaseName !== 'all' ? `指定数据库「${restoringBackup.databaseName}」` : '所有匹配数据库'}现有数据表将被覆盖</li>
-                  <li>无需重启容器，数据导入完成后即时生效</li>
-                </ul>
-              ) : (
-                <ul className="list-disc list-inside text-ink-muted space-y-1 pl-1">
-                  <li>平台核心数据库记录与元数据将还原至快照备份时刻</li>
-                  <li>受管应用与服务配置文件将被覆盖，未备份的变更将丢失</li>
-                  <li>Caddy 路由引擎将自动依据恢复后的域名规则重新加载</li>
-                </ul>
-              )}
-            </div>
+          <div className="space-y-4 font-sans text-xs">
+            <p className="text-ink-muted leading-relaxed">
+              {restoringBackup.type === 'app_db'
+                ? `执行恢复后，将把该原生转储流直接导入至目标容器，覆盖现有 ${restoringBackup.databaseName && restoringBackup.databaseName !== 'all' ? `「${restoringBackup.databaseName}」` : '所有匹配'} 数据库内容。`
+                : '执行恢复后，将解压该快照并全面还原系统核心数据库记录、配置文件与容器编排规则。当前未备份的变更将被覆盖。'}
+            </p>
 
             {/* Input Verification Box */}
             <div className="space-y-2 pt-1">
-              <label className="block text-xs text-ink-muted leading-relaxed">
-                请输入{' '}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    setRestoreConfirmInput('确认恢复');
-                    if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
+              <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                <label htmlFor="restore-backup-input" className="text-ink-muted">
+                  请输入确认口令以确认执行：
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
                       setRestoreConfirmInput('确认恢复');
-                    }
-                  }}
-                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
-                  title="点击直接填入「确认恢复」"
-                >
-                  确认恢复
-                </span>{' '}
-                或{' '}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    setRestoreConfirmInput('RESTORE');
-                    if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
+                      if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                    }}
+                    className="text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer select-none underline decoration-dotted underline-offset-2"
+                  >
+                    确认恢复
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
                       setRestoreConfirmInput('RESTORE');
-                    }
-                  }}
-                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
-                  title="点击直接填入「RESTORE」"
-                >
-                  RESTORE
-                </span>{' '}
-                以确认执行：
-              </label>
+                      if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
+                    }}
+                    className="text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer select-none underline decoration-dotted underline-offset-2 font-mono"
+                  >
+                    RESTORE
+                  </button>
+                </div>
+              </div>
+
               <input
+                id="restore-backup-input"
                 type="text"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -836,50 +799,30 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 }}
                 placeholder="确认恢复 或 RESTORE"
                 autoFocus
-                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/70 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
               />
             </div>
 
             {/* Modal Actions */}
-            <div className="pt-4 mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
-              {!isRestoreConfirmed ? (
-                <button
-                  type="button"
-                  disabled
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[42px] px-4 py-2 bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 text-xs font-semibold rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 select-none"
-                >
-                  <ArrowCounterClockwise className="w-4 h-4 text-current" />
-                  <span>确认恢复快照</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleConfirmRestore}
-                  disabled={isRestoring}
-                  className="order-1 sm:order-2 w-full sm:w-auto min-h-[42px] px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] sm:active:scale-100 cursor-pointer"
-                >
-                  {isRestoring ? (
-                    <>
-                      <CircleNotch className="w-4 h-4 animate-spin text-current" />
-                      <span>正在恢复...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowCounterClockwise className="w-4 h-4 text-current" weight="bold" />
-                      <span>确认恢复快照</span>
-                    </>
-                  )}
-                </button>
-              )}
-
+            <div className="pt-3 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setRestoringBackup(null)}
                 disabled={isRestoring}
-                className="btn-vessel-secondary order-2 sm:order-1 w-full sm:w-auto min-h-[42px] px-4 py-2 text-xs font-medium rounded-xl text-center cursor-pointer select-none"
+                className="btn-vessel-secondary px-4 py-2 text-xs font-medium rounded-xl cursor-pointer select-none"
               >
                 取消
               </button>
+              <Button8State
+                size="sm"
+                variant="primary"
+                state={isRestoring ? 'loading' : 'default'}
+                disabled={!isRestoreConfirmed || isRestoring}
+                onClick={handleConfirmRestore}
+                className="rounded-xl px-4 py-2 text-xs font-medium"
+              >
+                确认恢复
+              </Button8State>
             </div>
           </div>
         )}

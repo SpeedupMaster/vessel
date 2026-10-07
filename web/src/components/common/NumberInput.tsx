@@ -108,7 +108,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   return (
     <div
       className={clsx(
-        'relative flex items-center rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm transition-colors duration-150',
+        'relative flex items-center rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm transition-colors duration-150 h-10',
         'focus-within:border-zinc-400 dark:focus-within:border-white/30 focus-within:outline-none',
         disabled && 'opacity-50 cursor-not-allowed',
         className
@@ -128,7 +128,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
         aria-valuemin={min !== undefined ? min : undefined}
         aria-valuemax={max !== undefined ? max : undefined}
         className={clsx(
-          'flex-1 min-w-0 bg-transparent px-3.5 py-2.5 min-h-[42px] text-xs font-mono text-ink placeholder:text-ink-faint',
+          'flex-1 min-w-0 bg-transparent px-3.5 h-full text-xs font-mono text-ink placeholder:text-ink-faint',
           'outline-none focus:outline-none border-none ring-0 focus:ring-0 shadow-none focus:shadow-none',
           // Hide native browser spinners in WebKit and Firefox
           '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
@@ -138,7 +138,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
       />
 
       {/* Right Controls Container: Unit + Custom Stepper (Naturally spaced, no overlap) */}
-      <div className="flex items-center shrink-0 pr-2 pl-1 gap-2 select-none">
+      <div className="flex items-center shrink-0 pr-2 pl-1 gap-2 select-none h-full">
         {/* Optional Unit Badge */}
         {unit && (
           <span className="text-xs font-medium text-ink-muted/80 select-none pointer-events-none px-0.5">
@@ -148,7 +148,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
 
         {/* Custom Designed Stepper Controls */}
         {showStepper && (
-          <div className="flex flex-col justify-center items-center w-5.5 my-1 border-l border-zinc-200 dark:border-white/10 pl-1.5 shrink-0">
+          <div className="flex flex-col justify-center items-center w-5.5 my-0.5 border-l border-zinc-200 dark:border-white/10 pl-1.5 shrink-0">
             <button
               type="button"
               tabIndex={-1}
@@ -160,7 +160,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
               onTouchStart={() => startHold(1)}
               onTouchEnd={stopHold}
               className={clsx(
-                'w-full h-4 rounded flex items-center justify-center transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-paper-3 dark:hover:bg-paper-4 active:scale-95',
+                'w-full h-3.5 rounded flex items-center justify-center transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-paper-3 dark:hover:bg-paper-4 active:scale-95',
                 (disabled || isMax) && 'opacity-25 cursor-not-allowed hover:bg-transparent hover:text-ink-muted'
               )}
             >
@@ -177,7 +177,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
               onTouchStart={() => startHold(-1)}
               onTouchEnd={stopHold}
               className={clsx(
-                'w-full h-4 rounded flex items-center justify-center transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-paper-3 dark:hover:bg-paper-4 active:scale-95',
+                'w-full h-3.5 rounded flex items-center justify-center transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-paper-3 dark:hover:bg-paper-4 active:scale-95',
                 (disabled || isMin) && 'opacity-25 cursor-not-allowed hover:bg-transparent hover:text-ink-muted'
               )}
             >

@@ -430,6 +430,49 @@ apiRouter.post('/domains', requireAuth, async (req: Request, res: Response) => {
   res.status(201).json(newDomain);
 });
 
+apiRouter.put('/domains/:id', requireAuth, async (req: Request, res: Response) => {
+  const { domain, appId, serviceName, targetPort, targetType } = req.body;
+  const domains = db.get('domains') || [];
+  const index = domains.findIndex((d) => d.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Domain not found' });
+  }
+
+  const existing = domains[index];
+  const cleanDomain = domain ? String(domain).trim().toLowerCase().replace(/^https?:\/\//i, '').replace(/\/.*$/, '') : existing.domain;
+  if (!cleanDomain) {
+    return res.status(400).json({ error: 'Domain name cannot be empty' });
+  }
+
+  let sslStatus = existing.sslStatus;
+  let sslIssuer = existing.sslIssuer;
+  let sslExpiresAt = existing.sslExpiresAt;
+  if (cleanDomain !== existing.domain) {
+    const cert = await caddyService.checkCertStatus(cleanDomain);
+    sslStatus = cert.status;
+    sslIssuer = cert.issuer;
+    sslExpiresAt = cert.expiresAt;
+  }
+
+  const updatedDomain: DomainItem = {
+    ...existing,
+    domain: cleanDomain,
+    appId: appId || existing.appId,
+    serviceName: serviceName !== undefined ? serviceName : existing.serviceName,
+    targetPort: targetPort !== undefined ? Number(targetPort) : existing.targetPort,
+    targetType: targetType !== undefined ? (targetType === 'host' ? 'host' : 'internal') : existing.targetType,
+    sslStatus,
+    sslIssuer,
+    sslExpiresAt,
+  };
+
+  domains[index] = updatedDomain;
+  db.set('domains', domains);
+  caddyService.syncCaddyfile();
+
+  res.json(updatedDomain);
+});
+
 apiRouter.delete('/domains/:id', requireAuth, (req: Request, res: Response) => {
   const domains = db.get('domains') || [];
   const updated = domains.filter((d) => d.id !== req.params.id);
@@ -561,7 +604,12 @@ apiRouter.post('/apps/:id/restore-file', requireAuth, async (req: Request, res: 
 
   writeStream.on('finish', async () => {
     try {
-      const result = await r2BackupService.restoreDatabaseFromFile(app, tempFilePath, { databaseName });
+      let result;
+      if (fileName.toLowerCase().endsWith('.zip')) {
+        result = await r2BackupService.restoreAppFromFile(app, tempFilePath);
+      } else {
+        result = await r2BackupService.restoreDatabaseFromFile(app, tempFilePath, { databaseName });
+      }
       try { fs.unlinkSync(tempFilePath); } catch {}
       if (result.success) {
         res.json({ success: true, message: result.message });

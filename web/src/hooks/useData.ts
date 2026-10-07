@@ -230,6 +230,21 @@ export function useData() {
     return created;
   };
 
+  const updateDomain = async (id: string, domainData: Partial<DomainItem>) => {
+    const res = await apiFetch(`/api/domains/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(domainData),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update domain');
+    }
+    const updated = await res.json();
+    setDomains((prev) => prev.map((d) => (d.id === id ? updated : d)));
+    return updated;
+  };
+
   const deleteDomain = async (id: string) => {
     const res = await apiFetch(`/api/domains/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete domain');
@@ -401,6 +416,7 @@ export function useData() {
     freshVolumesApp,
     backupApp,
     createDomain,
+    updateDomain,
     deleteDomain,
     renewDomain,
     saveR2Config,

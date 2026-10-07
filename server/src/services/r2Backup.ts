@@ -780,6 +780,54 @@ export class R2BackupService {
     };
     return this.restoreDatabaseDump(syntheticRecord, filePath, options);
   }
+
+  /**
+   * Restore application from uploaded zip file (Compose, .env, volumes)
+   */
+  public async restoreAppFromFile(
+    app: AppItem,
+    filePath: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const zip = new AdmZip(filePath);
+      const appDir = path.join(APPS_DATA_DIR, app.id);
+      if (!fs.existsSync(appDir)) fs.mkdirSync(appDir, { recursive: true });
+      zip.extractAllTo(appDir, true);
+
+      // Sync restored app entity in db
+      const metadataPath = path.join(appDir, 'app_metadata.json');
+      const composePath = path.join(appDir, 'docker-compose.yml');
+      const envPath = path.join(appDir, '.env');
+
+      const apps = db.get('apps') || [];
+      const appIndex = apps.findIndex((a) => a.id === app.id);
+
+      if (appIndex >= 0) {
+        const currentApp = { ...apps[appIndex] };
+        if (fs.existsSync(metadataPath)) {
+          try {
+            const meta = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+            if (meta.name) currentApp.name = meta.name;
+            if (meta.description !== undefined) currentApp.description = meta.description;
+            if (meta.composeYaml) currentApp.composeYaml = meta.composeYaml;
+            if (meta.envContent !== undefined) currentApp.envContent = meta.envContent;
+          } catch {}
+        } else if (fs.existsSync(composePath)) {
+          currentApp.composeYaml = fs.readFileSync(composePath, 'utf-8');
+          if (fs.existsSync(envPath)) {
+            currentApp.envContent = fs.readFileSync(envPath, 'utf-8');
+          }
+        }
+        currentApp.updatedAt = new Date().toISOString();
+        apps[appIndex] = currentApp;
+        db.set('apps', apps);
+      }
+
+      return { success: true, message: `应用 ${app.name} 的本地备份包已成功恢复生效！` };
+    } catch (err: any) {
+      return { success: false, error: `从本地备份包恢复失败: ${err.message}` };
+    }
+  }
 }
 
 export const r2BackupService = new R2BackupService();
