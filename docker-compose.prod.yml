@@ -24,4 +24,4 @@ services:
 networks:
   vessel-net:
     name: vessel-net
-    driver: bridge
+    external: true

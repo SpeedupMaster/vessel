@@ -171,6 +171,9 @@ vessel.example.com {
 若希望通过克隆源码或直接使用 Compose 管理：
 
 ```bash
+# 确保共享网络存在（已有网络直接复用）
+docker network inspect vessel-net >/dev/null 2>&1 || docker network create vessel-net
+
 # 启动生产容器
 docker compose -f docker-compose.prod.yml up -d
 
@@ -178,6 +181,23 @@ docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f
 ```
+
+`vessel-net` 是供 Vessel 与其他应用共享的外部网络，与一键安装脚本保持一致。其他应用若需要通过 Vessel 的内部网络反向代理访问，需在自己的 Compose 中将对应服务加入该网络，例如：
+
+```yaml
+services:
+  my-web:
+    image: nginx:alpine
+    networks:
+      - vessel-net
+
+networks:
+  vessel-net:
+    name: vessel-net
+    external: true
+```
+
+在 Vessel 域名管理中选择内部网络，填写服务名 `my-web` 和容器端口 `80`。不同应用请使用不同的服务名或唯一网络别名，避免共享网络中的名称冲突；仅用于应用内部通信的数据库等服务无需加入该共享网络。
 
 ### 2. 本地全栈开发模式
 
@@ -247,6 +267,7 @@ docker cp vessel-hub:/app/server/data ./vessel-data-before-upgrade
 #### 3. 重新拉取构建启动
 
 ```bash
+docker network inspect vessel-net >/dev/null 2>&1 || docker network create vessel-net
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
