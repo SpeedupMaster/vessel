@@ -47,10 +47,11 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Relevant backups for this app (prefer app's own backups, or matching type)
+  // Restore-by-ID acts on the record's owning app, so never list another app's archives.
   const appBackups = backups.filter(
-    (b) => b.targetId === app.id || b.type === 'app_db'
+    (b) => b.targetId === app.id && b.type === 'app_db'
   );
+  const initialRecordId = appBackups[0]?.id || '';
 
   // Fetch databases inside container
   const fetchDatabases = useCallback(async () => {
@@ -61,9 +62,6 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         const data = await res.json();
         if (Array.isArray(data.databases) && data.databases.length > 0) {
           setAvailableDatabases(data.databases);
-          if (!targetDb) {
-            setTargetDb(data.databases[0]);
-          }
         }
       }
     } catch {
@@ -71,7 +69,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
     } finally {
       setLoadingDbs(false);
     }
-  }, [app.id, targetDb]);
+  }, [app.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -90,11 +88,12 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
           break;
         }
       }
-      const initial = envDb || (engineName.toLowerCase().includes('postgres') ? 'postgres' : 'app_db');
+      const initial = engineName.toLowerCase().includes('mongo') ? '' :
+        envDb || (engineName.toLowerCase().includes('postgres') ? 'postgres' : 'app_db');
       setTargetDb(initial);
 
-      if (appBackups.length > 0) {
-        setSelectedRecordId(appBackups[0].id);
+      setSelectedRecordId(initialRecordId);
+      if (initialRecordId) {
         setSourceType('existing');
       } else {
         setSourceType('upload');
@@ -102,7 +101,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
       setSelectedFile(null);
       fetchDatabases();
     }
-  }, [isOpen, app.envContent, engineName, fetchDatabases, appBackups.length]);
+  }, [isOpen, app.id, app.envContent, engineName, fetchDatabases, initialRecordId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -130,7 +129,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
     try {
       const dbTarget = targetDb.trim() || undefined;
       if (sourceType === 'existing') {
-        if (!selectedRecordId) throw new Error('请选择要恢复的历史备份归档');
+        if (!appBackups.some(record => record.id === selectedRecordId)) throw new Error('请选择当前应用的数据库备份归档');
         await onRestoreRecord(selectedRecordId, dbTarget);
       } else {
         if (!selectedFile) throw new Error('请选择或拖拽要导入的备份文件');
@@ -319,7 +318,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-ink-muted flex items-center gap-1">
               <span>目标数据库名称 (Database Name)</span>
-              <span className="text-rose-500">*</span>
+              {!engineName.toLowerCase().includes('mongo') && <span className="text-rose-500">*</span>}
             </label>
             <button
               type="button"
@@ -334,10 +333,10 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
 
           <input
             type="text"
-            required
+            required={!engineName.toLowerCase().includes('mongo')}
             value={targetDb}
             onChange={(e) => setTargetDb(e.target.value)}
-            placeholder="如 postgres 或 app_db"
+            placeholder={engineName.toLowerCase().includes('mongo') ? '留空按归档恢复全部数据库' : '如 postgres 或 app_db'}
             className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
           />
 
@@ -362,7 +361,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             </div>
           )}
           <p className="text-[11px] text-ink-muted leading-relaxed">
-            数据将直接导入至该目标数据库中，容器内现有同名数据表记录将被覆写。
+            MongoDB 留空时按归档中的数据库名称恢复。SQL 归档中的 USE 或连接切换语句可能指定其他数据库。
           </p>
         </div>
 
@@ -373,7 +372,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             <span>高危数据覆写风险提示</span>
           </div>
           <p className="text-ink-muted leading-relaxed text-[11.5px]">
-            还原过程将通过原生管道流将转储直接注入容器。目标数据库中已存在的冲突数据将被覆盖。还原期间建议暂停写入业务。
+            还原会修改现有数据，冲突时也可能中途失败并留下部分修改。请先备份当前数据，并在还原期间暂停业务写入。
           </p>
         </div>
 

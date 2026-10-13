@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import {
@@ -20,7 +20,7 @@ import {
 import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
-import { ComposeAppView } from './ComposeAppView.js';
+const ComposeAppView = lazy(() => import('./ComposeAppView.js').then(module => ({ default: module.ComposeAppView })));
 import { CreateDatabaseModal } from '../common/CreateDatabaseModal.js';
 
 interface AppsViewProps {

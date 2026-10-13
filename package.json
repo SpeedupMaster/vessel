@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "pnpm --parallel --filter \"./web\" --filter \"./server\" dev",
     "build": "pnpm --filter \"./web\" build && pnpm --filter \"./server\" build",
-    "start": "pnpm --filter \"./server\" start"
+    "start": "pnpm --filter \"./server\" start",
+    "test": "pnpm --filter \"./server\" build && node --test server/tests/*.test.cjs",
+    "check": "pnpm test && pnpm build"
   },
   "keywords": [
     "vessel",

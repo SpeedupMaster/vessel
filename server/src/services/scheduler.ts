@@ -1,4 +1,5 @@
 import cron, { ScheduledTask } from 'node-cron';
+import { withAppLock, appEvents } from './appOperations.js';
 import { db } from '../db/index.js';
 import { r2BackupService } from './r2Backup.js';
 import { cleanerService } from './cleaner.js';
@@ -6,6 +7,7 @@ import { registryService } from './registry.js';
 import { dockerService } from './docker.js';
 
 export class SchedulerService {
+  private checkingUpdates = false;
   private backupJob?: ScheduledTask;
   private pruneJob?: ScheduledTask;
   private updateCheckJob?: ScheduledTask;
@@ -25,7 +27,8 @@ export class SchedulerService {
     if (r2Config.enabled && cron.validate(r2Config.cronSchedule)) {
       this.backupJob = cron.schedule(r2Config.cronSchedule, async () => {
         console.log('[Scheduler] Executing scheduled R2 system backup...');
-        await r2BackupService.runSystemBackup();
+        try { await withAppLock('*', () => r2BackupService.runSystemBackup()); }
+        catch (error) { console.error('[Scheduler] System backup failed', error); }
       });
     }
 
@@ -52,9 +55,11 @@ export class SchedulerService {
         const job = cron.schedule(app.backupSchedule.cronSchedule, async () => {
           console.log(`[Scheduler] Executing scheduled database backup for ${app.name} (${app.id})...`);
           try {
-            const res = await r2BackupService.runDatabaseBackup(app, {
-              databaseName: app.backupSchedule?.targetDatabase || 'all',
-            });
+            const current = db.get('apps').find(item => item.id === app.id);
+            if (!current?.backupSchedule?.enabled) return;
+            const res = await withAppLock(current.id, () => r2BackupService.runDatabaseBackup(current, {
+              databaseName: current.backupSchedule?.targetDatabase || 'all',
+            }));
             const freshApps = db.get('apps') || [];
             const freshApp = freshApps.find((a) => a.id === app.id);
             if (freshApp && freshApp.backupSchedule) {
@@ -72,27 +77,30 @@ export class SchedulerService {
   }
 
   public async runUpdateCheck(): Promise<void> {
-    const apps = db.get('apps');
-    const maintenance = db.get('maintenance');
-    maintenance.lastCheckedAt = new Date().toISOString();
-    db.set('maintenance', { ...maintenance });
-
-    for (const app of apps) {
-      const { hasUpdate, newDigest } = await registryService.checkAppUpdate(app);
-      if (hasUpdate) {
-        app.updateAvailable = true;
-        app.latestDigest = newDigest;
-
-        // Auto update if enabled for this app
-        if (app.autoUpdate && app.status === 'running') {
-          console.log(`[Scheduler] Auto-updating app: ${app.name} (${app.id})...`);
-          await dockerService.pullAndRebuild(app);
-          app.updateAvailable = false;
-          app.currentDigest = newDigest;
-        }
+    if (this.checkingUpdates) return;
+    this.checkingUpdates = true;
+    try {
+      db.set('maintenance', { ...db.get('maintenance'), lastCheckedAt: new Date().toISOString() });
+      for (const { id } of db.get('apps')) {
+        try {
+          await withAppLock(id, async () => {
+            const app = db.get('apps').find(item => item.id === id);
+            if (!app) return;
+            const result = await registryService.checkAppUpdate(app);
+            if (!result.currentDigest || !result.newDigest) return;
+            db.updateApp(id, { currentDigest: result.currentDigest, latestDigest: result.newDigest, updateAvailable: result.hasUpdate });
+            if (result.hasUpdate && app.autoUpdate && app.status === 'running') {
+              db.updateApp(id, { status: 'rebuilding' });
+              appEvents.emit('changed', id);
+              const rebuilt = await dockerService.pullAndRebuild(app);
+              if (!rebuilt.success) { db.updateApp(id, { status: 'error' }); return; }
+              await registryService.captureAppDigest(app);
+              db.updateApp(id, { updateAvailable: false });
+            }
+          });
+        } catch (error) { console.warn(`[Scheduler] Skipped ${id}: ${String(error)}`); }
       }
-    }
-    db.set('apps', [...apps]);
+    } finally { this.checkingUpdates = false; }
   }
 
   public stopJobs(): void {

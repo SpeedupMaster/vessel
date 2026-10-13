@@ -17,11 +17,13 @@ import clsx from 'clsx';
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
+  required?: boolean;
 }
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   isOpen,
   onClose,
+  required = false,
 }) => {
   const { changePassword } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -47,7 +49,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   // Validation checks
   const isCurrentEmpty = touched.current && !currentPassword;
-  const isNewTooShort = touched.new && newPassword.length > 0 && newPassword.length < 6;
+  const isNewTooShort = touched.new && newPassword.length > 0 && newPassword.length < 12;
   const isNewEmpty = touched.new && !newPassword;
   const isConfirmMismatch =
     touched.confirm && confirmPassword.length > 0 && confirmPassword !== newPassword;
@@ -56,13 +58,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   // Progressive Enablement: all fields must be non-empty and valid
   const isFormValid =
     currentPassword.trim().length > 0 &&
-    newPassword.length >= 6 &&
+    newPassword.length >= 12 &&
     newPassword === confirmPassword;
 
   const hasDirtyInput = Boolean(currentPassword || newPassword || confirmPassword);
 
   const handleAttemptClose = () => {
-    if (loading) return;
+    if (loading || required) return;
     if (hasDirtyInput && !success) {
       setShowDiscardConfirm(true);
     } else {
@@ -96,8 +98,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError('新密码长度不能少于 6 位字符');
+    if (newPassword.length < 12) {
+      setError('新密码长度不能少于 12 位字符');
       return;
     }
 
@@ -151,14 +153,14 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-semibold text-ink leading-tight">修改管理员密码</h2>
-              <p className="text-[11px] text-ink-muted mt-0.5">更新当前账号的登录访问凭证</p>
+              <p className="text-[11px] text-ink-muted mt-0.5">{required ? '首次使用必须先修改初始密码' : '更新当前账号的登录访问凭证'}</p>
             </div>
           </div>
           {/* Close Button with >=44px Touch Target */}
           <button
             type="button"
             onClick={handleAttemptClose}
-            disabled={loading}
+            disabled={loading || required}
             aria-label="关闭弹窗"
             className="w-8 h-8 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors flex items-center justify-center cursor-pointer"
           >
@@ -239,7 +241,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 <label className="text-xs font-semibold text-ink-muted">
                   新密码
                 </label>
-                <span className="text-[11px] text-ink-muted">至少 6 位字符</span>
+                <span className="text-[11px] text-ink-muted">至少 12 位字符</span>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-ink-faint">
@@ -253,7 +255,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                     if (error) setError(null);
                   }}
                   onBlur={() => setTouched((prev) => ({ ...prev, new: true }))}
-                  placeholder="设置新密码 (≥6 位)"
+                  placeholder="设置新密码 (≥12 位)"
                   disabled={loading || success}
                   autoComplete="new-password"
                   autoCapitalize="off"
@@ -285,7 +287,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               {isNewTooShort && (
                 <p className="mt-1 text-[11px] text-rose-500 flex items-center gap-1 animate-fade-in font-sans">
                   <WarningCircle className="w-3.5 h-3.5 shrink-0" weight="fill" />
-                  <span>密码长度不能少于 6 位 (当前仅 {newPassword.length} 位)</span>
+                  <span>密码长度不能少于 12 位 (当前仅 {newPassword.length} 位)</span>
                 </p>
               )}
             </div>
@@ -352,7 +354,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               variant="secondary"
               size="md"
               onClick={handleAttemptClose}
-              disabled={loading || success}
+              disabled={loading || success || required}
               className="min-h-[40px] px-4 rounded-xl"
             >
               取消

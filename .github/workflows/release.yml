@@ -1,0 +1,85 @@
+name: Publish release
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vessel-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Test portable installer
+        run: sh scripts/test-installer.sh
+      - name: Validate version and image name
+        id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use a stable vX.Y.Z tag'; exit 1; }
+          echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - name: Verify real Docker behavior
+        run: |
+          VESSEL_DOCKER_TEST=1 node --test server/tests/docker.integration.mjs
+          docker build -t vessel:ci .
+          bash scripts/test-container.sh
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - name: Prepare version-pinned installer
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p release
+          python3 - <<'PY'
+          import os, pathlib
+          source = pathlib.Path('scripts/install.sh').read_text()
+          assert source.count("DEFAULT_IMAGE=''") == 1
+          pathlib.Path('release/install.sh').write_text(source.replace("DEFAULT_IMAGE=''", "DEFAULT_IMAGE='" + os.environ['IMAGE'] + "'"))
+          PY
+          sh -n release/install.sh
+          cd release
+          sha256sum install.sh > SHA256SUMS
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release upload "$VERSION" release/install.sh release/SHA256SUMS --clobber
+          else
+            gh release create "$VERSION" release/install.sh release/SHA256SUMS --verify-tag --generate-notes --title "Vessel $VERSION"
+          fi

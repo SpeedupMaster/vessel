@@ -8,7 +8,7 @@ import {
   MaintenanceConfig,
   SystemMetrics,
 } from '../types/index.js';
-import { getAuthHeaders } from './useAuth.js';
+import { getAuthHeaders, getStoredToken } from './useAuth.js';
 
 export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const authHeaders = getAuthHeaders();
@@ -16,19 +16,25 @@ export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit): Pr
   for (const [key, value] of Object.entries(authHeaders)) {
     headers.set(key, value);
   }
-  return fetch(input, { ...init, headers });
+  const response = await fetch(input, { ...init, headers });
+  if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event('vessel-session-expired'));
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `请求失败 (${response.status})`);
+  }
+  return response;
 };
 
-export function useData() {
+export function useData(token: string | null = null, enabled = true) {
   const [metrics, setMetrics] = useState<SystemMetrics>({
     cpuUsage: 0,
     memUsedBytes: 0,
-    memTotalBytes: 16 * 1024 * 1024 * 1024,
-    diskUsedBytes: 0,
-    diskTotalBytes: 256 * 1024 * 1024 * 1024,
+    memTotalBytes: 0,
+    diskUsedBytes: null,
+    diskTotalBytes: null,
     dockerStatus: 'disconnected',
-    runningContainers: 0,
-    totalImages: 0,
+    runningContainers: null,
+    totalImages: null,
     totalApps: 0,
     activeDomains: 0,
     totalBackups: 0,
@@ -44,10 +50,16 @@ export function useData() {
   const [logsMap, setLogsMap] = useState<Record<string, string[]>>({});
 
   const wsRef = useRef<WebSocket | null>(null);
+  const subscriptions = useRef(new Set<string>());
+  const requestVersion = useRef(0);
+  const hasActiveTask = useRef(false);
+  hasActiveTask.current = apps.some(app => app.status === 'deploying' || app.status === 'rebuilding');
 
   const fetchAll = useCallback(async () => {
+    if (!enabled || !token) return;
+    const version = ++requestVersion.current;
     try {
-      const [appsRes, domainsRes, r2Res, backupsRes, regRes, maintRes] = await Promise.all([
+      const results = await Promise.allSettled([
         apiFetch('/api/apps').then((r) => r.json()),
         apiFetch('/api/domains').then((r) => r.json()),
         apiFetch('/api/r2/config').then((r) => r.json()),
@@ -56,6 +68,12 @@ export function useData() {
         apiFetch('/api/maintenance/config').then((r) => r.json()),
       ]);
 
+      if (version !== requestVersion.current || getStoredToken() !== token) return;
+      const [appsRes, domainsRes, r2Res, backupsRes, regRes, maintRes] = results.map(result => {
+        if (result.status === 'fulfilled') return result.value;
+        console.error('Error refreshing data:', result.reason);
+        return undefined;
+      });
       if (Array.isArray(appsRes)) setApps(appsRes);
       if (Array.isArray(domainsRes)) setDomains(domainsRes);
       if (r2Res) setR2Config(r2Res);
@@ -65,50 +83,69 @@ export function useData() {
     } catch (e) {
       console.error('Error fetching initial data:', e);
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current && getStoredToken() === token) setLoading(false);
     }
-  }, []);
+  }, [enabled, token]);
 
-  // WebSocket Connection
+  // Session-scoped connection; reconnect only while mounted and restore subscriptions.
   useEffect(() => {
-    fetchAll();
-
-    const connectWs = () => {
+    if (!enabled || !token) {
+      requestVersion.current++;
+      subscriptions.current.clear();
+      setApps([]); setDomains([]); setBackups([]); setRegistries([]); setLogsMap({});
+      setR2Config(null); setMaintenance(null); setLoading(false);
+      return;
+    }
+    let disposed = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    setLoading(true);
+    void fetchAll();
+    const connect = () => {
+      if (disposed) return;
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`, ['vessel', `auth.${token}`]);
       wsRef.current = ws;
-
-      ws.onmessage = (event) => {
+      ws.onopen = () => {
+        if (disposed) { ws.close(); return; }
+        for (const id of subscriptions.current) ws.send(JSON.stringify({ type: 'subscribe', channel: `logs:${id}` }));
+        void fetchAll();
+      };
+      ws.onmessage = event => {
+        if (disposed) return;
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === 'metrics' && msg.data) {
-            setMetrics(msg.data);
-          } else if (msg.type === 'log' && msg.appId && msg.text) {
-            setLogsMap((prev) => {
-              const current = prev[msg.appId] || [];
-              return {
-                ...prev,
-                [msg.appId]: [...current.slice(-250), msg.text],
-              };
-            });
+          if (msg.type === 'metrics' && msg.data) setMetrics(msg.data);
+          else if (msg.type === 'apps-changed') void fetchAll();
+          else if (msg.type === 'log' && msg.appId && msg.text) {
+            setLogsMap(prev => ({ ...prev, [msg.appId]: [...(prev[msg.appId] || []).slice(-250), msg.text] }));
           }
         } catch {}
       };
-
-      ws.onclose = () => {
-        setTimeout(connectWs, 3000);
+      ws.onclose = event => {
+        if (disposed) return;
+        if (event.code === 1008) { window.dispatchEvent(new Event('vessel-session-expired')); return; }
+        retry = setTimeout(connect, 3000);
       };
     };
-
-    connectWs();
+    connect();
+    // Reconcile task completion even when an event was missed during network interruption.
+    const poll = setInterval(() => {
+      if (!document.hidden && (hasActiveTask.current || wsRef.current?.readyState !== WebSocket.OPEN)) void fetchAll();
+    }, 10000);
     return () => {
-      wsRef.current?.close();
+      disposed = true;
+      requestVersion.current++;
+      if (retry) clearTimeout(retry);
+      clearInterval(poll);
+      const ws = wsRef.current;
+      if (ws) { ws.onclose = null; ws.onmessage = null; ws.onopen = null; ws.close(); }
+      wsRef.current = null;
     };
-  }, [fetchAll]);
+  }, [enabled, token, fetchAll]);
 
   const subscribeLogs = (appId: string) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    subscriptions.current.add(appId);
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'subscribe', channel: `logs:${appId}` }));
     }
   };
@@ -164,18 +201,19 @@ export function useData() {
     const res = await apiFetch(`/api/apps/${id}/deploy`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to initiate deploy');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'deploying' } : a)));
+    await fetchAll();
   };
 
   const stopApp = async (id: string) => {
     const res = await apiFetch(`/api/apps/${id}/stop`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to stop app');
-    setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'stopped' } : a)));
+    await fetchAll();
   };
 
   const restartApp = async (id: string) => {
     const res = await apiFetch(`/api/apps/${id}/restart`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to restart app');
-    setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'running' } : a)));
+    await fetchAll();
   };
 
   const rebuildApp = async (id: string) => {
@@ -183,6 +221,7 @@ export function useData() {
     const res = await apiFetch(`/api/apps/${id}/rebuild`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to rebuild app');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rebuilding' } : a)));
+    await fetchAll();
   };
 
   const freshVolumesApp = async (id: string) => {
@@ -190,6 +229,7 @@ export function useData() {
     const res = await apiFetch(`/api/apps/${id}/fresh-volumes`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to initiate fresh volumes reset');
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rebuilding' } : a)));
+    await fetchAll();
   };
 
   const backupApp = async (
@@ -300,7 +340,7 @@ export function useData() {
   };
 
   const downloadBackup = (id: string, fileName: string) => {
-    const token = localStorage.getItem('vessel_token') || '';
+    const token = getStoredToken() || '';
     const url = `/api/r2/backups/${id}/download?token=${encodeURIComponent(token)}`;
     const a = document.createElement('a');
     a.href = url;
@@ -323,11 +363,11 @@ export function useData() {
   };
 
   const restoreDatabaseFromFile = async (appId: string, file: File, databaseName?: string) => {
-    const token = localStorage.getItem('vessel_token') || '';
+    const token = getStoredToken() || '';
     const query = new URLSearchParams();
     query.set('filename', file.name);
     if (databaseName) query.set('databaseName', databaseName);
-    const res = await fetch(`/api/apps/${appId}/restore-file?${query.toString()}`, {
+    const res = await apiFetch(`/api/apps/${appId}/restore-file?${query.toString()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/octet-stream',

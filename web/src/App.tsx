@@ -1,19 +1,19 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import gsap from 'gsap';
 import { AuthContext, useAuthProvider, useAuth } from './hooks/useAuth.js';
 import { useData } from './hooks/useData.js';
 import { Sidebar, NavTab } from './components/layout/Sidebar.js';
 import { Header } from './components/layout/Header.js';
-import { OverviewView } from './components/views/OverviewView.js';
-import { AppsView } from './components/views/AppsView.js';
-import { DomainsView } from './components/views/DomainsView.js';
-import { BackupsView } from './components/views/BackupsView.js';
-import { RegistriesView } from './components/views/RegistriesView.js';
-import { MaintenanceView } from './components/views/MaintenanceView.js';
+const OverviewView = lazy(() => import('./components/views/OverviewView.js').then(module => ({ default: module.OverviewView })));
+const AppsView = lazy(() => import('./components/views/AppsView.js').then(module => ({ default: module.AppsView })));
+const DomainsView = lazy(() => import('./components/views/DomainsView.js').then(module => ({ default: module.DomainsView })));
+const BackupsView = lazy(() => import('./components/views/BackupsView.js').then(module => ({ default: module.BackupsView })));
+const RegistriesView = lazy(() => import('./components/views/RegistriesView.js').then(module => ({ default: module.RegistriesView })));
+const MaintenanceView = lazy(() => import('./components/views/MaintenanceView.js').then(module => ({ default: module.MaintenanceView })));
 import { LoginView } from './components/views/LoginView.js';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal.js';
 import { GlobalTooltip } from './components/common/Tooltip.js';
-import { ShieldWarning, X, ArrowClockwise } from '@phosphor-icons/react';
+import { ArrowClockwise } from '@phosphor-icons/react';
 import { usePWA } from './hooks/usePWA.js';
 
 interface RouteState {
@@ -62,13 +62,10 @@ function parsePath(pathname: string, search: string = ''): RouteState {
 }
 
 function MainConsole() {
-  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const { user, token, isAuthenticated, loading: authLoading, logout } = useAuth();
   const { updateAvailable, updateApp } = usePWA();
   const [route, setRoute] = useState<RouteState>(() => parsePath(window.location.pathname, window.location.search));
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-  const [isPasswordWarningDismissed, setIsPasswordWarningDismissed] = useState<boolean>(() => {
-    return typeof window !== 'undefined' && sessionStorage.getItem('vessel_dismiss_password_warning') === '1';
-  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -109,7 +106,7 @@ function MainConsole() {
     triggerPrune,
     triggerCheckUpdates,
     refreshAll,
-  } = useData();
+  } = useData(token, isAuthenticated && !user?.isDefaultPassword);
 
   // Navigation dispatcher that updates URL path and state
   const navigate = useCallback((newPath: string, replace = false) => {
@@ -213,10 +210,13 @@ function MainConsole() {
       <LoginView
         onLoginSuccess={() => {
           navigate('/overview', true);
-          refreshAll();
         }}
       />
     );
+  }
+
+  if (user?.isDefaultPassword) {
+    return <div className="min-h-screen bg-paper"><ChangePasswordModal isOpen required onClose={() => {}} /></div>;
   }
 
   // Data initializing state
@@ -277,37 +277,6 @@ function MainConsole() {
                     className="btn-vessel-primary py-1.5 px-3.5 text-xs font-medium rounded-xl cursor-pointer"
                   >
                     立即更新
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Inset Dismissible Security Banner */}
-            {user?.isDefaultPassword && !isPasswordWarningDismissed && (
-              <div className="mb-6 rounded-2xl bg-amber-500/10 p-4 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-sans animate-fade-in">
-                <div className="flex items-start sm:items-center gap-2.5 text-amber-800 dark:text-amber-200 min-w-0">
-                  <ShieldWarning className="w-4 h-4 shrink-0 text-amber-500 mt-0.5 sm:mt-0" weight="fill" />
-                  <span className="leading-relaxed break-words">
-                    <strong>安全提醒：</strong> 当前系统正在使用初始默认密码 (<code className="px-1.5 py-0.5 rounded-md bg-amber-500/15 font-mono text-amber-900 dark:text-amber-100">vessel2026</code>)。为防止公网未授权访问，建议尽快修改。
-                  </span>
-                </div>
-                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0">
-                  <button
-                    onClick={() => setIsChangePasswordOpen(true)}
-                    className="min-h-[40px] sm:min-h-0 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
-                  >
-                    <span>立即修改密码</span>
-                    <span>&rarr;</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsPasswordWarningDismissed(true);
-                      sessionStorage.setItem('vessel_dismiss_password_warning', '1');
-                    }}
-                    title="忽略本次提醒"
-                    className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 p-1.5 rounded-lg text-amber-700/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-200 hover:bg-amber-500/15 transition-colors cursor-pointer flex items-center justify-center"
-                  >
-                    <X className="w-3.5 h-3.5" weight="bold" />
                   </button>
                 </div>
               </div>
@@ -420,7 +389,7 @@ export function App() {
 
   return (
     <AuthContext.Provider value={auth}>
-      <MainConsole />
+      <Suspense fallback={<div className="min-h-screen bg-paper p-8 text-ink" role="status">加载页面中…</div>}><MainConsole /></Suspense>
     </AuthContext.Provider>
   );
 }

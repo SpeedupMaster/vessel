@@ -1,5 +1,8 @@
 import crypto from 'crypto';
-import { db } from '../db/index.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { db, DATA_DIR } from '../db/index.js';
+import { hashPassword, matchesPassword } from './password.js';
 import { AdminUser } from '../types/index.js';
 
 function base64UrlEncode(str: string): string {
@@ -47,7 +50,7 @@ export function verifyJwt(token: string, secret: string): { valid: boolean; payl
     }
 
     const payload = JSON.parse(base64UrlDecode(p));
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+    if (!Number.isFinite(payload.exp) || payload.exp <= Math.floor(Date.now() / 1000)) {
       return { valid: false, error: 'Token has expired' };
     }
 
@@ -59,21 +62,13 @@ export function verifyJwt(token: string, secret: string): { valid: boolean; payl
 
 export class AuthService {
   private getAdmin(): AdminUser {
-    let admin = db.get('admin');
-    if (!admin) {
-      admin = {
-        initialized: true,
-        username: 'admin',
-        passwordHash: crypto.createHash('sha256').update('vessel2026').digest('hex'),
-        jwtSecret: crypto.randomBytes(32).toString('hex'),
-      };
-      db.set('admin', admin);
-    }
+    const admin = db.get('admin');
+    if (!admin) throw new Error('Admin account is not initialized');
     return admin;
   }
 
   public hashPassword(raw: string): string {
-    return crypto.createHash('sha256').update(raw).digest('hex');
+    return hashPassword(raw);
   }
 
   public login(username: string, password: string): {
@@ -85,7 +80,7 @@ export class AuthService {
   } {
     const admin = this.getAdmin();
 
-    if (!username || !password) {
+    if (typeof username !== 'string' || typeof password !== 'string' || !username || !password || password.length > 1024) {
       return { success: false, error: '请输入用户名和密码' };
     }
 
@@ -93,11 +88,15 @@ export class AuthService {
       return { success: false, error: '用户名或密码错误' };
     }
 
-    const inputHash = this.hashPassword(password);
-    if (inputHash !== admin.passwordHash) {
+    if (!matchesPassword(password, admin.passwordHash)) {
       return { success: false, error: '用户名或密码错误' };
     }
 
+    if (!admin.passwordHash.startsWith('scrypt:')) {
+      admin.mustChangePassword = this.isDefaultPassword();
+      admin.passwordHash = hashPassword(password);
+      db.set('admin', { ...admin });
+    }
     const token = createJwt({ sub: admin.username, username: admin.username }, admin.jwtSecret);
     return {
       success: true,
@@ -111,7 +110,7 @@ export class AuthService {
     if (!token) return { valid: false, error: 'No token provided' };
     const admin = this.getAdmin();
     const res = verifyJwt(token, admin.jwtSecret);
-    if (!res.valid) return { valid: false, error: res.error };
+    if (!res.valid || res.payload?.sub !== admin.username) return { valid: false, error: res.error || 'Invalid subject' };
     return { valid: true, username: res.payload.username || admin.username };
   }
 
@@ -121,16 +120,15 @@ export class AuthService {
   ): { success: boolean; error?: string; token?: string; isDefaultPassword?: boolean } {
     const admin = this.getAdmin();
 
-    if (!currentPassword || !newPassword) {
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || !currentPassword || !newPassword) {
       return { success: false, error: '当前密码与新密码均不能为空' };
     }
 
-    if (newPassword.length < 6) {
-      return { success: false, error: '新密码长度至少需要 6 个字符' };
+    if (newPassword.length < 12 || newPassword.length > 1024 || newPassword === 'vessel2026' || newPassword === currentPassword) {
+      return { success: false, error: '新密码须为 12–1024 个字符，且不能与旧密码或默认密码相同' };
     }
 
-    const curHash = this.hashPassword(currentPassword);
-    if (curHash !== admin.passwordHash) {
+    if (!matchesPassword(currentPassword, admin.passwordHash)) {
       return { success: false, error: '当前旧密码不正确' };
     }
 
@@ -142,9 +140,11 @@ export class AuthService {
       ...admin,
       passwordHash: newHash,
       jwtSecret: newSecret,
+      mustChangePassword: false,
     };
 
     db.set('admin', updatedAdmin);
+    fs.rmSync(path.join(DATA_DIR, 'initial-admin-password'), { force: true });
 
     // Issue fresh token
     const newToken = createJwt({ sub: updatedAdmin.username, username: updatedAdmin.username }, newSecret);
@@ -157,8 +157,7 @@ export class AuthService {
 
   public isDefaultPassword(): boolean {
     const admin = this.getAdmin();
-    const defaultHash = this.hashPassword('vessel2026');
-    return admin.passwordHash === defaultHash;
+    return !!admin.mustChangePassword || admin.passwordHash === crypto.createHash('sha256').update('vessel2026').digest('hex');
   }
 
   public getAdminProfile() {

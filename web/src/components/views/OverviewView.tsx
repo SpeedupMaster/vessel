@@ -100,7 +100,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 {runningApps.length}运行中
               </span>
               <span className="text-ink-faint">·</span>
-              <span>{metrics.runningContainers}活跃</span>
+              <span>{metrics.runningContainers ?? '未知'}活跃</span>
               {updatesCount > 0 && (
                 <>
                   <span className="text-ink-faint">·</span>

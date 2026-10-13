@@ -51,6 +51,14 @@
 
 ## 🚀 启动与运行
 
+### 安全修复版本升级须知
+
+旧版 Docker 部署的数据实际位于容器内 `/app/server/data`。**重建或删除旧容器之前，先导出数据**，再迁移到新版本挂载的 `/app/data`。新安装不再使用统一默认密码，初始密码写入数据目录的 `initial-admin-password`。
+
+完整迁移、备份语义和验证说明见 [升级与验证指南](docs/upgrade-and-verification.md)。运行 `pnpm check` 执行回归测试与前后端构建；CI 额外验证 Docker 构建、容器替换后持久化及真实数据卷备份恢复。
+
+新安装为空白控制台，不预置演示应用、域名或备份。GHCR 与 Docker Hub 仅保留未配置凭据的连接入口。
+
 ### 1. 本地全栈开发模式 (支持前端热重载)
 
 同时启动 Vite 开发服务器 (5174 端口) 与后端 API 服务 (3900 端口)：
@@ -83,11 +91,35 @@ pnpm start
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-或使用脚本在全新 Linux VPS 上 30 秒一键安装：
+### 4. Linux 一键安装（发布后使用）
+
+支持类似 Dokploy 的 `curl | sh` 入口。发布流程会生成绑定镜像 digest 的 `install.sh`，服务器无需克隆源码或安装 Node.js。
+
+项目仓库为 `SpeedupMaster/vessel`；**只有发布 Release 和公开镜像后，该命令才可用**：
 
 ```bash
-sudo bash scripts/install.sh
+curl -fsSL https://github.com/SpeedupMaster/vessel/releases/latest/download/install.sh | sudo sh
 ```
+
+如果已配置自己的安装域名，也可以使用以下形式（示例域名需替换）：
+
+```bash
+curl -fsSL https://vessel.example.com/install.sh | sudo sh
+```
+
+安装脚本支持 Linux amd64/arm64，检查 Docker 与 Compose v2、启动后就绪状态，默认数据目录 `/opt/vessel/data`、控制台端口 `3900`，并使用端口 `80/443` 提供反向代理。初始账号为 `admin`，密码读取方式：
+
+```bash
+sudo cat /opt/vessel/data/initial-admin-password
+```
+
+源码版脚本没有预设未发布的镜像，需要明确指定真实镜像：
+
+```bash
+sudo env VESSEL_IMAGE=ghcr.io/speedupmaster/vessel:v1.0.0 sh scripts/install.sh
+```
+
+发布流程、固定版本安装、自定义端口、重复安装和旧版迁移见 [一键安装与发布指南](docs/installation.md)。
 
 ---
 
@@ -100,7 +132,7 @@ F:\代码\vessel/
 ├── docker-compose.prod.yml   # 生产部署编排
 ├── Dockerfile                # 多阶段生产容器构建
 ├── scripts/
-│   └── install.sh            # Linux 30秒一键安装脚本
+│   └── install.sh            # Linux POSIX sh 一键安装脚本
 ├── .hallmark/                # Hallmark 1.1.0 规范配置与执行记录
 │   ├── log.json
 │   └── preflight.json

@@ -1,7 +1,14 @@
 node_modules
+.pnpm-store
 dist
 data
 *.log
 .env
 .DS_Store
 *.tsbuildinfo
+
+# Local credentials and private runtime configuration
+.env.*
+!.env.example
+*.pem
+*.key

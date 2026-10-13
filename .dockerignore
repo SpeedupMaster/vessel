@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/data
+.git
+.pnpm-store
+.env
+*.log
+**/*.tsbuildinfo
+
+# Local credentials and private runtime configuration
+.env.*
+!.env.example
+*.pem
+*.key

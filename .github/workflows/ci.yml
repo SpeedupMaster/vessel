@@ -1,0 +1,23 @@
+name: Verify
+on: [push, pull_request]
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Verify POSIX installer
+        run: sh scripts/test-installer.sh
+      - name: Verify Docker volume backup and restore
+        run: VESSEL_DOCKER_TEST=1 node --test server/tests/docker.integration.mjs
+      - run: docker build -t vessel:ci .
+      - name: Verify fresh install and persistence across container replacement
+        run: bash scripts/test-container.sh

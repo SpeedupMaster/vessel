@@ -1,26 +1,23 @@
 import fs from 'fs';
 import path from 'path';
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
+import { runDocker } from './process.js';
 import YAML from 'yaml';
 import { APPS_DATA_DIR, db } from '../db/index.js';
 import { ContainerInfo, AppItem } from '../types/index.js';
 
-const execAsync = promisify(exec);
+
 
 export class DockerService {
   private networkName = 'vessel-net';
 
-  constructor() {
-    this.ensureNetwork();
-  }
+
 
   /**
    * Check if Docker daemon is responsive
    */
   public async checkDaemon(): Promise<{ available: boolean; version?: string; error?: string }> {
     try {
-      const { stdout } = await execAsync('docker info --format "{{.ServerVersion}}"', { timeout: 4000 });
+      const { stdout } = await runDocker(['info', '--format', '{{.ServerVersion}}'], { timeout: 4000 });
       return { available: true, version: stdout.trim() };
     } catch (e: any) {
       return { available: false, error: e.message || 'Docker daemon is not running' };
@@ -32,7 +29,7 @@ export class DockerService {
    */
   public async ensureNetwork(): Promise<void> {
     try {
-      await execAsync(`docker network create ${this.networkName}`, { timeout: 3000 });
+      await runDocker(['network', 'create', this.networkName], { timeout: 3000 });
     } catch {
       // Ignored if network already exists or docker is offline
     }
@@ -42,6 +39,7 @@ export class DockerService {
    * Prepare project workspace directory with compose file and .env
    */
   public prepareAppFiles(app: AppItem): { appDir: string; composePath: string; envPath: string } {
+    if (!/^[a-z0-9][a-z0-9_-]*$/i.test(app.id)) throw new Error('Invalid application ID');
     const appDir = path.join(APPS_DATA_DIR, app.id);
     if (!fs.existsSync(appDir)) {
       fs.mkdirSync(appDir, { recursive: true });
@@ -87,203 +85,69 @@ export class DockerService {
     return { appDir, composePath, envPath };
   }
 
-  /**
-   * Deploy/Start an application with streaming output
-   */
-  public async deployApp(
-    app: AppItem,
-    onLog?: (chunk: string) => void
-  ): Promise<{ success: boolean; error?: string }> {
-    await this.ensureNetwork();
-    const { composePath, appDir, envPath } = this.prepareAppFiles(app);
-
-    return new Promise((resolve) => {
-      onLog?.(`[vessel] Initiating deployment for ${app.name} (${app.id})...\n`);
-      onLog?.(`[vessel] Working directory: ${appDir}\n`);
-
-      const child = spawn('docker', ['compose', '-f', composePath, '--env-file', envPath, 'up', '-d', '--remove-orphans'], {
-        cwd: appDir,
-        shell: true,
-      });
-
-      child.stdout.on('data', (d) => onLog?.(d.toString()));
-      child.stderr.on('data', (d) => onLog?.(d.toString()));
-
-      child.on('close', async (code) => {
-        if (code === 0) {
-          onLog?.(`[vessel] Deployment finished successfully (exit code 0).\n`);
-          await this.syncAppContainers(app.id);
-          resolve({ success: true });
-        } else {
-          onLog?.(`[vessel] Deployment exited with error code ${code}.\n`);
-          resolve({ success: false, error: `Process exited with code ${code}` });
-        }
-      });
-
-      child.on('error', (err) => {
-        onLog?.(`[vessel] Execution error: ${err.message}\n`);
-        resolve({ success: false, error: err.message });
-      });
-    });
+  public composeArgs(app: AppItem, args: string[]) {
+    const { composePath, envPath, appDir } = this.prepareAppFiles(app);
+    return { args: ['compose', '-f', composePath, '--env-file', envPath, ...args], cwd: appDir };
   }
 
-  /**
-   * Stop an application
-   */
-  public async stopApp(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
-    const { composePath, appDir } = this.prepareAppFiles(app);
-    return new Promise((resolve) => {
-      onLog?.(`[vessel] Stopping ${app.name}...\n`);
-      const child = spawn('docker', ['compose', '-f', composePath, 'stop'], {
-        cwd: appDir,
-        shell: true,
-      });
-
-      child.stdout.on('data', (d) => onLog?.(d.toString()));
-      child.stderr.on('data', (d) => onLog?.(d.toString()));
-
-      child.on('close', async () => {
-        onLog?.(`[vessel] Application stopped.\n`);
-        await this.syncAppContainers(app.id);
-        resolve({ success: true });
-      });
-    });
+  public async compose(app: AppItem, args: string[], onLog?: (chunk: string) => void) {
+    const command = this.composeArgs(app, args);
+    return runDocker(command.args, { cwd: command.cwd, onLog, timeout: 15 * 60 * 1000 });
   }
 
-  /**
-   * Restart an application
-   */
-  public async restartApp(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
-    const { composePath, appDir } = this.prepareAppFiles(app);
-    return new Promise((resolve) => {
-      onLog?.(`[vessel] Restarting ${app.name}...\n`);
-      const child = spawn('docker', ['compose', '-f', composePath, 'restart'], {
-        cwd: appDir,
-        shell: true,
-      });
-
-      child.stdout.on('data', (d) => onLog?.(d.toString()));
-      child.stderr.on('data', (d) => onLog?.(d.toString()));
-
-      child.on('close', async () => {
-        onLog?.(`[vessel] Application restarted.\n`);
-        await this.syncAppContainers(app.id);
-        resolve({ success: true });
-      });
-    });
-  }
-
-  /**
-   * Synchronize container runtime status for an application
-   */
-  public async syncAppContainers(appId: string): Promise<ContainerInfo[]> {
-    const apps = db.get('apps');
-    const app = apps.find((a) => a.id === appId);
-    if (!app) return [];
-
-    const { composePath, appDir } = this.prepareAppFiles(app);
+  private async lifecycle(app: AppItem, commands: string[][], onLog?: (text: string) => void): Promise<{ success: boolean; error?: string }> {
     try {
-      const { stdout } = await execAsync('docker compose ps --format json', {
-        cwd: appDir,
-        timeout: 4000,
-      });
-
-      const containers: ContainerInfo[] = [];
-      const lines = stdout.trim().split('\n').filter(Boolean);
-      for (const line of lines) {
-        try {
-          const item = JSON.parse(line);
-          containers.push({
-            id: item.ID || item.Name || '',
-            name: item.Name || item.Service || '',
-            image: item.Image || '',
-            state: item.State === 'running' ? 'running' : 'exited',
-            status: item.Status || '',
-            ports: item.Publishers ? item.Publishers.map((p: any) => `${p.PublishedPort}->${p.TargetPort}`) : [],
-          });
-        } catch {
-          // ignore parsing error
-        }
+      for (const command of commands) {
+        onLog?.(`[vessel] docker compose ${command.join(' ')}
+`);
+        await this.compose(app, command, onLog);
       }
-
-      app.containers = containers;
-      app.status = containers.length > 0 && containers.some((c) => c.state === 'running') ? 'running' : 'stopped';
-      db.set('apps', [...apps]);
-      return containers;
-    } catch {
-      return [];
+      await this.syncAppContainers(app.id);
+      onLog?.('[vessel] Operation completed successfully.\n');
+      return { success: true };
+    } catch (error: any) {
+      onLog?.(`[vessel] Operation failed: ${error.message}
+`);
+      return { success: false, error: error.message };
     }
   }
 
-  /**
-   * Pull latest images and rebuild if requested
-   */
-  public async pullAndRebuild(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
+  public async deployApp(app: AppItem, onLog?: (text: string) => void) {
     await this.ensureNetwork();
-    const { composePath, appDir, envPath } = this.prepareAppFiles(app);
-    return new Promise((resolve) => {
-      onLog?.(`[vessel] Pulling updated images for ${app.name}...\n`);
-      const child = spawn('docker', ['compose', '-f', composePath, 'pull'], {
-        cwd: appDir,
-        shell: true,
-      });
-
-      child.stdout.on('data', (d) => onLog?.(d.toString()));
-      child.stderr.on('data', (d) => onLog?.(d.toString()));
-
-      child.on('close', async () => {
-        onLog?.(`[vessel] Re-launching containers with new images...\n`);
-        const upChild = spawn('docker', ['compose', '-f', composePath, '--env-file', envPath, 'up', '-d', '--force-recreate'], {
-          cwd: appDir,
-          shell: true,
-        });
-
-        upChild.stdout.on('data', (d) => onLog?.(d.toString()));
-        upChild.stderr.on('data', (d) => onLog?.(d.toString()));
-
-        upChild.on('close', async () => {
-          onLog?.(`[vessel] Update and recreation completed.\n`);
-          await this.syncAppContainers(app.id);
-          resolve({ success: true });
-        });
-      });
-    });
+    return this.lifecycle(app, [['up', '-d', '--remove-orphans']], onLog);
   }
 
-  /**
-   * Fresh volumes rebuild: docker compose down -v followed by docker compose up -d --build
-   */
-  public async freshVolumesRebuild(app: AppItem, onLog?: (chunk: string) => void): Promise<{ success: boolean }> {
+  public stopApp(app: AppItem, onLog?: (text: string) => void) {
+    return this.lifecycle(app, [['stop']], onLog);
+  }
+
+  public restartApp(app: AppItem, onLog?: (text: string) => void) {
+    return this.lifecycle(app, [['restart']], onLog);
+  }
+
+  public async syncAppContainers(appId: string): Promise<ContainerInfo[]> {
+    const app = db.get('apps').find(item => item.id === appId);
+    if (!app) return [];
+    const { stdout } = await this.compose(app, ['ps', '--all', '--format', 'json']);
+    const rows: any[] = stdout.trim().startsWith('[') ? JSON.parse(stdout) : stdout.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+    const containers: ContainerInfo[] = rows.map(item => ({
+      id: item.ID || item.Name || '', name: item.Name || item.Service || '', image: item.Image || '',
+      state: item.State === 'running' ? 'running' : item.State === 'restarting' ? 'restarting' : 'exited',
+      status: item.Status || '', ports: (item.Publishers || []).map((p: any) => `${p.PublishedPort}->${p.TargetPort}`),
+    }));
+    const status = containers.some(item => item.state === 'running') ? 'running' : 'stopped';
+    db.updateApp(appId, { containers, status });
+    return containers;
+  }
+
+  public async pullAndRebuild(app: AppItem, onLog?: (text: string) => void) {
     await this.ensureNetwork();
-    const { composePath, appDir, envPath } = this.prepareAppFiles(app);
-    return new Promise((resolve) => {
-      onLog?.(`[vessel] ⚠️ Fresh Volumes triggered: destroying persistent volumes for ${app.name}...\n`);
-      onLog?.(`[vessel] Executing: docker compose down -v --remove-orphans\n`);
-      const downChild = spawn('docker', ['compose', '-f', composePath, 'down', '-v', '--remove-orphans'], {
-        cwd: appDir,
-        shell: true,
-      });
+    return this.lifecycle(app, [['pull'], ['up', '-d', '--force-recreate']], onLog);
+  }
 
-      downChild.stdout.on('data', (d) => onLog?.(d.toString()));
-      downChild.stderr.on('data', (d) => onLog?.(d.toString()));
-
-      downChild.on('close', async () => {
-        onLog?.(`[vessel] Starting clean deployment: docker compose up -d --build\n`);
-        const upChild = spawn('docker', ['compose', '-f', composePath, '--env-file', envPath, 'up', '-d', '--build'], {
-          cwd: appDir,
-          shell: true,
-        });
-
-        upChild.stdout.on('data', (d) => onLog?.(d.toString()));
-        upChild.stderr.on('data', (d) => onLog?.(d.toString()));
-
-        upChild.on('close', async (code) => {
-          onLog?.(`[vessel] Fresh volumes deployment completed (exit code ${code}).\n`);
-          await this.syncAppContainers(app.id);
-          resolve({ success: code === 0 });
-        });
-      });
-    });
+  public async freshVolumesRebuild(app: AppItem, onLog?: (text: string) => void) {
+    await this.ensureNetwork();
+    return this.lifecycle(app, [['down', '-v', '--remove-orphans'], ['up', '-d', '--build']], onLog);
   }
 
   /**
@@ -294,17 +158,19 @@ export class DockerService {
     options: { service?: string; tail?: number; timestamps?: boolean } = {}
   ): Promise<string[]> {
     const { composePath, appDir } = this.prepareAppFiles(app);
-    const tail = options.tail || 100;
-    const args = ['compose', '-f', `"${composePath}"`, 'logs', '--tail', String(tail), '--no-color'];
+    const tail = Math.max(1, Math.min(5000, Number.isFinite(options.tail) ? Math.trunc(options.tail!) : 100));
+    const args = ['compose', '-f', composePath, 'logs', '--tail', String(tail), '--no-color'];
     if (options.timestamps !== false) {
       args.push('--timestamps');
     }
     if (options.service && options.service !== 'all') {
+      const services = YAML.parse(app.composeYaml)?.services || {};
+      if (!Object.hasOwn(services, options.service) || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(options.service)) throw new Error('Unknown Compose service');
       args.push(options.service);
     }
 
     try {
-      const { stdout, stderr } = await execAsync(`docker ${args.join(' ')}`, {
+      const { stdout, stderr } = await runDocker(args, {
         cwd: appDir,
         timeout: 8000,
       });
@@ -322,22 +188,16 @@ export class DockerService {
    * Get Docker disk usage details
    */
   public async getDiskUsage(): Promise<{ imagesSize: string; containersSize: string; volumesSize: string; raw: string }> {
-    try {
-      const { stdout } = await execAsync('docker system df', { timeout: 5000 });
-      return {
-        imagesSize: '1.2GB',
-        containersSize: '240MB',
-        volumesSize: '850MB',
-        raw: stdout,
-      };
-    } catch {
-      return {
-        imagesSize: '0 B',
-        containersSize: '0 B',
-        volumesSize: '0 B',
-        raw: 'Docker offline',
-      };
-    }
+    const { stdout } = await runDocker(['system', 'df', '--format', '{{json .}}'], { timeout: 5000 });
+    const rows = stdout.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+    const size = (type: string) => rows.find(row => row.Type === type)?.Size || '未知';
+    return { imagesSize: size('Images'), containersSize: size('Containers'), volumesSize: size('Local Volumes'), raw: stdout };
+  }
+
+  public async getEngineCounts(): Promise<{ runningContainers: number; totalImages: number }> {
+    const { stdout } = await runDocker(['info', '--format', '{{json .}}'], { timeout: 4000 });
+    const info = JSON.parse(stdout);
+    return { runningContainers: info.ContainersRunning, totalImages: info.Images };
   }
 
   /**
@@ -449,88 +309,15 @@ export class DockerService {
       execArgs = ['sh', '-c', rawCmd];
     }
 
-    return new Promise((resolve) => {
-      const dockerArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', service, ...execArgs];
-      const child = spawn('docker', dockerArgs, {
-        cwd: appDir,
-        shell: true,
-      });
-
-      let stdout = '';
-      let stderr = '';
-      let timedOut = false;
-
-      const timer = setTimeout(() => {
-        timedOut = true;
-        child.kill();
-        resolve({
-          success: false,
-          output: '[错误] 命令执行超时（超过 15 秒），已自动中断。',
-          exitCode: 124,
-        });
-      }, 15000);
-
-      child.stdout.on('data', (d) => {
-        stdout += d.toString();
-      });
-
-      child.stderr.on('data', (d) => {
-        stderr += d.toString();
-      });
-
-      child.on('close', (code) => {
-        if (timedOut) return;
-        clearTimeout(timer);
-
-        const combined = (stdout || '') + (stderr || '');
-        if (
-          combined.includes('pipe/dockerDesktopLinuxEngine') ||
-          combined.includes('daemon is not running') ||
-          combined.includes('connect to the docker API') ||
-          combined.includes('The system cannot find the file specified')
-        ) {
-          resolve({
-            success: false,
-            output: '[错误] Docker 守护进程未启动。请先确保宿主机 Docker Desktop 或 Docker 服务已启动。',
-            exitCode: 1,
-          });
-          return;
-        }
-
-        if (combined.includes('is not running') || combined.includes('not running')) {
-          resolve({
-            success: false,
-            output: `[错误] 容器 "${service}" 当前未在运行中。请先点击「部署」或「启动」容器后再执行命令。`,
-            exitCode: 1,
-          });
-          return;
-        }
-
-        if (code === 0) {
-          resolve({
-            success: true,
-            output: stdout.trimEnd() || stderr.trimEnd() || '（命令已成功执行，无返回输出）',
-            exitCode: 0,
-          });
-        } else {
-          resolve({
-            success: false,
-            output: stderr.trimEnd() || stdout.trimEnd() || `Process exited with code ${code}`,
-            exitCode: code ?? 1,
-          });
-        }
-      });
-
-      child.on('error', (err) => {
-        if (timedOut) return;
-        clearTimeout(timer);
-        resolve({
-          success: false,
-          output: `[错误] 执行失败: ${err.message}`,
-          exitCode: 1,
-        });
-      });
-    });
+    try {
+      const services = YAML.parse(app.composeYaml)?.services || {};
+      if (!Object.hasOwn(services, service) || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(service)) throw new Error('Unknown Compose service');
+      const args = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', service, ...execArgs];
+      const result = await runDocker(args, { cwd: appDir, timeout: 15000 });
+      return { success: true, output: result.stdout.trimEnd() || result.stderr.trimEnd() || '命令已执行', exitCode: 0 };
+    } catch (error: any) {
+      return { success: false, output: error.message, exitCode: 1 };
+    }
   }
 
   /**

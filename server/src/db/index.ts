@@ -1,12 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { hashPassword } from '../services/password.js';
 import { fileURLToPath } from 'url';
 import { DatabaseSchema, AppItem, DomainItem, R2Config, BackupRecord, RegistryItem, MaintenanceConfig, AdminUser } from '../types/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-export const DATA_DIR = path.resolve(__dirname, '../../data');
+export const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.resolve(__dirname, '../../data');
 export const APPS_DATA_DIR = path.join(DATA_DIR, 'apps');
 const DB_FILE = path.join(DATA_DIR, 'vessel_db.json');
 
@@ -31,72 +34,24 @@ const DEFAULT_MAINTENANCE_CONFIG: MaintenanceConfig = {
   checkSchedule: '0 */6 * * *', // Every 6 hours
 };
 
-const DEFAULT_ADMIN: AdminUser = {
-  initialized: true,
-  username: 'admin',
-  passwordHash: crypto.createHash('sha256').update('vessel2026').digest('hex'),
-  jwtSecret: crypto.randomBytes(32).toString('hex'),
-};
-
-const DEFAULT_APPS: AppItem[] = [
-  {
-    id: 'n8n-workflow',
-    name: 'n8n Workflow Automation',
-    description: 'Fair-code workflow automation platform',
-    status: 'stopped',
-    composeYaml: `services:
-  n8n:
-    image: docker.n8n.io/n8nio/n8n:latest
-    container_name: n8n-app
-    restart: unless-stopped
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_HOST=\${DOMAIN:-localhost}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - NODE_ENV=production
-    volumes:
-      - n8n_data:/home/node/.n8n
-
-volumes:
-  n8n_data:
-`,
-    envContent: `DOMAIN=n8n.local
-NODE_ENV=production
-`,
-    autoUpdate: true,
-    currentImageTag: 'docker.n8n.io/n8nio/n8n:latest',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    containers: [],
-  },
-  {
-    id: 'redis-cache',
-    name: 'Redis In-Memory Store',
-    description: 'High-performance key-value caching service',
-    status: 'stopped',
-    composeYaml: `services:
-  redis:
-    image: redis:7-alpine
-    container_name: redis-cache
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-volumes:
-  redis_data:
-`,
-    envContent: ``,
-    autoUpdate: false,
-    currentImageTag: 'redis:7-alpine',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    containers: [],
-  },
-];
+function createAdmin(): AdminUser {
+  const supplied = process.env.VESSEL_ADMIN_PASSWORD;
+  if (supplied && (supplied.length < 12 || supplied.length > 1024 || supplied === 'vessel2026')) {
+    throw new Error('VESSEL_ADMIN_PASSWORD must contain at least 12 characters and cannot be the legacy default');
+  }
+  const password = supplied || crypto.randomBytes(24).toString('base64url');
+  if (!supplied) {
+    fs.writeFileSync(path.join(DATA_DIR, 'initial-admin-password'), password + '\n', { mode: 0o600 });
+    console.log(`[Vessel] Initial admin password written to ${path.join(DATA_DIR, 'initial-admin-password')}. Change it after signing in.`);
+  }
+  return {
+    initialized: true,
+    username: 'admin',
+    passwordHash: hashPassword(password),
+    jwtSecret: crypto.randomBytes(32).toString('hex'),
+    mustChangePassword: !supplied,
+  };
+}
 
 const DEFAULT_REGISTRIES: RegistryItem[] = [
   {
@@ -117,7 +72,7 @@ const DEFAULT_REGISTRIES: RegistryItem[] = [
   },
 ];
 
-class Database {
+export class Database {
   private data: DatabaseSchema;
 
   constructor() {
@@ -139,9 +94,12 @@ class Database {
       try {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
+        if (!parsed.admin?.passwordHash || !parsed.admin?.jwtSecret) {
+          throw new Error('Database admin record is missing or invalid');
+        }
         return {
-          admin: parsed.admin || DEFAULT_ADMIN,
-          apps: parsed.apps || DEFAULT_APPS,
+          admin: parsed.admin,
+          apps: parsed.apps || [],
           domains: parsed.domains || [],
           r2Config: parsed.r2Config || DEFAULT_R2_CONFIG,
           backups: parsed.backups || [],
@@ -149,13 +107,13 @@ class Database {
           maintenance: parsed.maintenance || DEFAULT_MAINTENANCE_CONFIG,
         };
       } catch (e) {
-        console.error('Failed to parse database file, falling back to defaults:', e);
+        throw new Error(`Cannot read database ${DB_FILE}; original file was preserved: ${String(e)}`);
       }
     }
 
     const initial: DatabaseSchema = {
-      admin: DEFAULT_ADMIN,
-      apps: DEFAULT_APPS,
+      admin: createAdmin(),
+      apps: [],
       domains: [],
       r2Config: DEFAULT_R2_CONFIG,
       backups: [],
@@ -168,8 +126,8 @@ class Database {
 
   private save(data: DatabaseSchema) {
     this.ensureDirs();
-    const tempFile = `${DB_FILE}.tmp.${Date.now()}`;
-    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+    const tempFile = `${DB_FILE}.tmp.${crypto.randomUUID()}`;
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
     fs.renameSync(tempFile, DB_FILE);
   }
 
@@ -178,8 +136,18 @@ class Database {
   }
 
   public set<K extends keyof DatabaseSchema>(key: K, value: DatabaseSchema[K]): void {
-    this.data[key] = value;
-    this.save(this.data);
+    const next = { ...this.data, [key]: value };
+    this.save(next);
+    this.data = next;
+  }
+
+  public updateApp(id: string, update: Partial<AppItem> | ((app: AppItem) => AppItem)): AppItem | undefined {
+    const apps = this.data.apps;
+    const index = apps.findIndex(app => app.id === id);
+    if (index < 0) return undefined;
+    const app = typeof update === 'function' ? update(apps[index]) : { ...apps[index], ...update };
+    this.set('apps', apps.map((item, i) => i === index ? app : item));
+    return app;
   }
 
   public getAll(): DatabaseSchema {

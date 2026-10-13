@@ -1,3 +1,4 @@
+import { apiFetch } from '../../hooks/useData.js';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -54,7 +55,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
     if (!silent) setLoading(true);
     try {
       const serviceParam = selectedService === 'all' ? '' : `&service=${encodeURIComponent(selectedService)}`;
-      const res = await fetch(`/api/apps/${app.id}/logs?tail=${limit}${serviceParam}`);
+      const res = await apiFetch(`/api/apps/${app.id}/logs?tail=${limit}${serviceParam}`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.logs)) {

@@ -1,4 +1,8 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
+import { pipeline } from 'node:stream/promises';
+import { Transform } from 'node:stream';
+import { checkedRouter, validateRequest, apiErrorHandler, BadRequest } from '../middleware/validation.js';
+import { assertAppIdle, withAppLock, appEvents } from '../services/appOperations.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
@@ -11,11 +15,11 @@ import { registryService } from '../services/registry.js';
 import { cleanerService } from '../services/cleaner.js';
 import { schedulerService } from '../services/scheduler.js';
 import { authService } from '../services/auth.js';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
+import { requireAuth, requirePasswordChanged, loginRateLimit, AuthenticatedRequest } from '../middleware/auth.js';
 import { wsHub } from '../ws/wsHub.js';
 import { AppItem, DomainItem, R2Config, RegistryItem, MaintenanceConfig } from '../types/index.js';
 
-export const apiRouter = Router();
+export const apiRouter = checkedRouter();
 
 // ======================= AUTH =======================
 apiRouter.get('/auth/status', (_req: Request, res: Response) => {
@@ -25,8 +29,8 @@ apiRouter.get('/auth/status', (_req: Request, res: Response) => {
   });
 });
 
-apiRouter.post('/auth/login', (req: Request, res: Response) => {
-  const { username, password } = req.body;
+apiRouter.post('/auth/login', loginRateLimit, (req: Request, res: Response) => {
+  const { username, password } = req.body || {};
   const result = authService.login(username, password);
   if (!result.success) {
     return res.status(401).json({ error: result.error });
@@ -65,7 +69,7 @@ apiRouter.get('/auth/me', (req: Request, res: Response) => {
 });
 
 apiRouter.post('/auth/change-password', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  const { currentPassword, newPassword } = req.body;
+  const { currentPassword, newPassword } = req.body || {};
   const result = authService.changePassword(currentPassword, newPassword);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
@@ -81,6 +85,24 @@ apiRouter.post('/auth/change-password', requireAuth, (req: AuthenticatedRequest,
 apiRouter.post('/auth/logout', (_req: Request, res: Response) => {
   res.json({ success: true, message: '已安全登出' });
 });
+
+// All management endpoints are private by default.
+apiRouter.use(requireAuth, requirePasswordChanged, validateRequest);
+apiRouter.use((req, _res, next) => {
+  try {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) assertAppIdle('*');
+    next();
+  } catch (error) { next(error); }
+});
+
+function checkDomainBinding(domain: string, appId: string, exceptId?: string) {
+  if (appId !== 'vessel-system' && !db.get('apps').some(app => app.id === appId)) {
+    throw new BadRequest('关联的应用不存在');
+  }
+  if (db.get('domains').some(item => item.id !== exceptId && item.domain.toLowerCase() === domain.toLowerCase())) {
+    throw new BadRequest('该域名已绑定，请编辑现有记录');
+  }
+}
 
 // ======================= SYSTEM =======================
 apiRouter.get('/system/status', async (req: Request, res: Response) => {
@@ -120,9 +142,10 @@ apiRouter.post('/apps', requireAuth, async (req: Request, res: Response) => {
   }
 
   const customId = req.body.id;
+  if (customId && !/^[a-z0-9][a-z0-9_-]*$/i.test(customId)) throw new BadRequest('Invalid application ID');
   const id = (customId && typeof customId === 'string' && /^[a-z0-9_-]+$/i.test(customId))
     ? customId.toLowerCase()
-    : name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 32) + '-' + uuidv4().slice(0, 4);
+    : (name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^[^a-z0-9]+/, '').slice(0, 32) || 'app') + '-' + uuidv4().slice(0, 8);
   const newApp: AppItem = {
     id,
     name,
@@ -137,15 +160,17 @@ apiRouter.post('/apps', requireAuth, async (req: Request, res: Response) => {
   };
 
   const apps = db.get('apps') || [];
-  apps.push(newApp);
-  db.set('apps', [...apps]);
-
+  if (apps.some(app => app.id === id)) return res.status(409).json({ error: 'App ID already exists' });
+  assertAppIdle(id);
+  if (domainBinding && db.get('domains').some(item => item.domain.toLowerCase() === domainBinding.domain.toLowerCase())) {
+    throw new BadRequest('该域名已绑定，请编辑现有记录');
+  }
   dockerService.prepareAppFiles(newApp);
+  db.set('apps', [...apps, newApp]);
 
   // If domainBinding is provided, bind domain immediately and sync Caddy
   if (domainBinding && domainBinding.domain && domainBinding.targetPort) {
     const cleanDomain = String(domainBinding.domain).trim().toLowerCase();
-    const certStatus = await caddyService.checkCertStatus(cleanDomain);
     const newDomain: DomainItem = {
       id: uuidv4(),
       domain: cleanDomain,
@@ -153,15 +178,12 @@ apiRouter.post('/apps', requireAuth, async (req: Request, res: Response) => {
       serviceName: domainBinding.serviceName || 'web',
       targetPort: Number(domainBinding.targetPort),
       targetType: domainBinding.targetType === 'host' ? 'host' : 'internal',
-      sslStatus: certStatus.status,
-      sslIssuer: certStatus.issuer,
-      sslExpiresAt: certStatus.expiresAt,
+      sslStatus: 'unknown',
+      sslIssuer: '未知',
       createdAt: new Date().toISOString(),
     };
 
-    const domains = db.get('domains') || [];
-    domains.push(newDomain);
-    db.set('domains', domains);
+    db.set('domains', [...db.get('domains'), newDomain]);
     caddyService.syncCaddyfile();
   }
 
@@ -169,6 +191,7 @@ apiRouter.post('/apps', requireAuth, async (req: Request, res: Response) => {
 });
 
 apiRouter.put('/apps/:id', requireAuth, async (req: Request, res: Response) => {
+  assertAppIdle(String(req.params.id));
   const apps = db.get('apps') || [];
   const idx = apps.findIndex((a) => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'App not found' });
@@ -182,7 +205,7 @@ apiRouter.put('/apps/:id', requireAuth, async (req: Request, res: Response) => {
     }
   }
 
-  apps[idx] = {
+  const updatedApp: AppItem = {
     ...apps[idx],
     name: name ?? apps[idx].name,
     description: description ?? apps[idx].description,
@@ -192,114 +215,68 @@ apiRouter.put('/apps/:id', requireAuth, async (req: Request, res: Response) => {
     updatedAt: new Date().toISOString(),
   };
 
-  db.set('apps', [...apps]);
-  dockerService.prepareAppFiles(apps[idx]);
-  res.json(apps[idx]);
+  dockerService.prepareAppFiles(updatedApp);
+  db.updateApp(updatedApp.id, updatedApp);
+  schedulerService.reload();
+  appEvents.emit('changed', String(req.params.id));
+  res.json(updatedApp);
 });
 
-apiRouter.delete('/apps/:id', requireAuth, async (req: Request, res: Response) => {
-  const apps = db.get('apps') || [];
-  const app = apps.find((a) => a.id === req.params.id);
-  if (!app) return res.status(404).json({ error: 'App not found' });
-
-  // Stop containers if running
-  await dockerService.stopApp(app);
-
-  const updated = apps.filter((a) => a.id !== req.params.id);
-  db.set('apps', updated);
-
-  // Clean associated domains
-  const domains = db.get('domains') || [];
-  const updatedDomains = domains.filter((d) => d.appId !== req.params.id);
-  db.set('domains', updatedDomains);
-  caddyService.syncCaddyfile();
-
-  res.json({ success: true, message: 'App deleted' });
+apiRouter.delete('/apps/:id', async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  await withAppLock(id, async () => {
+    const app = db.get('apps').find(item => item.id === id);
+    if (!app) { res.status(404).json({ error: 'App not found' }); return; }
+    const result = await dockerService.stopApp(app);
+    if (!result.success) throw new Error(result.error || 'Failed to stop application');
+    db.set('apps', db.get('apps').filter(item => item.id !== id));
+    db.set('domains', db.get('domains').filter(domain => domain.appId !== id));
+    caddyService.syncCaddyfile();
+    schedulerService.reload();
+    res.json({ success: true, message: 'App deleted' });
+  });
 });
 
-apiRouter.post('/apps/:id/deploy', requireAuth, async (req: Request, res: Response) => {
-  const apps = db.get('apps') || [];
-  const app = apps.find((a) => a.id === req.params.id);
-  if (!app) return res.status(404).json({ error: 'App not found' });
-
-  app.status = 'deploying';
-  db.set('apps', [...apps]);
-
-  // Asynchronous deployment with WebSocket logs
-  dockerService
-    .deployApp(app, (log) => {
-      wsHub.broadcastLog(app.id, log);
-    })
-    .then((result) => {
-      app.status = result.success ? 'running' : 'error';
-      app.lastDeployedAt = new Date().toISOString();
-      db.set('apps', [...apps]);
+const lifecycleActions = {
+  deploy: (app: AppItem, log: (text: string) => void) => dockerService.deployApp(app, log),
+  stop: (app: AppItem, log: (text: string) => void) => dockerService.stopApp(app, log),
+  restart: (app: AppItem, log: (text: string) => void) => dockerService.restartApp(app, log),
+  rebuild: (app: AppItem, log: (text: string) => void) => dockerService.pullAndRebuild(app, log),
+  'fresh-volumes': (app: AppItem, log: (text: string) => void) => dockerService.freshVolumesRebuild(app, log),
+};
+for (const action of Object.keys(lifecycleActions) as (keyof typeof lifecycleActions)[]) {
+  apiRouter.post(`/apps/:id/${action}`, async (req: Request, res: Response) => {
+    const id = String(req.params.id);
+    assertAppIdle(id);
+    const app = db.get('apps').find(item => item.id === id);
+    if (!app) return res.status(404).json({ error: 'App not found' });
+    const asynchronous = ['deploy', 'rebuild', 'fresh-volumes'].includes(action);
+    const task = withAppLock(id, async () => {
+      db.updateApp(id, { status: action === 'deploy' ? 'deploying' : 'rebuilding' });
+      appEvents.emit('changed', id);
+      try {
+        const result = await lifecycleActions[action](app, text => wsHub.broadcastLog(id, text));
+        if (!result.success) throw new Error(result.error || 'Docker operation failed');
+        if (action !== 'stop') await registryService.captureAppDigest(app);
+        db.updateApp(id, {
+          ...(action === 'stop' ? { status: 'stopped' as const } : {}),
+          ...(['deploy', 'rebuild', 'fresh-volumes'].includes(action) ? { lastDeployedAt: new Date().toISOString(), updateAvailable: false } : {}),
+        });
+        return result;
+      } catch (error) {
+        db.updateApp(id, { status: 'error' });
+        throw error;
+      }
     });
-
-  res.json({ message: 'Deployment triggered', appId: app.id });
-});
-
-apiRouter.post('/apps/:id/stop', requireAuth, async (req: Request, res: Response) => {
-  const apps = db.get('apps') || [];
-  const app = apps.find((a) => a.id === req.params.id);
-  if (!app) return res.status(404).json({ error: 'App not found' });
-
-  await dockerService.stopApp(app, (log) => wsHub.broadcastLog(app.id, log));
-  app.status = 'stopped';
-  db.set('apps', [...apps]);
-
-  res.json({ success: true, message: 'App stopped' });
-});
-
-apiRouter.post('/apps/:id/restart', requireAuth, async (req: Request, res: Response) => {
-  const apps = db.get('apps') || [];
-  const app = apps.find((a) => a.id === req.params.id);
-  if (!app) return res.status(404).json({ error: 'App not found' });
-
-  await dockerService.restartApp(app, (log) => wsHub.broadcastLog(app.id, log));
-  app.status = 'running';
-  db.set('apps', [...apps]);
-
-  res.json({ success: true, message: 'App restarted' });
-});
-
-apiRouter.post('/apps/:id/rebuild', requireAuth, async (req: Request, res: Response) => {
-  const apps = db.get('apps') || [];
-  const app = apps.find((a) => a.id === req.params.id);
-  if (!app) return res.status(404).json({ error: 'App not found' });
-
-  app.status = 'rebuilding';
-  db.set('apps', [...apps]);
-
-  dockerService
-    .pullAndRebuild(app, (log) => wsHub.broadcastLog(app.id, log))
-    .then(() => {
-      app.status = 'running';
-      app.updateAvailable = false;
-      db.set('apps', [...apps]);
-    });
-
-  res.json({ message: 'Rebuild initiated' });
-});
-
-apiRouter.post('/apps/:id/fresh-volumes', requireAuth, async (req: Request, res: Response) => {
-  const apps = db.get('apps') || [];
-  const app = apps.find((a) => a.id === req.params.id);
-  if (!app) return res.status(404).json({ error: 'App not found' });
-
-  app.status = 'rebuilding';
-  db.set('apps', [...apps]);
-
-  dockerService
-    .freshVolumesRebuild(app, (log) => wsHub.broadcastLog(app.id, log))
-    .then(() => {
-      app.status = 'running';
-      app.updateAvailable = false;
-      db.set('apps', [...apps]);
-    });
-
-  res.json({ message: 'Fresh volumes deployment initiated' });
-});
+    if (asynchronous) {
+      task.catch(error => { console.error('[App operation]', error); wsHub.broadcastLog(id, `[vessel] ${error.message}`); });
+      res.status(202).json({ message: 'Operation started', appId: id });
+    } else {
+      await task;
+      res.json({ success: true, app: db.get('apps').find(item => item.id === id) });
+    }
+  });
+}
 
 apiRouter.get('/apps/:id/logs', async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
@@ -322,6 +299,7 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
 
+  assertAppIdle(app.id);
   const { databaseName, schedule, runNow = true } = req.body || {};
 
   // If a schedule was provided, save it to the app and reload scheduler
@@ -362,9 +340,9 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
     name.startsWith('redis') ||
     name.startsWith('libsql');
 
-  const result = isDb
-    ? await r2BackupService.runDatabaseBackup(app, { databaseName })
-    : await r2BackupService.runAppBackup(app);
+  const result = await withAppLock(app.id, () => isDb
+    ? r2BackupService.runDatabaseBackup(app, { databaseName })
+    : r2BackupService.runAppBackup(app));
 
   if (result.success) {
     res.json({ success: true, record: result.record, schedule: app.backupSchedule });
@@ -392,12 +370,13 @@ apiRouter.post('/apps/:id/exec', requireAuth, async (req: Request, res: Response
     return res.status(400).json({ error: 'Command string is required' });
   }
 
-  const result = await dockerService.execInApp(app, { command, mode, service });
+  const result = await withAppLock(app.id, () => dockerService.execInApp(app, { command, mode, service }));
   res.json(result);
 });
 
 // ======================= DOMAINS & SSL =======================
-apiRouter.get('/domains', (req: Request, res: Response) => {
+apiRouter.get('/domains', async (req: Request, res: Response) => {
+  await caddyService.refreshCertificateStatuses();
   const domains = db.get('domains') || [];
   res.json(domains);
 });
@@ -408,7 +387,7 @@ apiRouter.post('/domains', requireAuth, async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'domain, appId, and targetPort are required' });
   }
 
-  const certStatus = await caddyService.checkCertStatus(domain);
+  checkDomainBinding(domain, appId);
   const newDomain: DomainItem = {
     id: uuidv4(),
     domain: domain.trim().toLowerCase(),
@@ -416,15 +395,12 @@ apiRouter.post('/domains', requireAuth, async (req: Request, res: Response) => {
     serviceName: serviceName || 'web',
     targetPort: Number(targetPort),
     targetType: targetType === 'host' ? 'host' : 'internal',
-    sslStatus: certStatus.status,
-    sslIssuer: certStatus.issuer,
-    sslExpiresAt: certStatus.expiresAt,
+    sslStatus: 'unknown',
+    sslIssuer: '未知',
     createdAt: new Date().toISOString(),
   };
 
-  const domains = db.get('domains') || [];
-  domains.push(newDomain);
-  db.set('domains', domains);
+  db.set('domains', [...db.get('domains'), newDomain]);
 
   caddyService.syncCaddyfile();
   res.status(201).json(newDomain);
@@ -443,15 +419,15 @@ apiRouter.put('/domains/:id', requireAuth, async (req: Request, res: Response) =
   if (!cleanDomain) {
     return res.status(400).json({ error: 'Domain name cannot be empty' });
   }
+  checkDomainBinding(cleanDomain, appId || existing.appId, existing.id);
 
   let sslStatus = existing.sslStatus;
   let sslIssuer = existing.sslIssuer;
   let sslExpiresAt = existing.sslExpiresAt;
   if (cleanDomain !== existing.domain) {
-    const cert = await caddyService.checkCertStatus(cleanDomain);
-    sslStatus = cert.status;
-    sslIssuer = cert.issuer;
-    sslExpiresAt = cert.expiresAt;
+    sslStatus = 'unknown';
+    sslIssuer = '未知';
+    sslExpiresAt = undefined;
   }
 
   const updatedDomain: DomainItem = {
@@ -466,8 +442,7 @@ apiRouter.put('/domains/:id', requireAuth, async (req: Request, res: Response) =
     sslExpiresAt,
   };
 
-  domains[index] = updatedDomain;
-  db.set('domains', domains);
+  db.set('domains', domains.map(item => item.id === updatedDomain.id ? updatedDomain : item));
   caddyService.syncCaddyfile();
 
   res.json(updatedDomain);
@@ -493,9 +468,9 @@ apiRouter.post('/domains/:id/renew', requireAuth, async (req: Request, res: Resp
   domain.sslStatus = cert.status;
   domain.sslIssuer = cert.issuer;
   domain.sslExpiresAt = cert.expiresAt;
-  db.set('domains', [...domains]);
+  db.set('domains', db.get('domains').map(current => current.id === domain.id && current.domain === domain.domain ? { ...current, sslStatus: cert.status, sslIssuer: cert.issuer, sslExpiresAt: cert.expiresAt } : current));
 
-  res.json(domain);
+  res.json(db.get('domains').find(current => current.id === domain.id));
 });
 
 // ======================= CLOUDFLARE R2 BACKUPS =======================
@@ -556,17 +531,19 @@ apiRouter.get('/r2/backups/:id/download', requireAuth, async (req: Request, res:
     return res.status(404).json({ error: '备份文件不存在或已被清除' });
   }
 
-  res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
-  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.fileName)}`);
+  res.setHeader('Content-Type', result.fileName.endsWith('.gz') ? 'application/gzip' : 'application/zip');
   if (result.contentLength) {
     res.setHeader('Content-Length', result.contentLength);
   }
-  result.stream.pipe(res);
+  await pipeline(result.stream, res);
 });
 
 apiRouter.delete('/r2/backups/:id', requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const result = await r2BackupService.deleteBackup(id);
+  const record = db.get('backups').find(item => item.id === id);
+  if (!record) return res.status(404).json({ error: 'Backup not found' });
+  const result = await withAppLock(record.type === 'system' ? '*' : record.targetId, () => r2BackupService.deleteBackup(id));
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -576,7 +553,10 @@ apiRouter.delete('/r2/backups/:id', requireAuth, async (req: Request, res: Respo
 apiRouter.post('/r2/backups/:id/restore', requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const { databaseName } = req.body || {};
-  const result = await r2BackupService.restoreBackup(id, { databaseName });
+  const record = db.get('backups').find(item => item.id === id);
+  if (!record) return res.status(404).json({ error: 'Backup not found' });
+  const result = await withAppLock(record.type === 'system' ? '*' : record.targetId, () => r2BackupService.restoreBackup(id, { databaseName }));
+  if (result.success) schedulerService.reload();
   if (!result.success) {
     return res.status(500).json({ error: result.error });
   }
@@ -588,43 +568,35 @@ apiRouter.post('/apps/:id/restore-file', requireAuth, async (req: Request, res: 
   const app = apps.find((a) => a.id === req.params.id);
   if (!app) return res.status(404).json({ error: 'App not found' });
 
-  const fileName = (req.query.filename as string) || `upload_${Date.now()}.sql`;
+  if (req.query.filename !== undefined && typeof req.query.filename !== 'string') throw new BadRequest('Invalid filename');
+  if (req.query.databaseName !== undefined && typeof req.query.databaseName !== 'string') throw new BadRequest('Invalid databaseName');
+  const fileName = (req.query.filename as string) || 'upload.sql';
   const databaseName = req.query.databaseName as string;
   const tempDir = path.join(DATA_DIR, 'temp');
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-  const tempFilePath = path.join(tempDir, `${Date.now()}_${path.basename(fileName)}`);
+  const tempFilePath = path.join(tempDir, `${uuidv4()}_${path.basename(fileName).toLowerCase()}`);
 
-  const writeStream = fs.createWriteStream(tempFilePath);
-  req.pipe(writeStream);
-
-  req.on('error', (err) => {
-    writeStream.destroy();
-    res.status(500).json({ error: err.message });
-  });
-
-  writeStream.on('finish', async () => {
+  await withAppLock(app.id, async () => {
+    let bytes = 0;
+    const limit = new Transform({ transform(chunk, _encoding, callback) {
+      bytes += chunk.length;
+      callback(bytes > 2 * 1024 ** 3 ? new BadRequest('上传文件不能超过 2 GiB') : null, chunk);
+    } });
     try {
-      let result;
-      if (fileName.toLowerCase().endsWith('.zip')) {
-        result = await r2BackupService.restoreAppFromFile(app, tempFilePath);
-      } else {
-        result = await r2BackupService.restoreDatabaseFromFile(app, tempFilePath, { databaseName });
-      }
-      try { fs.unlinkSync(tempFilePath); } catch {}
-      if (result.success) {
-        res.json({ success: true, message: result.message });
-      } else {
-        res.status(500).json({ error: result.error });
-      }
-    } catch (e: any) {
-      try { fs.unlinkSync(tempFilePath); } catch {}
-      res.status(500).json({ error: e.message });
-    }
+      await pipeline(req, limit, fs.createWriteStream(tempFilePath, { flags: 'wx' }));
+      if (!bytes) throw new BadRequest('备份文件为空');
+      const result = fileName.toLowerCase().endsWith('.zip')
+        ? await r2BackupService.restoreAppFromFile(app, tempFilePath)
+        : await r2BackupService.restoreDatabaseFromFile(app, tempFilePath, { databaseName });
+      if (!result.success) return res.status(500).json({ error: result.error });
+      schedulerService.reload();
+      res.json({ success: true, message: result.message });
+    } finally { fs.rmSync(tempFilePath, { force: true }); }
   });
 });
 
 apiRouter.post('/r2/backup-now', requireAuth, async (req: Request, res: Response) => {
-  const result = await r2BackupService.runSystemBackup();
+  const result = await withAppLock('*', () => r2BackupService.runSystemBackup());
   if (result.success) {
     res.json({ success: true, record: result.record });
   } else {
@@ -716,3 +688,5 @@ apiRouter.get('/maintenance/disk-usage', async (req: Request, res: Response) => 
   const usage = await dockerService.getDiskUsage();
   res.json(usage);
 });
+
+apiRouter.use(apiErrorHandler);

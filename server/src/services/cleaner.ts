@@ -1,8 +1,7 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { runDocker } from './process.js';
 import { db } from '../db/index.js';
 
-const execAsync = promisify(exec);
+
 
 export class CleanerService {
   /**
@@ -12,46 +11,47 @@ export class CleanerService {
     const config = db.get('maintenance');
     let totalFreedBytes = 0;
     const logLines: string[] = [];
+    const failures: string[] = [];
 
     try {
       // 1. Prune dangling images
       if (config.pruneDangling) {
         try {
-          const { stdout } = await execAsync('docker image prune -f', { timeout: 15000 });
+          const { stdout } = await runDocker(['image', 'prune', '-f'], { timeout: 15000 });
           const match = stdout.match(/Total reclaimed space:\s*([0-9.]+)\s*([KMGTP]?B)/i);
           if (match) {
             totalFreedBytes += this.parseSize(parseFloat(match[1]), match[2]);
           }
           logLines.push('Dangling images pruned.');
-        } catch {}
+        } catch (error: any) { failures.push(error.message); }
       }
 
       // 2. Prune builder cache
       if (config.pruneBuilderCache) {
         try {
-          const { stdout } = await execAsync('docker builder prune -f', { timeout: 15000 });
+          const { stdout } = await runDocker(['builder', 'prune', '-f'], { timeout: 15000 });
           const match = stdout.match(/Total reclaimed space:\s*([0-9.]+)\s*([KMGTP]?B)/i);
           if (match) {
             totalFreedBytes += this.parseSize(parseFloat(match[1]), match[2]);
           }
           logLines.push('Builder cache pruned.');
-        } catch {}
+        } catch (error: any) { failures.push(error.message); }
       }
 
       // 3. Prune unused images older than retention hours
       const hours = config.unusedRetentionHours || 72;
       try {
-        const { stdout } = await execAsync(`docker image prune -a -f --filter "until=${hours}h"`, { timeout: 20000 });
+        const { stdout } = await runDocker(['image', 'prune', '-a', '-f', '--filter', `until=${hours}h`], { timeout: 20000 });
         const match = stdout.match(/Total reclaimed space:\s*([0-9.]+)\s*([KMGTP]?B)/i);
         if (match) {
           totalFreedBytes += this.parseSize(parseFloat(match[1]), match[2]);
         }
         logLines.push(`Unused images older than ${hours}h pruned.`);
-      } catch {}
+      } catch (error: any) { failures.push(error.message); }
 
-      config.lastPruneAt = new Date().toISOString();
-      config.lastFreedBytes = totalFreedBytes;
-      db.set('maintenance', { ...config });
+      if (failures.length) return { success: false, freedBytes: totalFreedBytes, summary: failures.join('; ') };
+      db.set('maintenance', { ...db.get('maintenance'),
+        lastPruneAt: new Date().toISOString(), lastFreedBytes: totalFreedBytes });
 
       const freedMb = (totalFreedBytes / 1024 / 1024).toFixed(1);
       const summary = totalFreedBytes > 0

@@ -1,3 +1,4 @@
+import { getStoredToken } from '../../hooks/useAuth.js';
 import React, { useState } from 'react';
 import clsx from 'clsx';
 import {
@@ -211,7 +212,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
     if (onDownloadBackup) {
       onDownloadBackup(record.id, record.fileName);
     } else {
-      const token = localStorage.getItem('vessel_token') || '';
+      const token = getStoredToken() || '';
       window.open(`/api/r2/backups/${record.id}/download?token=${encodeURIComponent(token)}`);
     }
   };

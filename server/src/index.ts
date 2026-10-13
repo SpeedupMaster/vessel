@@ -1,13 +1,14 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
-import cors from 'cors';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { apiRouter } from './routes/api.js';
 import { wsHub } from './ws/wsHub.js';
 import { dockerService } from './services/docker.js';
 import { caddyService } from './services/caddy.js';
+import { apiErrorHandler } from './middleware/validation.js';
+import { schedulerService } from './services/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,12 +16,14 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-app.use(cors());
+app.disable('x-powered-by');
+app.use('/api', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // REST API
 app.use('/api', apiRouter);
+app.use('/api', apiErrorHandler);
 
 // Serve Web Frontend in Production
 const webDistPath = path.resolve(__dirname, '../../web/dist');
@@ -65,11 +68,13 @@ server.listen(PORT, HOST, async () => {
 process.on('SIGTERM', () => {
   caddyService.stopDaemon();
   wsHub.destroy();
+  schedulerService.stopJobs();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   caddyService.stopDaemon();
   wsHub.destroy();
+  schedulerService.stopJobs();
   process.exit(0);
 });

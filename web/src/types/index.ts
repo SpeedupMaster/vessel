@@ -44,7 +44,7 @@ export interface DomainItem {
   serviceName: string;
   targetPort: number;
   targetType: 'internal' | 'host';
-  sslStatus: 'active' | 'issuing' | 'expired' | 'error';
+  sslStatus: 'active' | 'issuing' | 'expired' | 'error' | 'unknown';
   sslIssuer: string;
   sslExpiresAt?: string;
   createdAt: string;
@@ -104,11 +104,11 @@ export interface SystemMetrics {
   cpuUsage: number;
   memUsedBytes: number;
   memTotalBytes: number;
-  diskUsedBytes: number;
-  diskTotalBytes: number;
+  diskUsedBytes: number | null;
+  diskTotalBytes: number | null;
   dockerStatus: 'running' | 'disconnected';
-  runningContainers: number;
-  totalImages: number;
+  runningContainers: number | null;
+  totalImages: number | null;
   totalApps: number;
   activeDomains: number;
   totalBackups: number;

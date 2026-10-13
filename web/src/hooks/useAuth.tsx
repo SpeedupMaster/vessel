@@ -96,16 +96,18 @@ export function useAuthProvider() {
         return false;
       }
     } catch {
-      // In case of network glitch, keep optimistic session if token exists
-      setIsAuthenticated(true);
-      setUser({ username: 'admin', isDefaultPassword: false });
+      setIsAuthenticated(false);
+      setUser(null);
       setLoading(false);
-      return true;
+      return false;
     }
   }, []);
 
   useEffect(() => {
     checkAuth();
+    const expire = () => { setStoredToken(null); setToken(null); setUser(null); setIsAuthenticated(false); };
+    window.addEventListener('vessel-session-expired', expire);
+    return () => window.removeEventListener('vessel-session-expired', expire);
   }, [checkAuth]);
 
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {

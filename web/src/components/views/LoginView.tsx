@@ -24,25 +24,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [isDefaultPassword, setIsDefaultPassword] = useState(false);
-
-  const isLocalhost =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname === '[::1]');
-
-  useEffect(() => {
-    fetch('/api/auth/status')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && typeof data.isDefaultPassword === 'boolean') {
-          setIsDefaultPassword(data.isDefaultPassword);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -68,15 +49,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFillDefault = () => {
-    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(15);
-    }
-    setUsername('admin');
-    setPassword('vessel2026');
-    setError(null);
   };
 
   return (
@@ -184,36 +156,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         </form>
 
-        {/* Default Account Hint Box - ONLY visible on localhost when password is still default */}
-        {isLocalhost && isDefaultPassword && (
-          <div className="mt-6 pt-2">
-            <div className="p-3.5 rounded-2xl bg-paper-3 flex items-start justify-between gap-3 text-xs">
-              <div className="flex items-start gap-2.5 min-w-0">
-                <Key className="w-4 h-4 text-accent shrink-0 mt-0.5" weight="duotone" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-ink font-semibold">初始默认凭证</p>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono">
-                      本地调试可见 · 公网自动隐藏
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-ink-muted mt-1.5 truncate">
-                    账号: <code className="px-1.5 py-0.5 rounded-md bg-paper-4 font-mono text-ink">admin</code>
-                    <span className="mx-1.5 opacity-40">|</span>
-                    密码: <code className="px-1.5 py-0.5 rounded-md bg-paper-4 font-mono text-ink">vessel2026</code>
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleFillDefault}
-                className="min-h-[44px] min-w-[44px] -my-2 -mr-2 px-3 flex items-center justify-center text-xs font-semibold text-accent hover:opacity-80 shrink-0 cursor-pointer active:scale-95 transition-transform"
-              >
-                一键填入
-              </button>
-            </div>
-          </div>
-        )}
+        <p className="mt-6 text-xs text-ink-muted">
+          首次登录：账号为 admin，初始密码见服务器数据目录中的 initial-admin-password 文件，或使用安装时设置的密码。
+        </p>
       </div>
 
       {/* Footer copyright / info */}

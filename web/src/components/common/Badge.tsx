@@ -12,6 +12,7 @@ export type BadgeVariant =
   | 'expired'
   | 'connected'
   | 'unverified'
+  | 'unknown'
   | 'default'
   | 'accent';
 
@@ -33,6 +34,7 @@ const STATUS_TEXT_MAP: Record<string, string> = {
   expired: '已过期',
   connected: '已连接',
   unverified: '未验证',
+  unknown: '未知',
   completed: '已完成',
   failed: '失败',
   success: '成功',

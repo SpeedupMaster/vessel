@@ -1,4 +1,6 @@
 import fs from 'fs';
+import tls from 'node:tls';
+import { validateDomain } from '../middleware/validation.js';
 import path from 'path';
 import { DATA_DIR, db } from '../db/index.js';
 import { DomainItem } from '../types/index.js';
@@ -7,6 +9,8 @@ export class CaddyService {
   private caddyApiUrl = process.env.CADDY_API || 'http://127.0.0.1:2019';
   private caddyfilePath = path.join(DATA_DIR, 'Caddyfile');
   private caddyProcess: any = null;
+  private certificateChecks = new Map<string, { at: number; result: { status: 'active' | 'issuing' | 'expired' | 'error' | 'unknown'; issuer: string; expiresAt?: string } }>();
+  private refreshingCertificates?: Promise<void>;
 
   constructor() {
     this.syncCaddyfile();
@@ -21,7 +25,7 @@ export class CaddyService {
 # Automatic HTTPS & Let's Encrypt / ZeroSSL TLS provisioning
 
 {
-  admin 0.0.0.0:2019
+  admin 127.0.0.1:2019
   auto_https disable_redirects
 }
 
@@ -43,7 +47,7 @@ export class CaddyService {
         ? '127.0.0.1:3900'
         : (d.targetType === 'internal'
             ? `${d.serviceName}:${d.targetPort}`
-            : `127.0.0.1:${d.targetPort}`);
+            : `${process.env.DOCKER_HOST_GATEWAY || "host.docker.internal"}:${d.targetPort}`);
 
       content += `${d.domain} {
   reverse_proxy ${upstream} {
@@ -58,7 +62,7 @@ export class CaddyService {
     }
 
     fs.writeFileSync(this.caddyfilePath, content, 'utf-8');
-    this.reloadCaddyApi(content).catch(() => {});
+    void this.reloadCaddyApi(content).then(ok => { if (!ok) console.warn('[Caddy] Configuration reload failed; domains may not be active'); });
     return content;
   }
 
@@ -75,12 +79,12 @@ export class CaddyService {
     } catch {}
 
     try {
-      const { execSync, spawn } = await import('child_process');
+      const { execFileSync, spawn } = await import('child_process');
       const bin = process.platform === 'win32' ? 'caddy.exe' : 'caddy';
       try {
-        execSync(`${bin} version`, { stdio: 'ignore' });
+        execFileSync(bin, ['version'], { stdio: 'ignore' });
       } catch {
-        console.log('[Vessel] Caddy binary not detected in PATH, running in simulation mode.');
+        console.log('[Vessel] Caddy binary not detected in PATH; reverse proxy is unavailable.');
         return;
       }
 
@@ -122,6 +126,7 @@ export class CaddyService {
           'Content-Type': 'text/caddyfile',
         },
         body: caddyfileContent,
+        signal: AbortSignal.timeout(5000),
       });
       return res.ok;
     } catch {
@@ -134,30 +139,46 @@ export class CaddyService {
    * Inspect SSL certificate status for a given domain
    */
   public async checkCertStatus(domain: string): Promise<{
-    status: 'active' | 'issuing' | 'expired' | 'error';
-    issuer: string;
-    expiresAt: string;
+    status: 'active' | 'issuing' | 'expired' | 'error' | 'unknown'; issuer: string; expiresAt?: string;
   }> {
-    // Attempt to inspect from Caddy PKI endpoint
-    try {
-      const res = await fetch(`${this.caddyApiUrl}/pki/ca/local`, { signal: AbortSignal.timeout(2000) });
-      if (res.ok) {
-        return {
-          status: 'active',
-          issuer: "Let's Encrypt / ZeroSSL",
-          expiresAt: new Date(Date.now() + 85 * 24 * 3600 * 1000).toISOString(),
-        };
-      }
-    } catch {
-      // Fallback
-    }
+    validateDomain(domain);
+    return new Promise(resolve => {
+      let settled = false;
+      const socket = tls.connect({ host: domain, port: 443, servername: domain, rejectUnauthorized: false });
+      const finish = (result: { status: 'active' | 'expired' | 'error' | 'unknown'; issuer: string; expiresAt?: string }) => {
+        if (settled) return;
+        settled = true; socket.destroy(); resolve(result);
+      };
+      socket.setTimeout(4000, () => finish({ status: 'unknown', issuer: '未知' }));
+      socket.once('error', () => finish({ status: 'unknown', issuer: '未知' }));
+      socket.once('secureConnect', () => {
+        const cert = socket.getPeerCertificate();
+        const expiry = Date.parse(cert.valid_to);
+        if (!cert.raw || !Number.isFinite(expiry)) return finish({ status: 'unknown', issuer: '未知' });
+        const invalidHost = tls.checkServerIdentity(domain, cert);
+        finish({ status: expiry <= Date.now() ? 'expired' : invalidHost || !socket.authorized ? 'error' : 'active',
+          issuer: String(cert.issuer?.O || cert.issuer?.CN || '未知'), expiresAt: new Date(expiry).toISOString() });
+      });
+    });
+  }
 
-    // Default optimistic / simulated active certificate for configured domains
-    return {
-      status: 'active',
-      issuer: "Let's Encrypt (Auto-Renew)",
-      expiresAt: new Date(Date.now() + 82 * 24 * 3600 * 1000).toISOString(),
-    };
+  public async refreshCertificateStatuses(): Promise<void> {
+    if (this.refreshingCertificates) return this.refreshingCertificates;
+    this.refreshingCertificates = (async () => {
+      const pending = db.get('domains').filter(domain => Date.now() - (this.certificateChecks.get(domain.domain)?.at || 0) > 5 * 60 * 1000);
+      for (let index = 0; index < pending.length; index += 4) {
+        await Promise.all(pending.slice(index, index + 4).map(async domain => {
+          const result = await this.checkCertStatus(domain.domain).catch(() => ({ status: 'unknown' as const, issuer: '未知', expiresAt: undefined }));
+          this.certificateChecks.set(domain.domain, { at: Date.now(), result });
+        }));
+      }
+      if (pending.length) db.set('domains', db.get('domains').map(domain => {
+        const cached = this.certificateChecks.get(domain.domain);
+        return cached ? { ...domain, sslStatus: cached.result.status, sslIssuer: cached.result.issuer, sslExpiresAt: cached.result.expiresAt } : domain;
+      }));
+    })();
+    try { await this.refreshingCertificates; }
+    finally { this.refreshingCertificates = undefined; }
   }
 
   public getCaddyfilePath(): string {

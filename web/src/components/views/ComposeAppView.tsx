@@ -1,3 +1,4 @@
+import { getStoredToken } from '../../hooks/useAuth.js';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import YAML from 'yaml';
@@ -520,7 +521,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     if (onDownloadBackup) {
       onDownloadBackup(b.id, b.fileName);
     } else {
-      const token = localStorage.getItem('vessel_token') || '';
+      const token = getStoredToken() || '';
       const url = `/api/r2/backups/${b.id}/download?token=${encodeURIComponent(token)}`;
       const a = document.createElement('a');
       a.href = url;
@@ -653,7 +654,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       setAutoUpdate(app.autoUpdate);
       onSubscribeLogs(app.id);
     }
-  }, [app, mode]);
+  }, [app?.id, app?.composeYaml, app?.envContent, app?.name, app?.description, app?.autoUpdate, mode]);
 
   // Terminal scroll to bottom (respects isAutoScroll state)
   useEffect(() => {

@@ -173,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Running Containers */}
           <div className="text-[11px] text-ink-faint flex justify-between items-center">
             <span>运行中容器:</span>
-            <span className="text-ink font-mono font-medium">{metrics.runningContainers}</span>
+            <span className="text-ink font-mono font-medium">{metrics.runningContainers ?? '未知'}</span>
           </div>
 
           {/* Telemetry (Subtle Surface micro-cards without borders) */}
