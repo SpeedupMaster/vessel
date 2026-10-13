@@ -107,7 +107,7 @@ curl -fsSL https://github.com/SpeedupMaster/vessel/releases/latest/download/inst
 curl -fsSL https://vessel.example.com/install.sh | sudo sh
 ```
 
-安装脚本支持 Linux amd64/arm64，检查 Docker 与 Compose v2、启动后就绪状态，默认数据目录 `/opt/vessel/data`、控制台端口 `3900`，并使用端口 `80/443` 提供反向代理。初始账号为 `admin`，密码读取方式：
+安装脚本支持 Linux amd64/arm64，按发行版补装缺失的 curl、CA 证书与 Compose 插件，自动安装缺失的 Docker、启动未运行的 Docker 并检查就绪状态。依赖安装使用服务器已配置的软件源，支持范围与失败处理见 [安装指南](docs/installation.md)。使用 `curl | sh` 下载入口时仍需预先具备 curl 和 CA 证书；也可上传脚本后执行。默认数据目录 `/opt/vessel/data`、控制台端口 `3900`，并使用端口 `80/443` 提供反向代理。初始账号为 `admin`，密码读取方式：
 
 ```bash
 sudo cat /opt/vessel/data/initial-admin-password

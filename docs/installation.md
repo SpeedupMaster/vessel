@@ -6,7 +6,7 @@
 
 ## 用户安装
 
-准备 Linux amd64/arm64 服务器、root/sudo 权限和 curl。服务器需要可以访问 GitHub、GHCR，缺少 Docker 时还需访问 Docker 软件源。TCP 80、443、3900 默认应可用，防火墙放行由管理员按实际需求设置。
+准备 Linux amd64/arm64 服务器和 root/sudo 权限。安装器会按发行版补装缺失的 curl、CA 证书和 Docker Compose 插件，并自动启动尚未运行的 Docker。服务器需要可以访问 GitHub、GHCR、发行版软件源，缺少 Docker 时可能还需访问 Docker 软件源。TCP 80、443、3900 默认应可用，防火墙放行由管理员按实际需求设置。
 
 公开发布后：
 
@@ -19,6 +19,8 @@ curl -fsSL https://github.com/SpeedupMaster/vessel/releases/latest/download/inst
 ```sh
 curl -fSL https://github.com/SpeedupMaster/vessel/releases/download/v1.0.0/install.sh -o install.sh && sudo sh install.sh
 ```
+
+`curl … | sh` 的下载步骤仍需要系统事先具备 curl 和可用的 CA 证书；脚本尚未下载时无法替自己安装依赖。缺少这些工具时，可以将 Release 的 `install.sh` 上传到服务器，再执行 `sudo sh install.sh`，由安装器补齐依赖。安装器要求系统已有 POSIX sh 和 mkdir、mktemp、grep、sed 等基础命令。
 
 安装包包含 `SHA256SUMS`，可在执行前下载并用 `sha256sum -c SHA256SUMS` 检查文件。安装脚本内固定的是对应 Release 的镜像 digest，不会因为可变标签更新而拉取其他构建。
 
@@ -42,9 +44,22 @@ curl -fsSL https://github.com/SpeedupMaster/vessel/releases/latest/download/inst
 | `VESSEL_INSTALL_DIR` | `/opt/vessel` | 安装与数据目录，使用无空格绝对路径 |
 | `VESSEL_PORT` | `3900` | 宿主机控制台端口，不能为 80 或 443 |
 | `VESSEL_IMAGE` | Release 固定 digest | 指定自建镜像或其他已发布版本 |
-| `VESSEL_INSTALL_DOCKER` | `1` | 缺少 Docker 时使用官方安装脚本；设为 `0` 禁用 |
+| `VESSEL_INSTALL_DOCKER` | `1` | 缺少 Docker 时自动安装；设为 `0` 仅禁用 Docker Engine 自动安装，不禁用基础依赖、Compose 补装或服务启动 |
 
-Docker 已存在时，安装器不升级 Docker。缺少 Compose v2、守护进程未启动时会停止并提示。自动安装 Docker 使用 `get.docker.com`；Docker 官方将便利脚本定位于开发／测试环境。生产环境建议预先按发行版官方软件源方式安装 Docker，再设置 `VESSEL_INSTALL_DOCKER=0`。
+### 依赖检测与自动修复
+
+| 发行版系列 | 包管理器 | Compose 安装候选包 |
+| --- | --- | --- |
+| Debian / Ubuntu / Raspbian 及相应衍生版 | apt-get | docker-compose-plugin → docker-compose-v2 → docker-compose（仅候选版本 ≥ 2） |
+| Fedora / RHEL / CentOS / Rocky / AlmaLinux / Amazon Linux 及相应衍生版 | dnf，缺失时 yum | docker-compose-plugin → docker-compose |
+| Alpine | apk | docker-cli-compose |
+| openSUSE / SLES | zypper | docker-compose |
+
+安装器读取 `/etc/os-release` 的 `ID` / `ID_LIKE`，只在缺少依赖时调用对应包管理器，不执行全系统升级。软件包来自服务器已配置的软件源；Compose 安装后会验证 `docker compose version --short`，要求插件主版本至少为 2。仓库不可用、没有兼容插件或发行版无法识别时，会明确报错退出。Alpine 需启用包含 Docker 相关软件包的 community 源。已有可用依赖的其他发行版无需触发包管理器检测。
+
+Docker 已存在时，安装器不会重新运行 Docker Engine 安装脚本；Compose 安装过程中关联依赖的调整由包管理器决定。缺少 Docker 时，Alpine 使用发行版的 `docker` / `docker-openrc` 包，SUSE 使用 `docker` 包；其他上述系列延续 `get.docker.com` 安装方式，其发行版支持范围仍受官方脚本限制。生产环境建议预先按发行版官方软件源方式安装 Docker，再设置 `VESSEL_INSTALL_DOCKER=0`。
+
+Docker 未就绪时，安装器依次选择可用的 systemd、OpenRC 或 service 启动服务。systemd / OpenRC 分支还会尝试设置开机自启；已有运行中的 Docker 不会被重启。启动后最多等待约 60 秒并检查 `docker info`，失败时停止安装并给出排查提示。无服务管理器的容器环境需自行启动 Docker；`service` 回退分支不自动配置开机自启。
 
 ## 发布者首次配置
 
@@ -89,7 +104,7 @@ sh scripts/test-installer.sh
 pnpm check
 ```
 
-安装器隔离测试覆盖首次安装、`cat install.sh | sh`、重复安装、参数持久化、拉取失败、旧版保护、启动失败、就绪超时、端口冲突与非托管配置保护。Docker、网络和权限检查使用桩，不会安装真实服务。CI 在 Linux 上运行同一测试；发布流程另有 Docker 构建与数据卷集成验证。
+安装器隔离测试覆盖首次安装、`cat install.sh | sh`、重复安装、参数持久化、拉取失败、旧版保护、启动失败、就绪超时、端口冲突与非托管配置保护。还会自动运行 `scripts/test-installer-dependencies.sh`，验证各发行版包管理器、缺失 curl / CA、Compose 包名回退与版本校验、依赖安装失败、服务启动与超时、不重复安装及标准输入隔离。完整入口测试包含 Docker 未启动且 Compose 缺失时的自动修复。Docker、网络、包管理器和服务管理器使用桩，不会安装真实服务。CI 在 Linux 上运行同一测试；发布流程另有 Docker 构建与数据卷集成验证。发行版桩测试不替代对应发行版真实服务器验收。
 
 官方参考：
 - Docker 安装说明：https://docs.docker.com/engine/install/ubuntu/
