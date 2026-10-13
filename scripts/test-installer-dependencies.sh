@@ -5,7 +5,12 @@ set -eu
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' 0
-sed '$d' "$ROOT/scripts/install.sh" > "$WORK/functions.sh"
+sed -e '$d' \
+    -e 's/apt-get/mock_apt_get/g' \
+    -e 's/apt-cache/mock_apt_cache/g' \
+    -e 's/rc-service/mock_rc_service/g' \
+    -e 's/rc-update/mock_rc_update/g' \
+    "$ROOT/scripts/install.sh" > "$WORK/functions.sh"
 . "$WORK/functions.sh"
 
 reset_case() {
@@ -23,9 +28,10 @@ command() {
     case "$2" in
       curl) [ "$TEST_CURL" = 1 ]; return $? ;;
       dnf) [ "$TEST_DNF" = 1 ]; return $? ;;
-      apt-get|yum|apk|zypper) return 0 ;;
-      systemctl|rc-service|service) [ "$2" = "$TEST_MANAGER" ]; return $? ;;
-      rc-update) [ "$TEST_MANAGER" = rc-service ]; return $? ;;
+      apt-get|mock_apt_get|yum|apk|zypper) return 0 ;;
+      systemctl|service) [ "$2" = "$TEST_MANAGER" ]; return $? ;;
+      rc-service|mock_rc_service) [ "$TEST_MANAGER" = rc-service ]; return $? ;;
+      rc-update|mock_rc_update) [ "$TEST_MANAGER" = rc-service ]; return $? ;;
     esac
   fi
   command "$@"
@@ -47,12 +53,12 @@ mock_packages() {
   done
   return 0
 }
-apt-get() { mock_packages apt-get "$@"; }
+mock_apt_get() { mock_packages apt-get "$@"; }
 dnf() { mock_packages dnf "$@"; }
 yum() { mock_packages yum "$@"; }
 apk() { mock_packages apk "$@"; }
 zypper() { mock_packages zypper "$@"; }
-apt-cache() { printf '  Candidate: %s\n' "$TEST_CANDIDATE"; }
+mock_apt_cache() { printf '  Candidate: %s\n' "$TEST_CANDIDATE"; }
 docker() {
   case "$*" in
     info)
@@ -76,8 +82,8 @@ systemctl() {
     *) return 99 ;;
   esac
 }
-rc-service() { mock_start rc-service "$@"; }
-rc-update() { printf '%s\n' "rc-update $*" >> "$WORK/log"; }
+mock_rc_service() { mock_start rc-service "$@"; }
+mock_rc_update() { printf '%s\n' "rc-update $*" >> "$WORK/log"; }
 service() { mock_start service "$@"; }
 sleep() { :; }
 expect_failure() {
