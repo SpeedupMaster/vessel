@@ -1,15 +1,20 @@
 name: Publish release
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Existing stable version tag to publish (vX.Y.Z)
+        required: true
+        default: v1.0.0
   push:
     tags:
-      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - 'v*'
 
 permissions:
   contents: read
 
 concurrency:
-  group: vessel-release-${{ github.ref }}
+  group: vessel-release-${{ inputs.version || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -20,6 +25,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version || github.ref_name }}
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
@@ -35,7 +42,7 @@ jobs:
         id: image
         env:
           REPOSITORY: ${{ github.repository }}
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use a stable vX.Y.Z tag'; exit 1; }
           echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
@@ -57,7 +64,7 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+          tags: ${{ steps.image.outputs.name }}:${{ inputs.version || github.ref_name }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
       - name: Prepare version-pinned installer
         env:
@@ -76,7 +83,7 @@ jobs:
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           if gh release view "$VERSION" >/dev/null 2>&1; then
             gh release upload "$VERSION" release/install.sh release/SHA256SUMS --clobber
