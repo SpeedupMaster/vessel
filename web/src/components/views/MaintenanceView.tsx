@@ -293,10 +293,11 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   <span className="eyebrow">
                     上次清理释放空间
                   </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="status-dot shrink-0 text-emerald-500" />
                 </div>
-                <div className="text-3xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
-                  <RollingCounter value={freedMb} precision={1} suffix=" MB" />
+                <div className="text-[26px] sm:text-[30px] leading-tight font-semibold text-ink tracking-[-0.03em]">
+                  <RollingCounter value={freedMb} precision={1} />
+                  <span className="ml-1 text-sm font-medium text-ink-muted tracking-normal">MB</span>
                 </div>
                 <p className="text-[11px] text-ink-muted font-mono">
                   {maintenance?.lastPruneAt
@@ -495,13 +496,15 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                     data-live={appsWithUpdates.length === 0}
                   />
                 </div>
-                <div
-                  className={clsx(
-                    'text-2xl sm:text-3xl font-bold font-sans tracking-tight',
-                    appsWithUpdates.length > 0 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'
+                <div className="text-[26px] sm:text-[30px] leading-tight font-semibold text-ink tracking-[-0.03em]">
+                  {appsWithUpdates.length > 0 ? (
+                    <>
+                      <span className="tabular-nums">{appsWithUpdates.length}</span>
+                      <span className="ml-1.5 text-sm font-medium text-ink-muted tracking-normal">个应用待升级</span>
+                    </>
+                  ) : (
+                    '已是最新'
                   )}
-                >
-                  {appsWithUpdates.length > 0 ? `${appsWithUpdates.length} 个应用待升级` : '全部镜像为最新'}
                 </div>
                 <p className="text-[11px] text-ink-muted font-mono">
                   {maintenance?.lastCheckedAt
