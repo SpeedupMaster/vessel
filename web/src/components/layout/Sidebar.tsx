@@ -11,11 +11,15 @@ import {
   X,
   Cpu,
   Memory,
+  DownloadSimple,
   Icon,
 } from '@phosphor-icons/react';
 import { SystemMetrics } from '../../types/index.js';
 import { RollingCounter } from '../common/RollingCounter.js';
 import { VesselMark } from '../common/ViewReveal.js';
+import { UpdateModal } from '../common/UpdateModal.js';
+import { useSystemUpdate } from '../../hooks/useSystemUpdate.js';
+import { useNotification } from '../../context/NotificationContext.js';
 
 export type NavTab = 'overview' | 'apps' | 'domains' | 'backups' | 'registries' | 'maintenance' | 'notifications';
 
@@ -54,10 +58,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen = false,
   onClose,
 }) => {
-  const isDockerOnline = metrics.dockerStatus === 'running';
   const memUsedGb = metrics.memUsedBytes / (1024 * 1024 * 1024);
   const memTotalGb = metrics.memTotalBytes / (1024 * 1024 * 1024);
   const memPct = metrics.memTotalBytes > 0 ? (metrics.memUsedBytes / metrics.memTotalBytes) * 100 : 0;
+
+  const update = useSystemUpdate(true);
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+  const { toast } = useNotification();
+  useEffect(() => {
+    if (update.justUpdatedTo) toast.success(`Vessel 已更新至 v${update.justUpdatedTo}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const navRef = useRef<HTMLElement>(null);
   const itemRefs = useRef<Partial<Record<NavTab, HTMLButtonElement | null>>>({});
@@ -142,9 +153,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="leading-tight">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-[13px] tracking-[0.04em] text-ink">VESSEL</span>
-                <span className="text-[9.5px] px-1.5 py-px rounded-md border border-line text-ink-faint font-medium font-mono">
-                  v1.0
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsUpdateOpen(true)}
+                  data-tooltip="检查更新"
+                  className="text-[9.5px] px-1.5 py-px rounded-md border border-line text-ink-faint font-medium font-mono cursor-pointer hover:text-ink hover:border-ink-faint transition-colors"
+                >
+                  v{__APP_VERSION__}
+                </button>
               </div>
               <p className="text-[11px] text-ink-faint mt-0.5">Docker Compose Hub</p>
             </div>
@@ -211,28 +227,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </nav>
 
-        {/* Engine status */}
-        <div className="m-3 p-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))] md:pb-3.5 rounded-2xl bg-paper-3/50 border border-line-subtle flex-shrink-0 space-y-3 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-ink-muted text-[11px]">Docker 引擎</span>
-            <span
-              className={clsx(
-                'flex items-center gap-2 text-[11px] font-semibold',
-                isDockerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
-              )}
-            >
-              <span className="status-dot" data-live={isDockerOnline} />
-              {isDockerOnline ? '已连接' : '离线'}
-            </span>
-          </div>
+        {update.status?.updateAvailable && (
+          <button
+            type="button"
+            onClick={() => setIsUpdateOpen(true)}
+            className="mx-3 mt-1 mb-3 min-h-[44px] px-3.5 flex items-center gap-2.5 rounded-2xl bg-paper-2 border border-line shadow-subtle text-[13px] font-medium text-ink hover:bg-paper-3 transition-colors cursor-pointer flex-shrink-0"
+          >
+            <DownloadSimple className="w-4 h-4 shrink-0" weight="bold" />
+            <span className="flex-1 text-left truncate">发现新版本 {update.status.latest?.tag}</span>
+            <span className="status-dot text-emerald-500" data-live="true" />
+          </button>
+        )}
 
-          <div className="text-[11px] text-ink-faint flex justify-between items-center">
-            <span>运行中容器</span>
-            <span className="text-ink font-mono font-medium">{metrics.runningContainers ?? '—'}</span>
-          </div>
-
-          {/* CPU / RAM — the desktop header already carries these */}
-          <div className="md:hidden pt-1 grid grid-cols-2 gap-2">
+        {/* CPU / RAM on mobile — the desktop header carries these, and Docker status lives in the header */}
+        <div className="md:hidden mx-3 mb-3 p-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))] rounded-2xl bg-paper-3/50 border border-line-subtle flex-shrink-0 text-xs">
+          <div className="grid grid-cols-2 gap-2">
             <div className="bg-paper-2 rounded-xl p-2.5 border border-line-subtle">
               <div className="flex items-center gap-1.5 text-ink-muted text-[11px]">
                 <Cpu className="w-3.5 h-3.5" />
@@ -261,6 +270,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </aside>
+
+      <UpdateModal
+        isOpen={isUpdateOpen}
+        onClose={() => setIsUpdateOpen(false)}
+        status={update.status}
+        checking={update.checking}
+        apply={update.apply}
+        onCheck={update.check}
+        onStart={update.start}
+        onReset={update.reset}
+      />
     </>
   );
 };

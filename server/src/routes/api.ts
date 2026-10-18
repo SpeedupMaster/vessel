@@ -19,6 +19,7 @@ import { authService } from '../services/auth.js';
 import { requireAuth, requirePasswordChanged, loginRateLimit, AuthenticatedRequest } from '../middleware/auth.js';
 import { wsHub } from '../ws/wsHub.js';
 import { deploymentService, newWebhookToken } from '../services/deployments.js';
+import { selfUpdateService } from '../services/selfUpdate.js';
 import { notifier, maskChannel, isMasked, CHANNEL_TYPES, NOTIFICATION_EVENTS } from '../services/notifier.js';
 import { timingSafeEqual, generateKeyPairSync, sign } from 'node:crypto';
 import { AppItem, DomainItem, R2Config, RegistryItem, MaintenanceConfig, AppDeploySettings, DeploymentAction, DeploymentRecord, DeploymentTrigger, NotificationChannel } from '../types/index.js';
@@ -149,6 +150,19 @@ apiRouter.get('/system/status', async (req: Request, res: Response) => {
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
   });
+});
+
+apiRouter.get('/system/update', async (_req: Request, res: Response) => {
+  res.json(await selfUpdateService.status());
+});
+
+apiRouter.post('/system/update/check', async (_req: Request, res: Response) => {
+  await selfUpdateService.check(true);
+  res.json(await selfUpdateService.status());
+});
+
+apiRouter.post('/system/update', async (_req: Request, res: Response) => {
+  res.status(202).json(await selfUpdateService.apply());
 });
 
 // ======================= APPS =======================

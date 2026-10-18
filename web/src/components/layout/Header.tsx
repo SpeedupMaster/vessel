@@ -236,7 +236,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="flex items-center gap-3 shrink-0">
           {/* Telemetry strip */}
-          <div className="hidden xl:flex items-stretch rounded-xl border border-line bg-paper-2/70 shadow-subtle text-xs divide-x divide-line">
+          <div className="hidden md:flex items-stretch rounded-xl border border-line bg-paper-2/70 shadow-subtle text-xs divide-x divide-line">
             <div
               className={clsx(
                 'flex items-center gap-2 px-3 py-1.5 font-medium',
@@ -248,7 +248,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span>{isDockerOnline ? '运行中' : '离线'}</span>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1.5" data-tooltip={`CPU 负载 ${metrics.cpuUsage.toFixed(0)}%`}>
+            <div className="hidden xl:flex items-center gap-2 px-3 py-1.5" data-tooltip={`CPU 负载 ${metrics.cpuUsage.toFixed(0)}%`}>
               <Cpu className="w-3.5 h-3.5 text-ink-faint" />
               <span className="text-ink font-mono font-medium w-[34px] text-right">
                 <RollingCounter value={metrics.cpuUsage} suffix="%" />
@@ -258,7 +258,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1.5" data-tooltip={`内存 ${memUsedGb.toFixed(1)} / ${memTotalGb.toFixed(0)} GB`}>
+            <div className="hidden xl:flex items-center gap-2 px-3 py-1.5" data-tooltip={`内存 ${memUsedGb.toFixed(1)} / ${memTotalGb.toFixed(0)} GB`}>
               <Memory className="w-3.5 h-3.5 text-ink-faint" />
               <span className="text-ink font-mono font-medium">
                 <RollingCounter value={memUsedGb} precision={1} />

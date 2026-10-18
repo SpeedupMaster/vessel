@@ -9,6 +9,7 @@ import { dockerService } from './services/docker.js';
 import { caddyService } from './services/caddy.js';
 import { apiErrorHandler } from './middleware/validation.js';
 import { schedulerService } from './services/scheduler.js';
+import { selfUpdateService } from './services/selfUpdate.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,6 +75,7 @@ server.listen(PORT, HOST, async () => {
   caddyService.syncCaddyfile();
   console.log(`[Vessel] Caddyfile synced at: ${caddyService.getCaddyfilePath()}`);
   await caddyService.ensureDaemon();
+  selfUpdateService.start();
 });
 
 process.on('SIGTERM', () => {
