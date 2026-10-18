@@ -10,6 +10,13 @@ import {
 } from '../types/index.js';
 import { getAuthHeaders, getStoredToken } from './useAuth.js';
 
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  /** Upload finished; the server is now applying the file */
+  done: boolean;
+}
+
 export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const authHeaders = getAuthHeaders();
   const headers = new Headers(init?.headers || {});
@@ -363,21 +370,30 @@ export function useData(token: string | null = null, enabled = true) {
     return data;
   };
 
-  const restoreDatabaseFromFile = async (appId: string, file: File, databaseName?: string) => {
-    const token = getStoredToken() || '';
+  // XHR rather than fetch: fetch exposes no upload progress events
+  const restoreDatabaseFromFile = async (appId: string, file: File, databaseName?: string, onProgress?: (progress: UploadProgress) => void) => {
     const query = new URLSearchParams();
     query.set('filename', file.name);
     if (databaseName) query.set('databaseName', databaseName);
-    const res = await apiFetch(`/api/apps/${appId}/restore-file?${query.toString()}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: file,
+    const data = await new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/api/apps/${appId}/restore-file?${query.toString()}`);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      for (const [key, value] of Object.entries(getAuthHeaders())) xhr.setRequestHeader(key, value);
+      xhr.upload.onprogress = (event) => {
+        onProgress?.({ loaded: event.loaded, total: event.lengthComputable ? event.total : file.size, done: false });
+      };
+      xhr.upload.onload = () => onProgress?.({ loaded: file.size, total: file.size, done: true });
+      xhr.onload = () => {
+        let body: any = {};
+        try { body = JSON.parse(xhr.responseText); } catch { /* non-JSON error page */ }
+        if (xhr.status >= 200 && xhr.status < 300) return resolve(body);
+        if (xhr.status === 401) window.dispatchEvent(new Event('vessel-session-expired'));
+        reject(Object.assign(new Error(body.error || `请求失败 (${xhr.status})`), { code: body.code, status: xhr.status }));
+      };
+      xhr.onerror = () => reject(new Error('网络错误，上传中断'));
+      xhr.send(file);
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to restore backup file');
     await fetchAll();
     return data;
   };

@@ -18,6 +18,7 @@ import {
   Stack,
 } from '@phosphor-icons/react';
 import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
+import type { UploadProgress } from '../../hooks/useData.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { EmptyState } from '../common/EmptyState.js';
@@ -45,7 +46,7 @@ interface AppsViewProps {
   onBackup: (id: string, options?: { databaseName?: string; schedule?: any; runNow?: boolean }) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string, options?: { databaseName?: string }) => Promise<any>;
-  onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string) => Promise<any>;
+  onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string, onProgress?: (progress: UploadProgress) => void) => Promise<any>;
   onDeleteBackup?: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
   onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;

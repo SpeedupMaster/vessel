@@ -15,10 +15,21 @@ function frontend() {
     close() { this.onclose?.({ code: 1000 }); }
     send(message) { this.sent.push(JSON.parse(message)); }
   }
+  class FakeXHR {
+    constructor() { this.upload = {}; this.headers = new Map(); }
+    open(method, url) { this.method = method; this.url = url; }
+    setRequestHeader(key, value) { this.headers.set(key, value); }
+    send(body) {
+      calls.push({ url: this.url, xhr: this, body });
+      this.upload.onprogress?.({ loaded: 1, total: 2, lengthComputable: true });
+      this.upload.onload?.();
+      this.status = 200; this.responseText = '{}'; this.onload?.();
+    }
+  }
   const globals = { Headers, URLSearchParams, Event, console, localStorage,
     window: { location: { protocol: 'https:', host: 'test.invalid' }, dispatchEvent() {} },
     document: { hidden: false, createElement: () => anchor = { click() {} }, body: { appendChild() {}, removeChild() {} } },
-    WebSocket: FakeSocket, setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
+    WebSocket: FakeSocket, XMLHttpRequest: FakeXHR, setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id), setInterval: () => 1, clearInterval() {},
     fetch: async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => String(url).includes('/config') ? {} : [] }; },
   };
@@ -33,9 +44,11 @@ test('backup download and upload use the actual stored authentication token', as
   const data = context.module.useData('valid-test-token', true);
   data.downloadBackup('backup-id', 'backup.zip');
   assert.ok(context.getAnchor().href.endsWith('token=valid-test-token'));
-  await data.restoreDatabaseFromFile('app', { name: 'backup.sql' });
+  const progress = [];
+  await data.restoreDatabaseFromFile('app', { name: 'backup.sql', size: 2 }, undefined, p => progress.push(p));
   const upload = context.calls.find(call => call.url.includes('restore-file'));
-  assert.equal(upload.options.headers.get('Authorization'), 'Bearer valid-test-token');
+  assert.equal(upload.xhr.headers.get('Authorization'), 'Bearer valid-test-token');
+  assert.deepEqual(progress.map(p => p.done), [false, true]);
 });
 
 test('WebSocket cleanup cancels pending reconnect and cannot open another socket', async () => {
@@ -99,7 +112,7 @@ test('restore dialog lists only its database backups and keeps edited target acr
   const jsx = (type, props, key) => ({ type, props, key });
   const component = load('web/src/components/common/RestoreDatabaseBackupModal.tsx', {
     react, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@phosphor-icons/react': new Proxy({}, { get: (_target, name) => name }),
-    './Modal.js': { Modal: 'Modal' }, './Button8State.js': { Button8State: 'Button' },
+    './Modal.js': { Modal: 'Modal' }, './Button8State.js': { Button8State: 'Button' }, './UploadProgressBar.js': { UploadProgressBar: 'UploadProgressBar' },
     '../../hooks/useData.js': { apiFetch: async () => ({ ok: true, json: async () => ({ databases: ['postgres'] }) }) },
     '../../utils/format.js': { formatBytes: () => '1 KB' },
   }).RestoreDatabaseBackupModal;

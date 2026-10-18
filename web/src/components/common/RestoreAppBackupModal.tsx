@@ -13,6 +13,8 @@ import { Modal } from './Modal.js';
 import { Button8State } from './Button8State.js';
 import { AppItem, BackupRecord } from '../../types/index.js';
 import { formatBytes } from '../../utils/format.js';
+import { UploadProgressBar } from './UploadProgressBar.js';
+import type { UploadProgress } from '../../hooks/useData.js';
 import { useNotification } from '../../context/NotificationContext.js';
 
 interface RestoreAppBackupModalProps {
@@ -21,7 +23,7 @@ interface RestoreAppBackupModalProps {
   app: AppItem;
   backups: BackupRecord[];
   onRestoreRecord: (recordId: string) => Promise<any>;
-  onRestoreFile?: (appId: string, file: File) => Promise<any>;
+  onRestoreFile?: (appId: string, file: File, onProgress?: (progress: UploadProgress) => void) => Promise<any>;
 }
 
 export const RestoreAppBackupModal: React.FC<RestoreAppBackupModalProps> = ({
@@ -36,6 +38,7 @@ export const RestoreAppBackupModal: React.FC<RestoreAppBackupModalProps> = ({
   const [sourceType, setSourceType] = useState<'existing' | 'upload'>('existing');
   const [selectedRecordId, setSelectedRecordId] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [confirmInput, setConfirmInput] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,13 +117,15 @@ export const RestoreAppBackupModal: React.FC<RestoreAppBackupModalProps> = ({
       }
       setIsSubmitting(true);
       try {
-        await onRestoreFile(app.id, selectedFile);
+        setUploadProgress({ loaded: 0, total: selectedFile.size, done: false });
+        await onRestoreFile(app.id, selectedFile, setUploadProgress);
         toast.success(`文件 ${selectedFile.name} 已成功恢复至应用 ${app.name}！`);
         onClose();
       } catch (err: any) {
         toast.error(`导入恢复失败: ${err.message || '未知错误'}`);
       } finally {
         setIsSubmitting(false);
+        setUploadProgress(null);
       }
     }
   };
@@ -273,13 +278,15 @@ export const RestoreAppBackupModal: React.FC<RestoreAppBackupModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
-                  className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-4 transition-colors cursor-pointer"
+                  disabled={isSubmitting}
+                  className="disabled:opacity-40 disabled:cursor-not-allowed p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-4 transition-colors cursor-pointer"
                   title="重新选择"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             )}
+            {uploadProgress && <UploadProgressBar progress={uploadProgress} />}
           </div>
         )}
 
@@ -345,7 +352,11 @@ export const RestoreAppBackupModal: React.FC<RestoreAppBackupModalProps> = ({
             icon={isSubmitting ? undefined : <ArrowCounterClockwise className="w-3.5 h-3.5 text-current" />}
             className="rounded-xl px-4 py-2 text-xs font-semibold"
           >
-            {isSubmitting ? '正在恢复快照...' : '确认恢复应用'}
+            {uploadProgress
+              ? uploadProgress.done
+                ? '正在还原…'
+                : `上传中 ${uploadProgress.total ? Math.floor((uploadProgress.loaded / uploadProgress.total) * 100) : 0}%`
+              : isSubmitting ? '正在恢复快照...' : '确认恢复应用'}
           </Button8State>
         </div>
       </div>

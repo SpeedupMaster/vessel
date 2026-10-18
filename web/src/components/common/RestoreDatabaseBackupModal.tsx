@@ -15,6 +15,8 @@ import { Button8State } from './Button8State.js';
 import { AppItem, BackupRecord } from '../../types/index.js';
 import { apiFetch } from '../../hooks/useData.js';
 import { formatBytes } from '../../utils/format.js';
+import { UploadProgressBar } from './UploadProgressBar.js';
+import type { UploadProgress } from '../../hooks/useData.js';
 
 interface RestoreDatabaseBackupModalProps {
   isOpen: boolean;
@@ -23,7 +25,7 @@ interface RestoreDatabaseBackupModalProps {
   engineName: string;
   backups: BackupRecord[];
   onRestoreRecord: (recordId: string, databaseName?: string) => Promise<any>;
-  onRestoreFile?: (appId: string, file: File, databaseName?: string) => Promise<any>;
+  onRestoreFile?: (appId: string, file: File, databaseName?: string, onProgress?: (progress: UploadProgress) => void) => Promise<any>;
 }
 
 export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProps> = ({
@@ -44,6 +46,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
 
   // File upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,13 +137,15 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
       } else {
         if (!selectedFile) throw new Error('请选择或拖拽要导入的备份文件');
         if (!onRestoreFile) throw new Error('暂不支持文件直接还原');
-        await onRestoreFile(app.id, selectedFile, dbTarget);
+        setUploadProgress({ loaded: 0, total: selectedFile.size, done: false });
+        await onRestoreFile(app.id, selectedFile, dbTarget, setUploadProgress);
       }
       onClose();
     } catch {
       // Handled by toast in caller
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -303,13 +308,15 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
-                  className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-4 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="disabled:opacity-40 disabled:cursor-not-allowed p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-4 cursor-pointer"
                   title="清除所选文件"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             )}
+            {uploadProgress && <UploadProgressBar progress={uploadProgress} />}
           </div>
         )}
 
@@ -390,7 +397,11 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             icon={<ArrowsClockwise className="w-3.5 h-3.5" />}
             className="order-1 sm:order-2 w-full sm:w-auto min-h-[40px] sm:min-h-0 rounded-xl font-semibold"
           >
-            确认恢复备份
+            {uploadProgress
+              ? uploadProgress.done
+                ? '正在还原…'
+                : `上传中 ${uploadProgress.total ? Math.floor((uploadProgress.loaded / uploadProgress.total) * 100) : 0}%`
+              : '确认恢复备份'}
           </Button8State>
           <button
             type="button"

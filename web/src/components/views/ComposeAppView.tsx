@@ -47,6 +47,7 @@ import {
 } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
+import type { UploadProgress } from '../../hooks/useData.js';
 import { DATABASE_OPTIONS } from '../common/CreateDatabaseModal.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
@@ -84,7 +85,7 @@ interface ComposeAppViewProps {
   onBackup: (id: string, options?: { databaseName?: string; schedule?: any; runNow?: boolean }) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string, options?: { databaseName?: string }) => Promise<any>;
-  onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string) => Promise<any>;
+  onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string, onProgress?: (progress: UploadProgress) => void) => Promise<any>;
   onDeleteBackup?: (id: string) => Promise<any>;
   onSubscribeLogs: (id: string) => void;
   onCreateDomain?: (domain: Partial<DomainItem>) => Promise<any>;
@@ -544,11 +545,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     }
   };
 
-  const handleRestoreDbFile = async (appId: string, file: File, targetDatabaseName?: string) => {
+  const handleRestoreDbFile = async (appId: string, file: File, targetDatabaseName?: string, onProgress?: (progress: UploadProgress) => void) => {
     if (!onRestoreDatabaseFromFile) return;
     try {
-      toast.info(`正在上传并导入 ${file.name}...`);
-      await onRestoreDatabaseFromFile(appId, file, targetDatabaseName);
+      await onRestoreDatabaseFromFile(appId, file, targetDatabaseName, onProgress);
       toast.success(`文件 ${file.name} 已成功恢复至数据库！`);
     } catch (err: any) {
       toast.error(`导入恢复失败: ${err.message || '未知错误'}`);
@@ -556,11 +556,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     }
   };
 
-  const handleRestoreAppFile = async (appId: string, file: File) => {
+  const handleRestoreAppFile = async (appId: string, file: File, onProgress?: (progress: UploadProgress) => void) => {
     if (!onRestoreDatabaseFromFile) return;
     try {
-      toast.info(`正在上传并还原 ${file.name}...`);
-      await onRestoreDatabaseFromFile(appId, file);
+      await onRestoreDatabaseFromFile(appId, file, undefined, onProgress);
       toast.success(`备份文件 ${file.name} 已成功恢复生效！`);
     } catch (err: any) {
       toast.error(`导入恢复失败: ${err.message || '未知错误'}`);
