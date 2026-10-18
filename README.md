@@ -41,6 +41,12 @@
   - 以原生 `docker-compose.yml` 与 `.env` 为核心，零私有黑盒封装，完全透明。
   - 独立工作区隔离目录，支持启动、停止、重启、拉取重建及环境变量在线配置。
   - 基于 WebSocket 的流式实时部署控制台终端（带 ANSI 日志渲染与平滑自动滚动）。
+- **部署记录、回滚与 Webhook 触发**：
+  - 每次部署 / 重建 / 回滚都会留下记录：完整日志（`DATA_DIR/deployments/`）、Compose 与 `.env` 配置快照、触发方式与耗时。
+  - 一键回滚到任意成功部署的配置；可开启「失败时自动回滚」。镜像仍按 Compose 中的标签解析，需要精确回滚镜像时请固定版本号或摘要。
+  - 每个应用可开启带随机密钥的部署 Webhook，CI 推送镜像后执行 `curl -X POST https://<面板>/api/hooks/deploy/<应用ID>/<密钥>` 即可拉取并重建（追加 `?action=deploy` 只按当前配置部署）。
+  - 可按应用配置镜像拉取策略、`--remove-orphans`、`--wait` 健康检查等待与部署超时。
+- **通知渠道**：飞书 / 钉钉 / 企业微信群机器人、Telegram Bot 与通用 JSON Webhook，订阅部署失败、部署成功、发现新版本镜像与定时备份失败事件。
 - **Caddy 原生自动 SSL 证书与动态反代**：
   - 内置极轻量 Caddy 引擎，支持 REST API 动态热挂载域名路由。
   - 原生全自动向 Let's Encrypt / ZeroSSL 申请 TLS 证书，到期前 30 天静默自动续订。

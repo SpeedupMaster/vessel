@@ -3,7 +3,11 @@ import path from 'path';
 import { runDocker } from './process.js';
 import YAML from 'yaml';
 import { APPS_DATA_DIR, db } from '../db/index.js';
-import { ContainerInfo, AppItem } from '../types/index.js';
+import { ContainerInfo, AppItem, AppDeploySettings } from '../types/index.js';
+
+export type DeployOptions = Partial<Pick<AppDeploySettings, 'pullPolicy' | 'removeOrphans' | 'waitHealthy' | 'timeoutMinutes'>>;
+
+const DEFAULT_TIMEOUT_MINUTES = 15;
 
 
 
@@ -90,17 +94,30 @@ export class DockerService {
     return { args: ['compose', '-f', composePath, '--env-file', envPath, ...args], cwd: appDir };
   }
 
-  public async compose(app: AppItem, args: string[], onLog?: (chunk: string) => void) {
+  public async compose(app: AppItem, args: string[], onLog?: (chunk: string) => void, timeoutMs = DEFAULT_TIMEOUT_MINUTES * 60 * 1000) {
     const command = this.composeArgs(app, args);
-    return runDocker(command.args, { cwd: command.cwd, onLog, timeout: 15 * 60 * 1000 });
+    return runDocker(command.args, { cwd: command.cwd, onLog, timeout: timeoutMs });
   }
 
-  private async lifecycle(app: AppItem, commands: string[][], onLog?: (text: string) => void): Promise<{ success: boolean; error?: string }> {
+  /** Flags appended to `up -d` according to the app's deploy settings */
+  private upFlags(options: DeployOptions = {}): string[] {
+    const flags: string[] = [];
+    if (options.removeOrphans !== false) flags.push('--remove-orphans');
+    if (options.pullPolicy === 'always') flags.push('--pull', 'always');
+    if (options.waitHealthy) {
+      const minutes = options.timeoutMinutes || DEFAULT_TIMEOUT_MINUTES;
+      flags.push('--wait', '--wait-timeout', String(minutes * 60));
+    }
+    return flags;
+  }
+
+  private async lifecycle(app: AppItem, commands: string[][], onLog?: (text: string) => void, options: DeployOptions = {}): Promise<{ success: boolean; error?: string }> {
+    const timeoutMs = (options.timeoutMinutes || DEFAULT_TIMEOUT_MINUTES) * 60 * 1000;
     try {
       for (const command of commands) {
         onLog?.(`[vessel] docker compose ${command.join(' ')}
 `);
-        await this.compose(app, command, onLog);
+        await this.compose(app, command, onLog, timeoutMs);
       }
       await this.syncAppContainers(app.id);
       onLog?.('[vessel] Operation completed successfully.\n');
@@ -112,9 +129,9 @@ export class DockerService {
     }
   }
 
-  public async deployApp(app: AppItem, onLog?: (text: string) => void) {
+  public async deployApp(app: AppItem, onLog?: (text: string) => void, options?: DeployOptions) {
     await this.ensureNetwork();
-    return this.lifecycle(app, [['up', '-d', '--remove-orphans']], onLog);
+    return this.lifecycle(app, [['up', '-d', ...this.upFlags(options)]], onLog, options);
   }
 
   public stopApp(app: AppItem, onLog?: (text: string) => void) {
@@ -140,14 +157,16 @@ export class DockerService {
     return containers;
   }
 
-  public async pullAndRebuild(app: AppItem, onLog?: (text: string) => void) {
+  public async pullAndRebuild(app: AppItem, onLog?: (text: string) => void, options?: DeployOptions) {
     await this.ensureNetwork();
-    return this.lifecycle(app, [['pull'], ['up', '-d', '--force-recreate']], onLog);
+    const up = ['up', '-d', '--force-recreate', ...this.upFlags({ ...options, removeOrphans: false, pullPolicy: 'missing' })];
+    return this.lifecycle(app, [['pull'], up], onLog, options);
   }
 
-  public async freshVolumesRebuild(app: AppItem, onLog?: (text: string) => void) {
+  public async freshVolumesRebuild(app: AppItem, onLog?: (text: string) => void, options?: DeployOptions) {
     await this.ensureNetwork();
-    return this.lifecycle(app, [['down', '-v', '--remove-orphans'], ['up', '-d', '--build']], onLog);
+    const up = ['up', '-d', '--build', ...this.upFlags({ ...options, removeOrphans: false, pullPolicy: 'missing' })];
+    return this.lifecycle(app, [['down', '-v', '--remove-orphans'], up], onLog, options);
   }
 
   /**

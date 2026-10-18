@@ -9,6 +9,7 @@ const DomainsView = lazy(() => import('./components/views/DomainsView.js').then(
 const BackupsView = lazy(() => import('./components/views/BackupsView.js').then(module => ({ default: module.BackupsView })));
 const RegistriesView = lazy(() => import('./components/views/RegistriesView.js').then(module => ({ default: module.RegistriesView })));
 const MaintenanceView = lazy(() => import('./components/views/MaintenanceView.js').then(module => ({ default: module.MaintenanceView })));
+const NotificationsView = lazy(() => import('./components/views/NotificationsView.js').then(module => ({ default: module.NotificationsView })));
 import { LoginView } from './components/views/LoginView.js';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal.js';
 import { GlobalTooltip } from './components/common/Tooltip.js';
@@ -34,7 +35,7 @@ function parsePath(pathname: string, search: string = ''): RouteState {
   if (clean === '/login') {
     return { tab: 'overview', isLogin: true, appSubRoute: null };
   }
-  if (tabParam && ['overview', 'apps', 'domains', 'backups', 'registries', 'maintenance'].includes(tabParam)) {
+  if (tabParam && ['overview', 'apps', 'domains', 'backups', 'registries', 'maintenance', 'notifications'].includes(tabParam)) {
     return { tab: tabParam, isLogin: false, appSubRoute: tabParam === 'apps' ? { mode: 'list' } : null };
   }
   if (clean === '/apps/new' || clean === '/apps/create') {
@@ -58,6 +59,9 @@ function parsePath(pathname: string, search: string = ''): RouteState {
   }
   if (clean === '/maintenance') {
     return { tab: 'maintenance', isLogin: false, appSubRoute: null };
+  }
+  if (clean === '/notifications') {
+    return { tab: 'notifications', isLogin: false, appSubRoute: null };
   }
   return { tab: 'overview', isLogin: false, appSubRoute: null };
 }
@@ -199,6 +203,8 @@ function MainConsole() {
         return '私有镜像凭证管理';
       case 'maintenance':
         return '镜像更新巡检与安全瘦身';
+      case 'notifications':
+        return '通知渠道';
     }
   };
 
@@ -367,6 +373,8 @@ function MainConsole() {
                 onUpdateApp={updateAppData}
               />
             )}
+
+            {route.tab === 'notifications' && <NotificationsView />}
             </ViewReveal>
             </Suspense>
           </div>

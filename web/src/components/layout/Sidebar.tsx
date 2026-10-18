@@ -7,6 +7,7 @@ import {
   CloudArrowUp,
   Package,
   Broom,
+  BellRinging,
   X,
   Cpu,
   Memory,
@@ -16,7 +17,7 @@ import { SystemMetrics } from '../../types/index.js';
 import { RollingCounter } from '../common/RollingCounter.js';
 import { VesselMark } from '../common/ViewReveal.js';
 
-export type NavTab = 'overview' | 'apps' | 'domains' | 'backups' | 'registries' | 'maintenance';
+export type NavTab = 'overview' | 'apps' | 'domains' | 'backups' | 'registries' | 'maintenance' | 'notifications';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -41,6 +42,7 @@ const NAV_GROUPS: { label: string; items: { id: NavTab; label: string; icon: Ico
       { id: 'registries', label: '私有镜像凭证', icon: Package },
       { id: 'maintenance', label: '巡检与安全瘦身', icon: Broom },
       { id: 'backups', label: 'Cloudflare R2 备份', icon: CloudArrowUp },
+      { id: 'notifications', label: '通知渠道', icon: BellRinging },
     ],
   },
 ];

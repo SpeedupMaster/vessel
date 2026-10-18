@@ -4,7 +4,8 @@ import { db } from '../db/index.js';
 import { r2BackupService } from './r2Backup.js';
 import { cleanerService } from './cleaner.js';
 import { registryService } from './registry.js';
-import { dockerService } from './docker.js';
+import { deploymentService } from './deployments.js';
+import { notifier } from './notifier.js';
 
 export class SchedulerService {
   private checkingUpdates = false;
@@ -27,8 +28,13 @@ export class SchedulerService {
     if (r2Config.enabled && cron.validate(r2Config.cronSchedule)) {
       this.backupJob = cron.schedule(r2Config.cronSchedule, async () => {
         console.log('[Scheduler] Executing scheduled R2 system backup...');
-        try { await withAppLock('*', () => r2BackupService.runSystemBackup()); }
-        catch (error) { console.error('[Scheduler] System backup failed', error); }
+        try {
+          const result = await withAppLock('*', () => r2BackupService.runSystemBackup());
+          if (!result.success) void notifier.notify({ event: 'backup.failure', title: '系统快照备份失败', message: String(result.error || '未知错误') });
+        } catch (error: any) {
+          console.error('[Scheduler] System backup failed', error);
+          void notifier.notify({ event: 'backup.failure', title: '系统快照备份失败', message: String(error?.message || error) });
+        }
       });
     }
 
@@ -67,8 +73,12 @@ export class SchedulerService {
               freshApp.backupSchedule.lastBackupStatus = res.success ? 'success' : 'failed';
               db.set('apps', [...freshApps]);
             }
+            if (!res.success) {
+              void notifier.notify({ event: 'backup.failure', title: `${app.name} 数据库备份失败`, message: String(res.error || '未知错误'), appId: app.id, appName: app.name });
+            }
           } catch (err: any) {
             console.error(`[Scheduler] Scheduled database backup failed for ${app.name}:`, err.message);
+            void notifier.notify({ event: 'backup.failure', title: `${app.name} 数据库备份失败`, message: String(err?.message || err), appId: app.id, appName: app.name });
           }
         });
         this.appBackupJobs.set(app.id, job);
@@ -90,12 +100,10 @@ export class SchedulerService {
             if (!result.currentDigest || !result.newDigest) return;
             db.updateApp(id, { currentDigest: result.currentDigest, latestDigest: result.newDigest, updateAvailable: result.hasUpdate });
             if (result.hasUpdate && app.autoUpdate && app.status === 'running') {
-              db.updateApp(id, { status: 'rebuilding' });
-              appEvents.emit('changed', id);
-              const rebuilt = await dockerService.pullAndRebuild(app);
-              if (!rebuilt.success) { db.updateApp(id, { status: 'error' }); return; }
-              await registryService.captureAppDigest(app);
-              db.updateApp(id, { updateAvailable: false });
+              await deploymentService.run(id, 'rebuild', 'auto-update');
+            } else if (result.hasUpdate && result.newDigest !== app.latestDigest && deploymentService.settings(id).notifyOnUpdate) {
+              // Only announce a given remote version once
+              void notifier.notify({ event: 'update.available', title: `${app.name} 有新版本镜像`, message: '远端镜像摘要已变化，可在应用页拉取并重建。', appId: id, appName: app.name });
             }
           });
         } catch (error) { console.warn(`[Scheduler] Skipped ${id}: ${String(error)}`); }

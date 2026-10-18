@@ -60,6 +60,8 @@ import { RestoreAppBackupModal } from '../common/RestoreAppBackupModal.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { Switch } from '../common/Switch.js';
 import { LogsPanel } from './LogsPanel.js';
+import { DeploymentsPanel } from './DeploymentsPanel.js';
+import { AppSettingsPanel } from './AppSettingsPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { formatBytes } from '../../utils/format.js';
 
@@ -174,33 +176,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [isEditorFocused, setIsEditorFocused] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedUUID, setCopiedUUID] = useState(false);
-  const [isAutoScroll, setIsAutoScroll] = useState(true);
-  const [isDeploymentFullscreen, setIsDeploymentFullscreen] = useState(false);
-  const [clearedLogOffset, setClearedLogOffset] = useState(0);
-  const [copiedTerminalLogs, setCopiedTerminalLogs] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
-
-  // Exit fullscreen deployment log on Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isDeploymentFullscreen) {
-        setIsDeploymentFullscreen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDeploymentFullscreen]);
-
-  // Lock body scroll when in fullscreen deployment logs
-  useEffect(() => {
-    if (isDeploymentFullscreen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-  }, [isDeploymentFullscreen]);
 
   // Delete App Modal state (Strict 2-step confirmation)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -608,8 +584,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     }
   };
 
-  const terminalEndRef = useRef<HTMLDivElement>(null);
-
   // Dirty detection for composeYaml, envContent, autoUpdate
   const isDirty = useMemo(() => {
     if (mode !== 'edit' || !app) return false;
@@ -656,13 +630,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       onSubscribeLogs(app.id);
     }
   }, [app?.id, app?.composeYaml, app?.envContent, app?.name, app?.description, app?.autoUpdate, mode]);
-
-  // Terminal scroll to bottom (respects isAutoScroll state)
-  useEffect(() => {
-    if (activeTab === 'deployments' && isAutoScroll) {
-      terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logsMap, activeTab, app?.id, isAutoScroll]);
 
   // YAML Parsing & Validation
   const yamlValidation = useMemo(() => {
@@ -1078,60 +1045,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     return backups.filter((b) => b.targetId === app.id);
   }, [backups, app]);
 
-  const appLogs = (app ? logsMap[app.id] : []) || [];
-
-  const displayLogs = useMemo(() => {
-    if (clearedLogOffset > 0) {
-      return appLogs.slice(clearedLogOffset);
-    }
-    return appLogs;
-  }, [appLogs, clearedLogOffset]);
-
-  const handleCopyDeploymentLogs = () => {
-    if (displayLogs.length === 0) {
-      toast.info('暂无日志可复制');
-      return;
-    }
-    navigator.clipboard.writeText(displayLogs.join('\n'));
-    setCopiedTerminalLogs(true);
-    toast.success('部署日志已复制');
-    setTimeout(() => setCopiedTerminalLogs(false), 2000);
-  };
-
-  const handleClearDeploymentLogs = () => {
-    setClearedLogOffset(appLogs.length);
-    toast.info('当前部署日志视图已清空');
-  };
-
-  const getLogLineStyle = (line: string) => {
-    const lower = line.toLowerCase();
-    if (
-      lower.includes('error') ||
-      lower.includes('fail') ||
-      lower.includes('cannot find') ||
-      lower.includes('fatal') ||
-      lower.includes('panic') ||
-      lower.includes('exception')
-    ) {
-      return 'text-rose-600 dark:text-rose-400 font-medium';
-    }
-    if (lower.includes('warn') || lower.includes('warning')) {
-      return 'text-amber-600 dark:text-amber-300';
-    }
-    if (line.startsWith('[vessel]') || line.startsWith('==>') || line.startsWith('STEP')) {
-      return 'text-sky-600 dark:text-sky-400 font-semibold';
-    }
-    if (
-      lower.includes('success') ||
-      lower.includes('completed') ||
-      lower.includes('successfully') ||
-      lower.includes('done') ||
-      lower.includes('healthy')
-    ) {
-      return 'text-emerald-600 dark:text-emerald-400';
-    }
-    return 'text-ink';
-  };
 
   return (
     <div className="space-y-6 animate-fade-in pb-28 md:pb-16">
@@ -1452,7 +1365,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
                 >
                   <Terminal className="w-3.5 h-3.5" />
-                  <span>部署日志</span>
+                  <span>部署记录</span>
                 </button>
               </>
             )}
@@ -1486,7 +1399,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             : [
                 { key: 'general' as TabKey, label: '常规' },
                 { key: 'environment' as TabKey, label: '环境变量' },
-                { key: 'deployments' as TabKey, label: '部署日志' },
+                { key: 'deployments' as TabKey, label: '部署记录' },
                 { key: 'containers' as TabKey, label: `容器 (${app?.containers?.length || 0})` },
                 { key: 'domains' as TabKey, label: `域名 (${appDomains.length})` },
                 { key: 'backups' as TabKey, label: `备份 (${appBackups.length})` },
@@ -1823,7 +1736,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/10 border border-accent/20 rounded-lg transition-colors cursor-pointer"
                 >
                   <Terminal className="w-3.5 h-3.5" />
-                  <span>查看实时部署日志</span>
+                  <span>查看部署记录</span>
                 </button>
               </>
             )}
@@ -2711,194 +2624,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       {/* ================= TAB CONTENT 4: DEPLOYMENTS & TERMINAL (EDIT MODE) ================= */}
       {activeTab === 'deployments' && mode === 'edit' && app && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-sm text-ink tracking-tight">部署构建与实时日志</h3>
-              <p className="text-xs text-ink-muted mt-0.5 leading-relaxed hidden sm:block">
-                WebSocket 实时管道对接 Docker Compose 部署构建与容器标准输出
-              </p>
-            </div>
-            <div className="sm:hidden flex items-center gap-1.5 text-xs text-ink-muted font-mono">
-              <span className="status-dot text-emerald-500" data-live="true" />
-              <span>实时流</span>
-            </div>
+          <div>
+            <h3 className="font-semibold text-sm text-ink tracking-tight">部署记录</h3>
+            <p className="text-xs text-ink-muted mt-0.5 leading-relaxed hidden sm:block">
+              每次部署的完整日志与配置快照，失败时可一键回滚到任意成功版本
+            </p>
           </div>
-
-          {/* Terminal Screen Window Card */}
-          <div
-            className={clsx(
-              "rounded-2xl bg-paper-2 dark:bg-paper border border-line-subtle overflow-hidden shadow-lg font-mono transition-colors",
-              isDeploymentFullscreen
-                ? "fixed inset-0 z-50 rounded-none border-0 w-screen h-[100dvh] flex flex-col"
-                : ""
-            )}
-          >
-            {/* Terminal Card Window Header */}
-            <div className="px-3.5 sm:px-4 py-2.5 bg-paper-3 dark:bg-paper-2 border-b border-line-subtle flex items-center justify-between gap-2 select-none shrink-0 transition-colors">
-              {/* Left: Window controls & Title */}
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
-                </div>
-                <div className="flex items-center gap-1.5 min-w-0 ml-1">
-                  <Terminal className="w-3.5 h-3.5 text-ink dark:text-accent shrink-0" />
-                  <span className="text-xs font-semibold text-ink truncate">
-                    {isDeploymentFullscreen ? '实时部署全屏输出' : '实时部署输出'}
-                  </span>
-                  {app.status === 'deploying' || app.status === 'rebuilding' ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 font-mono shrink-0">
-                      <CircleNotch className="w-2.5 h-2.5 animate-spin" />
-                      构建中
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Right: Terminal action buttons */}
-              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                {/* Auto-scroll toggle */}
-                <button
-                  type="button"
-                  onClick={() => setIsAutoScroll(!isAutoScroll)}
-                  title={isAutoScroll ? '自动滚屏已开启，点击暂停' : '自动滚屏已暂停，点击恢复'}
-                  className={clsx(
-                    "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
-                    isAutoScroll
-                      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/60 border border-emerald-500/20 dark:border-emerald-500/30 hover:bg-emerald-500/20 dark:hover:bg-emerald-900/60"
-                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4"
-                  )}
-                >
-                  <span className={clsx("status-dot shrink-0", isAutoScroll ? "text-emerald-500" : "text-ink-faint")} data-live={isAutoScroll} />
-                  <span>{isAutoScroll ? '滚屏' : '暂停'}</span>
-                </button>
-
-                {/* Clear */}
-                <button
-                  type="button"
-                  onClick={handleClearDeploymentLogs}
-                  title="清空当前日志视图"
-                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4 rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
-                >
-                  <Trash className="w-3 h-3 shrink-0" />
-                  <span>清空</span>
-                </button>
-
-                {/* Copy */}
-                <button
-                  type="button"
-                  onClick={handleCopyDeploymentLogs}
-                  title="复制全部部署日志"
-                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4 rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
-                >
-                  {copiedTerminalLogs ? (
-                    <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400 shrink-0" />
-                  ) : (
-                    <Copy className="w-3 h-3 shrink-0" />
-                  )}
-                  <span>{copiedTerminalLogs ? '已复制' : '复制'}</span>
-                </button>
-
-                {/* Redeploy (visible on sm+) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClearedLogOffset(0);
-                    onDeploy(app.id);
-                  }}
-                  disabled={app.status === 'deploying' || app.status === 'rebuilding'}
-                  className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-xs text-ink dark:text-accent hover:bg-paper-2/80 dark:hover:bg-accent/20 border border-line dark:hover:border-accent/30 rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 font-mono text-[11px]"
-                >
-                  <Play className="w-3 h-3 text-current" weight="fill" />
-                  <span>重新部署</span>
-                </button>
-
-                {/* Fullscreen Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setIsDeploymentFullscreen(!isDeploymentFullscreen)}
-                  title={isDeploymentFullscreen ? '退出全屏 (Esc)' : '全屏部署日志'}
-                  className={clsx(
-                    "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
-                    isDeploymentFullscreen
-                      ? "text-accent bg-accent/10 border border-accent/30 font-semibold"
-                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4"
-                  )}
-                >
-                  {isDeploymentFullscreen ? (
-                    <>
-                      <ArrowsInSimple className="w-3 h-3 shrink-0" weight="bold" />
-                      <span>退出全屏</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowsOutSimple className="w-3 h-3 shrink-0" weight="bold" />
-                      <span>全屏</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Terminal Screen Body */}
-            <div
-              className={clsx(
-                "p-3 sm:p-4 text-xs font-mono leading-[1.65] overflow-y-auto space-y-1 select-text overscroll-contain bg-paper-1/40 dark:bg-paper transition-colors",
-                isDeploymentFullscreen ? "flex-1 h-auto" : "h-[380px] sm:h-[440px]"
-              )}
-            >
-              {displayLogs.length === 0 ? (
-                <div className="text-ink-muted py-20 text-center space-y-2 select-none">
-                  <Terminal className="w-8 h-8 mx-auto text-ink-faint mb-2" />
-                  <p className="text-xs">暂无部署输出。点击「重新部署」启动实时构建管道。</p>
-                  {clearedLogOffset > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setClearedLogOffset(0)}
-                      className="text-xs text-ink font-semibold hover:underline cursor-pointer"
-                    >
-                      恢复已清空的 {clearedLogOffset} 行历史日志
-                    </button>
-                  )}
-                </div>
-              ) : (
-                displayLogs.map((line, idx) => (
-                  <div key={idx} className={clsx("whitespace-pre-wrap break-all flex items-start gap-2 hover:bg-paper-3/50 px-1 -mx-1 rounded transition-colors", getLogLineStyle(line))}>
-                    <span className="text-ink-faint select-none text-[10px] tabular-nums shrink-0 pt-0.5 w-6 text-right font-mono">
-                      {idx + 1}
-                    </span>
-                    <span className="flex-1 min-w-0 font-mono">
-                      {line}
-                    </span>
-                  </div>
-                ))
-              )}
-              <div ref={terminalEndRef} />
-            </div>
-
-            {/* Terminal Window Footer */}
-            <div className="px-4 py-2 bg-paper-3 dark:bg-paper-2 border-t border-line-subtle flex items-center justify-between text-xs text-ink-muted font-mono text-[11px] select-none shrink-0 transition-colors">
-              <div className="flex items-center gap-2">
-                <span>共输出 {displayLogs.length} 行构建日志</span>
-                {clearedLogOffset > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setClearedLogOffset(0)}
-                    className="text-ink font-medium hover:underline cursor-pointer"
-                  >
-                    (已隐藏 {clearedLogOffset} 行，点击恢复)
-                  </button>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-ink-muted">
-                <span className="status-dot text-emerald-500" data-live="true" />
-                <span className="hidden xs:inline">管道就绪</span>
-                <span className="text-ink-faint">·</span>
-                <span className="text-ink-faint">docker-compose</span>
-              </div>
-            </div>
-          </div>
+          <DeploymentsPanel app={app} onDeploy={onDeploy} />
         </div>
       )}
 
@@ -3687,80 +3419,19 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
       {/* ================= TAB CONTENT 8: ADVANCED ================= */}
       {activeTab === 'advanced' && (
-        <div className="space-y-8">
+        <div className="space-y-5">
           <div>
             <h3 className="font-semibold text-sm text-ink tracking-tight">高级设置</h3>
-            <p className="text-xs text-ink-muted mt-1 leading-relaxed">系统底层元数据与生命周期安全管理</p>
+            <p className="text-xs text-ink-muted mt-1 leading-relaxed">部署触发、部署策略、通知订阅与危险操作</p>
           </div>
-
-          {/* 系统底层元数据 - 无框化键值对列表 */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-ink tracking-tight">系统底层元数据</h4>
-
-            <div className="p-2 sm:p-3 rounded-2xl bg-paper-2 space-y-1 text-xs">
-              {/* UUID Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-xl hover:bg-paper-3/50 transition-colors group">
-                <span className="text-ink-muted">应用唯一标识 (UUID)</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-ink font-medium select-all">
-                    {app?.id || '未生成 (创建后确定)'}
-                  </span>
-                  {app?.id && (
-                    <button
-                      type="button"
-                      onClick={() => handleCopyUUID(app.id)}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] text-ink-muted hover:text-ink hover:bg-paper-3 rounded-md transition-colors cursor-pointer"
-                      title="复制应用 UUID"
-                    >
-                      {copiedUUID ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
-                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">已复制</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>复制</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Created At Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-xl hover:bg-paper-3/50 transition-colors">
-                <span className="text-ink-muted">创建时间</span>
-                <span className="font-mono text-ink font-medium">
-                  {app?.createdAt || new Date().toISOString()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 危险操作区域 (GitHub 风格 Danger Zone) */}
-          {mode === 'edit' && app && (
-            <div className="rounded-2xl bg-rose-500/10 p-5 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-semibold text-rose-600 dark:text-rose-400">
-                    彻底删除此应用
-                  </h4>
-                  <p className="text-xs text-ink-muted leading-relaxed max-w-xl">
-                    一旦删除此 Docker Compose 应用栈，所有相关容器、网络与本地配置文件将被永久销毁，且不可恢复。请谨慎操作。
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={openDeleteModal}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-xl flex items-center gap-2 transition-all cursor-pointer self-start sm:self-center"
-                >
-                  <Trash className="w-4 h-4" />
-                  <span>删除应用</span>
-                </button>
-              </div>
-            </div>
+          {mode === 'edit' && app ? (
+            <AppSettingsPanel
+              app={app}
+              onOpenDelete={openDeleteModal}
+              onOpenFreshVolumes={() => setIsFreshVolumesModalOpen(true)}
+            />
+          ) : (
+            <p className="text-xs text-ink-muted">创建应用后即可配置 Webhook、部署策略与通知。</p>
           )}
         </div>
       )}
