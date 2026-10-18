@@ -1,7 +1,10 @@
 import { runDocker } from './process.js';
 import { db } from '../db/index.js';
 
-
+// Pruning large hosts routinely takes minutes; killing the CLI early only reports a false failure
+const PRUNE_TIMEOUT = 10 * 60 * 1000;
+// `image prune` prints "Total reclaimed space: 1.2GB", buildx `builder prune` prints "Total:	1.2GB"
+const RECLAIMED = /Total(?: reclaimed space)?:\s*([0-9.]+)\s*([kKMGTP]?B)/;
 
 export class CleanerService {
   /**
@@ -17,8 +20,8 @@ export class CleanerService {
       // 1. Prune dangling images
       if (config.pruneDangling) {
         try {
-          const { stdout } = await runDocker(['image', 'prune', '-f'], { timeout: 15000 });
-          const match = stdout.match(/Total reclaimed space:\s*([0-9.]+)\s*([KMGTP]?B)/i);
+          const { stdout } = await runDocker(['image', 'prune', '-f'], { timeout: PRUNE_TIMEOUT });
+          const match = stdout.match(RECLAIMED);
           if (match) {
             totalFreedBytes += this.parseSize(parseFloat(match[1]), match[2]);
           }
@@ -29,8 +32,8 @@ export class CleanerService {
       // 2. Prune builder cache
       if (config.pruneBuilderCache) {
         try {
-          const { stdout } = await runDocker(['builder', 'prune', '-f'], { timeout: 15000 });
-          const match = stdout.match(/Total reclaimed space:\s*([0-9.]+)\s*([KMGTP]?B)/i);
+          const { stdout } = await runDocker(['builder', 'prune', '-f'], { timeout: PRUNE_TIMEOUT });
+          const match = stdout.match(RECLAIMED);
           if (match) {
             totalFreedBytes += this.parseSize(parseFloat(match[1]), match[2]);
           }
@@ -41,8 +44,8 @@ export class CleanerService {
       // 3. Prune unused images older than retention hours
       const hours = config.unusedRetentionHours || 72;
       try {
-        const { stdout } = await runDocker(['image', 'prune', '-a', '-f', '--filter', `until=${hours}h`], { timeout: 20000 });
-        const match = stdout.match(/Total reclaimed space:\s*([0-9.]+)\s*([KMGTP]?B)/i);
+        const { stdout } = await runDocker(['image', 'prune', '-a', '-f', '--filter', `until=${hours}h`], { timeout: PRUNE_TIMEOUT });
+        const match = stdout.match(RECLAIMED);
         if (match) {
           totalFreedBytes += this.parseSize(parseFloat(match[1]), match[2]);
         }
@@ -72,14 +75,10 @@ export class CleanerService {
     }
   }
 
+  /** Docker formats sizes with decimal (SI) units: kB = 1000 B. */
   private parseSize(num: number, unit: string): number {
-    const u = unit.toUpperCase();
-    if (u === 'B') return num;
-    if (u === 'KB') return num * 1024;
-    if (u === 'MB') return num * 1024 * 1024;
-    if (u === 'GB') return num * 1024 * 1024 * 1024;
-    if (u === 'TB') return num * 1024 * 1024 * 1024 * 1024;
-    return num * 1024 * 1024;
+    const exponent = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'].indexOf(unit.toUpperCase());
+    return num * 1000 ** Math.max(exponent, 0);
   }
 }
 

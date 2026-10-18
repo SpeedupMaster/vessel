@@ -20,7 +20,8 @@ export const apiFetch = async (input: RequestInfo | URL, init?: RequestInit): Pr
   if (!response.ok) {
     if (response.status === 401) window.dispatchEvent(new Event('vessel-session-expired'));
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `请求失败 (${response.status})`);
+    // `code` lets callers react to specific failures (e.g. BACKUP_PASSPHRASE_REQUIRED)
+    throw Object.assign(new Error(body.error || `请求失败 (${response.status})`), { code: body.code, status: response.status });
   }
   return response;
 };
@@ -350,7 +351,7 @@ export function useData(token: string | null = null, enabled = true) {
     document.body.removeChild(a);
   };
 
-  const restoreBackup = async (id: string, options?: { databaseName?: string }) => {
+  const restoreBackup = async (id: string, options?: { databaseName?: string; passphrase?: string }) => {
     const res = await apiFetch(`/api/r2/backups/${id}/restore`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

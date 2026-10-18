@@ -38,7 +38,7 @@ interface BackupsViewProps {
   onTriggerBackupNow: () => Promise<any>;
   onDeleteBackup?: (id: string) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
-  onRestoreBackup?: (id: string) => Promise<any>;
+  onRestoreBackup?: (id: string, options?: { passphrase?: string }) => Promise<any>;
 }
 
 const BACKUP_CRON_PRESETS = [
@@ -69,8 +69,11 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   const [secretAccessKey, setSecretAccessKey] = useState('');
   const [cronSchedule, setCronSchedule] = useState(r2Config?.cronSchedule || '0 3 * * *');
   const [retentionCount, setRetentionCount] = useState(r2Config?.retentionCount || 7);
+  const [backupPassphrase, setBackupPassphrase] = useState('');
+  const hasBackupPassphrase = Boolean(r2Config?.backupPassphrase);
 
   const [showSecret, setShowSecret] = useState(false);
+  const [showPassphrase, setShowPassphrase] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -85,6 +88,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   const [restoringBackup, setRestoringBackup] = useState<BackupRecord | null>(null);
   const [restoreConfirmInput, setRestoreConfirmInput] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
+  // Shown once the server reports the snapshot is encrypted and no usable passphrase is configured
+  const [needsRestorePassphrase, setNeedsRestorePassphrase] = useState(false);
+  const [restorePassphrase, setRestorePassphrase] = useState('');
 
   const isBackupDeleteConfirmed = Boolean(
     deletingBackup &&
@@ -121,18 +127,27 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
   const handleConfirmRestore = async () => {
     if (!restoringBackup || !isRestoreConfirmed || isRestoring) return;
+    if (needsRestorePassphrase && !restorePassphrase) return;
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([30, 50, 60]);
     }
     setIsRestoring(true);
     try {
       if (onRestoreBackup) {
-        const res = await onRestoreBackup(restoringBackup.id);
+        const passphrase = needsRestorePassphrase ? restorePassphrase : undefined;
+        const res = await onRestoreBackup(restoringBackup.id, passphrase ? { passphrase } : undefined);
         toast.success(res?.message || `快照 ${restoringBackup.fileName} 已成功恢复生效！`);
       }
       setRestoringBackup(null);
       setRestoreConfirmInput('');
+      setNeedsRestorePassphrase(false);
+      setRestorePassphrase('');
     } catch (err: any) {
+      if (err.code === 'BACKUP_PASSPHRASE_REQUIRED') {
+        setNeedsRestorePassphrase(true);
+        toast.error(needsRestorePassphrase ? err.message : '该快照已加密，请输入备份时使用的口令');
+        return;
+      }
       toast.error(`恢复失败: ${err.message}`);
     } finally {
       setIsRestoring(false);
@@ -181,7 +196,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         secretAccessKey,
         cronSchedule,
         retentionCount,
+        ...(backupPassphrase ? { backupPassphrase } : {}),
       });
+      setBackupPassphrase('');
       toast.success('Cloudflare R2 备份策略保存成功！');
     } catch (e: any) {
       toast.error(e.message);
@@ -385,6 +402,38 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       {showSecret ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
+                    系统快照加密口令
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassphrase ? 'text' : 'password'}
+                      value={backupPassphrase}
+                      onChange={(e) => setBackupPassphrase(e.target.value)}
+                      placeholder={hasBackupPassphrase ? '已设置，留空则保持不变' : '至少 12 个字符'}
+                      autoComplete="new-password"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassphrase(!showPassphrase)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5 cursor-pointer rounded-lg hover:bg-paper-3"
+                      title={showPassphrase ? '隐藏口令' : '显示口令'}
+                    >
+                      {showPassphrase ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className={`mt-1.5 text-[11px] leading-relaxed ${hasBackupPassphrase ? 'text-ink-muted' : 'text-amber-600 dark:text-amber-400'}`}>
+                    {hasBackupPassphrase
+                      ? '系统快照使用 AES-256-GCM 加密。请离线妥善保存口令：在新服务器恢复时需要输入，丢失后快照无法解密。'
+                      : '未设置口令：系统快照（含各应用 .env 与 R2 凭据）将以明文上传。'}
+                  </p>
                 </div>
 
                 {/* CRON Schedule with Quick-pick Chips */}
@@ -594,6 +643,8 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       onClick={() => {
                         setRestoringBackup(b);
                         setRestoreConfirmInput('');
+                        setNeedsRestorePassphrase(false);
+                        setRestorePassphrase('');
                       }}
                       className="min-h-[36px] px-3 text-xs whitespace-nowrap"
                     >
@@ -805,6 +856,29 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 autoFocus
                 className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 focus:outline-none transition-colors shadow-sm"
               />
+
+              {needsRestorePassphrase && (
+                <div className="space-y-1.5">
+                  <label htmlFor="restore-passphrase-input" className="block text-xs font-medium text-ink/85">
+                    备份口令（该快照已加密）
+                  </label>
+                  <input
+                    id="restore-passphrase-input"
+                    type="password"
+                    autoComplete="off"
+                    value={restorePassphrase}
+                    onChange={(e) => setRestorePassphrase(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && isRestoreConfirmed && restorePassphrase && !isRestoring) {
+                        handleConfirmRestore();
+                      }
+                    }}
+                    placeholder="输入创建该快照时使用的口令"
+                    autoFocus
+                    className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 focus:outline-none transition-colors shadow-sm"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Modal Actions */}
@@ -821,7 +895,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 size="sm"
                 variant="primary"
                 state={isRestoring ? 'loading' : 'default'}
-                disabled={!isRestoreConfirmed || isRestoring}
+                disabled={!isRestoreConfirmed || isRestoring || (needsRestorePassphrase && !restorePassphrase)}
                 onClick={handleConfirmRestore}
                 className="rounded-xl px-4 py-2 text-xs font-medium"
               >

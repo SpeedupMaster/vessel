@@ -42,7 +42,13 @@ export class SchedulerService {
     if (maintenance.autoPrune && cron.validate(maintenance.pruneSchedule)) {
       this.pruneJob = cron.schedule(maintenance.pruneSchedule, async () => {
         console.log('[Scheduler] Executing scheduled Docker prune...');
-        await cleanerService.runSafePrune();
+        try {
+          // Exclusive: `image prune -a` would delete an image a deployment has pulled but not yet started
+          const result = await withAppLock('*', () => cleanerService.runSafePrune());
+          if (!result.success) console.warn(`[Scheduler] Docker prune failed: ${result.summary}`);
+        } catch (error: any) {
+          console.warn(`[Scheduler] Docker prune skipped: ${error?.message || error}`);
+        }
       });
     }
 

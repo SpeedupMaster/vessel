@@ -262,13 +262,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       engine = 'MySQL';
     } else if (desc.includes('Redis') || /redis/i.test(yaml) || n.includes('redis') || envMap.REDIS_PASSWORD) {
       engine = 'Redis';
-    } else if (desc.includes('libSQL') || /libsql|sqld/i.test(yaml) || n.includes('libsql') || envMap.SQLD_AUTH_TOKEN) {
+    } else if (desc.includes('libSQL') || /libsql|sqld/i.test(yaml) || n.includes('libsql') || envMap.SQLD_AUTH_TOKEN || envMap.LIBSQL_AUTH_TOKEN) {
       engine = 'libSQL';
     }
 
     const dbName = envMap.POSTGRES_DB || envMap.MYSQL_DATABASE || envMap.MARIADB_DATABASE || envMap.MONGO_INITDB_DATABASE || '';
     const user = envMap.POSTGRES_USER || envMap.MYSQL_USER || envMap.MARIADB_USER || envMap.MONGO_INITDB_ROOT_USERNAME || '';
-    const password = envMap.POSTGRES_PASSWORD || envMap.MYSQL_PASSWORD || envMap.MARIADB_PASSWORD || envMap.MONGO_INITDB_ROOT_PASSWORD || envMap.REDIS_PASSWORD || envMap.SQLD_AUTH_TOKEN || '';
+    const password = envMap.POSTGRES_PASSWORD || envMap.MYSQL_PASSWORD || envMap.MARIADB_PASSWORD || envMap.MONGO_INITDB_ROOT_PASSWORD || envMap.REDIS_PASSWORD || envMap.LIBSQL_AUTH_TOKEN || envMap.SQLD_AUTH_TOKEN || '';
     const rootPassword = envMap.MYSQL_ROOT_PASSWORD || envMap.MARIADB_ROOT_PASSWORD || '';
     const port = envMap.POSTGRES_PORT || envMap.MYSQL_PORT || envMap.MARIADB_PORT || envMap.MONGO_PORT || envMap.REDIS_PORT || envMap.LIBSQL_PORT || (
       engine === 'PostgreSQL' ? '5432' :

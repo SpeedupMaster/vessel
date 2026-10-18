@@ -10,6 +10,7 @@ import {
 } from '@phosphor-icons/react';
 import { AppItem } from '../../types/index.js';
 import { Button8State } from './Button8State.js';
+import { apiFetch } from '../../hooks/useData.js';
 
 export type DatabaseType = 'postgres' | 'mongodb' | 'mariadb' | 'mysql' | 'redis' | 'libsql';
 
@@ -21,6 +22,8 @@ export interface DatabaseOption {
   defaultDbName?: string;
   hasUserAndDb: boolean;
   hasRootPassword?: boolean;
+  /** libSQL authenticates with a server-generated JWT instead of a password */
+  usesGeneratedToken?: boolean;
   icon: React.ReactNode;
 }
 
@@ -85,6 +88,7 @@ export const DATABASE_OPTIONS: DatabaseOption[] = [
     label: 'libSQL',
     defaultImage: 'ghcr.io/tursodatabase/libsql-server:latest',
     hasUserAndDb: false,
+    usesGeneratedToken: true,
     icon: (
       <svg className="w-8 h-8" viewBox="0 0 217.2 217.2"><path fill="#72f5cf" d="M118,87.2c.7,0,1.3,0,1.9.3.4.1.8.3,1.2.5.2.1.4.2.6.3.4.3.7.5,1.1.9l5.2,5.2c2.7,2.7,2.7,7,0,9.7l-95.1,95.1c-1.3,1.3-3.1,2-4.8,2s-3.5-.7-4.8-2l-5.2-5.2c-2.7-2.7-2.7-7,0-9.7l85.1-85.1,10-10c.3-.3.7-.6,1.1-.9.2-.1.4-.2.6-.3.4-.2.8-.4,1.2-.5.6-.2,1.3-.3,1.9-.3M118,71.2c-2.2,0-4.4.3-6.5.9-1.4.4-2.8,1-4.1,1.7-.7.4-1.3.7-2,1.2-1.3.8-2.5,1.8-3.6,2.9l-10,10L6.7,173c-8.9,8.9-8.9,23.4,0,32.3l5.2,5.2c4.3,4.3,10.1,6.7,16.2,6.7s11.8-2.4,16.2-6.7l95.1-95.1c4.3-4.3,6.7-10.1,6.7-16.2s-2.4-11.8-6.7-16.2l-5.2-5.2c-1.1-1.1-2.3-2.1-3.6-2.9-.6-.4-1.3-.8-1.9-1.2-1.3-.7-2.7-1.3-4.1-1.7-2.1-.6-4.3-.9-6.5-.9h0Z"/><g><path fill="#72f5cf" d="M119.4,16c.3,0,.6,0,.9,0l66.5,3.8c5.8.3,10.3,4.9,10.7,10.7l3.8,66.5c.3,4.4-1.4,8.7-4.5,11.8l-79.7,79.7c-3,3-6.9,4.5-11,4.5s-3.3-.3-4.9-.8l-49.9-16.5c-4.7-1.5-8.3-5.2-9.8-9.8l-16.5-49.9c-1.8-5.6-.4-11.7,3.8-15.8L108.4,20.5c2.9-2.9,6.9-4.5,11-4.5M119.4,0c-8.4,0-16.3,3.3-22.3,9.2L17.4,88.9c-8.5,8.5-11.4,20.8-7.6,32.1l16.5,49.9c3.1,9.4,10.6,16.9,20,20l49.9,16.5c3.2,1.1,6.5,1.6,9.9,1.6,8.4,0,16.3-3.3,22.3-9.2l79.7-79.7c6.3-6.3,9.7-15.1,9.2-24.1l-3.8-66.5c-.8-13.9-11.9-24.9-25.7-25.7L121.2,0c-.6,0-1.2,0-1.8,0h0Z"/><path fill="#a8f7d9" d="M24.9,116.1l16.5,49.9c1.5,4.7,5.2,8.3,9.8,9.8l49.9,16.5c5.6,1.8,11.7.4,15.8-3.8l79.7-79.7c3.1-3.1,4.8-7.4,4.5-11.8l-3.8-66.5c-.3-5.8-4.9-10.3-10.7-10.7l-66.5-3.8c-4.4-.3-8.7,1.4-11.8,4.5L28.7,100.3c-4.1,4.1-5.6,10.3-3.8,15.8Z"/><path fill="#141b1f" className="dark:fill-slate-300" d="M119.4,16c.3,0,.6,0,.9,0l66.5,3.8c5.8.3,10.3,4.9,10.7,10.7l3.8,66.5c.3,4.4-1.4,8.7-4.5,11.8l-79.7,79.7c-3,3-6.9,4.5-11,4.5s-3.3-.3-4.9-.8l-49.9-16.5c-4.7-1.5-8.3-5.2-9.8-9.8l-16.5-49.9c-1.8-5.6-.4-11.7,3.8-15.8L108.4,20.5c2.9-2.9,6.9-4.5,11-4.5M119.4,6c-6.8,0-13.2,2.7-18,7.5L21.6,93.2c-6.8,6.8-9.2,16.8-6.2,26l16.5,49.9c2.5,7.6,8.6,13.7,16.2,16.2l49.9,16.5c2.6.9,5.3,1.3,8,1.3,6.8,0,13.2-2.7,18-7.5l79.7-79.7c5.1-5.1,7.8-12.2,7.4-19.5l-3.8-66.5c-.6-10.8-9.3-19.5-20.1-20.1l-66.5-3.8c-.5,0-1,0-1.5,0h0Z"/><path fill="#141b1f" className="dark:fill-slate-300" d="M136.7,173.7l6.9-6.9c-.2-.1-.4-.2-.6-.3l-27.6-9.1-6.9,6.9,28.3,9.3Z"/><path fill="#141b1f" className="dark:fill-slate-300" d="M166.5,143.9l6.9-6.9c-.2-.1-.4-.2-.6-.3l-27.6-9.1-6.9,6.9,28.3,9.3Z"/><path fill="#141b1f" className="dark:fill-slate-300" d="M43.5,80.5l6.9-6.9c.1.2.2.4.3.6l9.1,27.6-6.9,6.9-9.3-28.3Z"/><path fill="#141b1f" className="dark:fill-slate-300" d="M73.3,50.7l6.9-6.9c.1.2.2.4.3.6l9.1,27.6-6.9,6.9-9.3-28.3Z"/></g><path fill="#79ac91" d="M130.6,101.5l-97.7,97.7c-2.7,2.7-7,2.7-9.7,0l-5.2-5.2c-2.7-2.7-2.7-7,0-9.7l97.7-97.7c1.5-1.5,3.4-2.4,5.5-2.6l7.9-.8c2.8-.3,5.1,2.1,4.9,4.9l-.8,7.9c-.2,2.1-1.1,4-2.6,5.5Z"/><path fill="#141b1f" className="dark:fill-slate-300" d="M129.5,83.3c2.6,0,4.7,2.2,4.4,4.9l-.8,7.9c-.2,2.1-1.1,4-2.6,5.5l-97.7,97.7c-1.3,1.3-3.1,2-4.8,2s-3.5-.7-4.8-2l-5.2-5.2c-2.7-2.7-2.7-7,0-9.7l97.7-97.7c1.5-1.5,3.4-2.4,5.5-2.6l7.9-.8c.1,0,.3,0,.4,0M129.5,73.3h0c-.5,0-.9,0-1.4,0l-7.9.8c-4.4.4-8.5,2.4-11.5,5.5L10.9,177.3c-6.6,6.6-6.6,17.3,0,23.8l5.2,5.2c3.2,3.2,7.4,4.9,11.9,4.9s8.7-1.8,11.9-4.9l97.7-97.7c3.1-3.1,5-7.2,5.5-11.5l.8-7.9c.4-4-.9-8.1-3.7-11.1-2.7-3-6.6-4.7-10.7-4.7h0Z"/></svg>
     ),
@@ -96,6 +100,33 @@ function generateSecurePassword(length = 24): string {
   const array = new Uint8Array(length);
   window.crypto.getRandomValues(array);
   return Array.from(array, (byte) => chars[byte % chars.length]).join('');
+}
+
+// Values are written unquoted into .env/Compose and embedded in connection URLs,
+// so restrict them to characters none of those formats treat specially.
+const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,62}$/;
+const PASSWORD_PATTERN = /^[A-Za-z0-9._~-]{8,128}$/;
+const IMAGE_PATTERN = /^[a-z0-9][a-z0-9._\/:@-]{0,254}$/i;
+
+/**
+ * Postgres 18+ images keep data under /var/lib/postgresql/<major>/docker and declare
+ * VOLUME /var/lib/postgresql; older ones use /var/lib/postgresql/data. Derivative images
+ * (pgvector, postgis, timescale…) without a recognisable version are assumed pre-18.
+ */
+function isLegacyPostgresImage(image: string): boolean {
+  const ref = image.split('@')[0];
+  const lastSegment = ref.slice(ref.lastIndexOf('/') + 1);
+  const [repo, tag = ''] = lastSegment.split(':');
+  const versionMatch = tag.match(/pg(\d{1,2})(?!\d)/i) || tag.match(/^(\d{1,2})(?=$|[.-])/);
+  if (versionMatch) return Number(versionMatch[1]) < 18;
+  const isOfficial = repo === 'postgres' && /^(?:(?:docker\.io\/)?library\/)?postgres$/.test(ref.split(':')[0]);
+  return !isOfficial;
+}
+
+/** Docker container names / app IDs must start with an alphanumeric character. */
+function generateInstanceId(name: string, fallback: string): string {
+  const slug = name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-{2,}/g, '-').replace(/^[^a-z0-9]+|[-_]+$/g, '').slice(0, 32);
+  return `${slug || fallback}-${Math.random().toString(36).slice(2, 6).padEnd(4, '0')}`;
 }
 
 interface CreateDatabaseModalProps {
@@ -124,15 +155,21 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
   const scrollBodyRef = useRef<HTMLDivElement>(null);
   const formSectionRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  // Whether the user has typed their own instance name since the modal opened
+  const nameEditedRef = useRef(false);
 
   const currentOption = DATABASE_OPTIONS.find((o) => o.type === selectedType) || DATABASE_OPTIONS[0];
+
+  useEffect(() => {
+    if (isOpen) nameEditedRef.current = false;
+  }, [isOpen]);
 
   // Initialize or reset defaults when switching database type
   useEffect(() => {
     if (isOpen) {
       setDbPassword(generateSecurePassword(20));
       setDbRootPassword(generateSecurePassword(20));
-      setName(`${selectedType}-db`);
+      if (!nameEditedRef.current) setName(`${selectedType}-db`);
       setDbName('');
       setDbUser('');
       setDockerImage('');
@@ -181,21 +218,45 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       setError('请输入数据库实例名称 (Name)');
       return;
     }
-    if (!dbPassword.trim()) {
-      setError('请输入或生成数据库访问密码 (Database Password)');
-      return;
+    if (!currentOption.usesGeneratedToken) {
+      if (!dbPassword.trim()) {
+        setError('请输入或生成数据库访问密码 (Database Password)');
+        return;
+      }
+      if (!PASSWORD_PATTERN.test(dbPassword)) {
+        setError('数据库密码需为 8-128 位，仅可包含字母、数字及 . _ ~ -（其他字符会破坏 .env 与连接串）');
+        return;
+      }
     }
-    if (currentOption.hasRootPassword && !dbRootPassword.trim()) {
-      setError('请输入或生成 Root 密码 (Database Root password)');
-      return;
+    if (currentOption.hasRootPassword) {
+      if (!dbRootPassword.trim()) {
+        setError('请输入或生成 Root 密码 (Database Root password)');
+        return;
+      }
+      if (!PASSWORD_PATTERN.test(dbRootPassword)) {
+        setError('Root 密码需为 8-128 位，仅可包含字母、数字及 . _ ~ -');
+        return;
+      }
     }
-
-    setIsSubmitting(true);
-    setError(null);
 
     const imageToUse = dockerImage.trim() || currentOption.defaultImage;
     const finalDbName = dbName.trim() || currentOption.defaultDbName || 'app_db';
     const finalDbUser = dbUser.trim() || currentOption.defaultUser || 'root';
+
+    if (!IMAGE_PATTERN.test(imageToUse)) {
+      setError('Docker 镜像格式无效，例如 postgres:17-alpine 或 ghcr.io/org/image:tag');
+      return;
+    }
+    if (currentOption.hasUserAndDb) {
+      if (!IDENTIFIER_PATTERN.test(finalDbName)) {
+        setError('数据库名称需以字母或下划线开头，仅可包含字母、数字、_ 和 -（最长 63 位）');
+        return;
+      }
+      if (!IDENTIFIER_PATTERN.test(finalDbUser)) {
+        setError('数据库用户名需以字母或下划线开头，仅可包含字母、数字、_ 和 -（最长 63 位）');
+        return;
+      }
+    }
 
     // Prevent MySQL/MariaDB official images from failing due to user being root
     if ((selectedType === 'mysql' || selectedType === 'mariadb') && finalDbUser.toLowerCase() === 'root') {
@@ -203,8 +264,26 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
+    setError(null);
+
     // Generate stable app ID and internal hostname (e.g. postgres-db-xxxx)
-    const generatedId = name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 32) + '-' + Math.random().toString(36).slice(2, 6);
+    const generatedId = generateInstanceId(name.trim(), `${selectedType}-db`);
+    const user = encodeURIComponent(finalDbUser);
+    const pass = encodeURIComponent(dbPassword);
+    const rootPass = encodeURIComponent(dbRootPassword);
+
+    let libsqlCredentials: { jwtKey: string; authToken: string } | null = null;
+    if (currentOption.usesGeneratedToken) {
+      try {
+        const res = await apiFetch('/api/databases/libsql-credentials', { method: 'POST' });
+        libsqlCredentials = await res.json();
+      } catch (err: any) {
+        setError(`生成 libSQL 访问凭据失败：${err.message || err}`);
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     // Assemble Docker Compose YAML and .env
     let composeYaml = '';
@@ -212,7 +291,7 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
 
     switch (selectedType) {
       case 'postgres': {
-        const isPgLegacy = /postgres:(?:1[0-7]|[1-9])(?:[.-]|$)/.test(imageToUse);
+        const isPgLegacy = isLegacyPostgresImage(imageToUse);
         const pgMountPath = isPgLegacy ? '/var/lib/postgresql/data' : '/var/lib/postgresql';
         const pgDataEnv = isPgLegacy ? '\n      PGDATA: /var/lib/postgresql/data/pgdata' : '';
 
@@ -232,10 +311,14 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
       POSTGRES_USER: \${POSTGRES_USER:-${finalDbUser}}
       POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}${pgDataEnv}
     volumes:
-      - ./data:${pgMountPath}
+      - db-data:${pgMountPath}
     networks:
       - default
       - vessel-net
+
+# Named volume: relative bind paths resolve inside the Vessel container, not on the Docker host
+volumes:
+  db-data:
 
 networks:
   vessel-net:
@@ -247,7 +330,7 @@ POSTGRES_USER=${finalDbUser}
 POSTGRES_PASSWORD=${dbPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@${generatedId}:5432/${finalDbName}
+INTERNAL_DATABASE_URL=postgresql://${user}:${pass}@${generatedId}:5432/${finalDbName}
 `;
         break;
       }
@@ -269,10 +352,14 @@ INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@${generatedId}:5
       MONGO_INITDB_ROOT_USERNAME: \${MONGO_INITDB_ROOT_USERNAME:-${finalDbUser}}
       MONGO_INITDB_ROOT_PASSWORD: \${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
-      - ./data:/data/db
+      - db-data:/data/db
     networks:
       - default
       - vessel-net
+
+# Named volume: relative bind paths resolve inside the Vessel container, not on the Docker host
+volumes:
+  db-data:
 
 networks:
   vessel-net:
@@ -284,7 +371,7 @@ MONGO_INITDB_ROOT_USERNAME=${finalDbUser}
 MONGO_INITDB_ROOT_PASSWORD=${dbPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@${generatedId}:27017/${finalDbName}?authSource=admin
+INTERNAL_MONGO_URL=mongodb://${user}:${pass}@${generatedId}:27017/${finalDbName}?authSource=admin
 `;
         break;
 
@@ -312,10 +399,14 @@ INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@${generatedId}:27017/$
       MARIADB_ROOT_HOST: "%"
       MYSQL_ROOT_HOST: "%"
     volumes:
-      - ./data:/var/lib/mysql
+      - db-data:/var/lib/mysql
     networks:
       - default
       - vessel-net
+
+# Named volume: relative bind paths resolve inside the Vessel container, not on the Docker host
+volumes:
+  db-data:
 
 networks:
   vessel-net:
@@ -329,8 +420,8 @@ MARIADB_ROOT_PASSWORD=${dbRootPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@${generatedId}:3306/${finalDbName}
-INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${finalDbName}
+INTERNAL_DATABASE_URL=mysql://${user}:${pass}@${generatedId}:3306/${finalDbName}
+INTERNAL_DATABASE_ROOT_URL=mysql://root:${rootPass}@${generatedId}:3306/${finalDbName}
 `;
         break;
 
@@ -353,10 +444,14 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${
       MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_HOST: "%"
     volumes:
-      - ./data:/var/lib/mysql
+      - db-data:/var/lib/mysql
     networks:
       - default
       - vessel-net
+
+# Named volume: relative bind paths resolve inside the Vessel container, not on the Docker host
+volumes:
+  db-data:
 
 networks:
   vessel-net:
@@ -369,8 +464,8 @@ MYSQL_PASSWORD=${dbPassword}
 MYSQL_ROOT_PASSWORD=${dbRootPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_DATABASE_URL=mysql://${finalDbUser}:${dbPassword}@${generatedId}:3306/${finalDbName}
-INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${finalDbName}
+INTERNAL_DATABASE_URL=mysql://${user}:${pass}@${generatedId}:3306/${finalDbName}
+INTERNAL_DATABASE_ROOT_URL=mysql://root:${rootPass}@${generatedId}:3306/${finalDbName}
 `;
         break;
 
@@ -381,17 +476,25 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${
     container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
     healthcheck:
-      test: ['CMD-SHELL', 'redis-cli --no-auth-warning -a "\${REDIS_PASSWORD}" ping | grep -q PONG']
+      test: ['CMD-SHELL', 'REDISCLI_AUTH="$\${REDIS_PASSWORD}" redis-cli ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
+    # $$ defers expansion to the container shell, keeping the password out of the rendered command;
+    # re-enter docker-entrypoint.sh so it still drops privileges to the redis user
+    environment:
+      REDIS_PASSWORD: \${REDIS_PASSWORD}
+    command: ['sh', '-c', 'exec docker-entrypoint.sh redis-server --requirepass "$\${REDIS_PASSWORD}" --appendonly yes']
     volumes:
-      - ./data:/data
+      - db-data:/data
     networks:
       - default
       - vessel-net
+
+# Named volume: relative bind paths resolve inside the Vessel container, not on the Docker host
+volumes:
+  db-data:
 
 networks:
   vessel-net:
@@ -401,32 +504,47 @@ networks:
 REDIS_PASSWORD=${dbPassword}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
-INTERNAL_REDIS_URL=redis://:${dbPassword}@${generatedId}:6379
+INTERNAL_REDIS_URL=redis://:${pass}@${generatedId}:6379
 `;
         break;
 
       case 'libsql':
+        if (!libsqlCredentials) break;
         composeYaml = `services:
   database:
     image: \${LIBSQL_IMAGE:-${imageToUse}}
     container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
+    # The image ships without curl/wget; probe sqld's unauthenticated /health via bash /dev/tcp
+    healthcheck:
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET /health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n" >&3 && head -n 1 <&3 | grep -q " 200 "']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     environment:
-      SQLD_AUTH_TOKEN: \${SQLD_AUTH_TOKEN}
+      SQLD_AUTH_JWT_KEY: \${SQLD_AUTH_JWT_KEY}
       SQLD_NODE: "primary"
       SQLD_HTTP_LISTEN_ADDR: "0.0.0.0:8080"
     volumes:
-      - ./data:/var/lib/sqld
+      - db-data:/var/lib/sqld
     networks:
       - default
       - vessel-net
+
+# Named volume: relative bind paths resolve inside the Vessel container, not on the Docker host
+volumes:
+  db-data:
 
 networks:
   vessel-net:
     external: true
 `;
         envContent = `LIBSQL_IMAGE=${imageToUse}
-SQLD_AUTH_TOKEN=${dbPassword}
+# Ed25519 公钥 (sqld 用于校验 JWT)
+SQLD_AUTH_JWT_KEY=${libsqlCredentials.jwtKey}
+# 客户端 authToken (JWT，长期有效；轮换需同时更换公钥)
+LIBSQL_AUTH_TOKEN=${libsqlCredentials.authToken}
 # 外部网络连接已关闭 (仅限容器内网访问)
 # 集群内部连接串
 INTERNAL_LIBSQL_URL=http://${generatedId}:8080
@@ -544,7 +662,10 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   data-bwignore="true"
                   data-protonpass-ignore="true"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    nameEditedRef.current = true;
+                    setName(e.target.value);
+                  }}
                   placeholder="例如 my-postgres"
                   autoCapitalize="off"
                   autoCorrect="off"
@@ -601,7 +722,14 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                 </div>
               )}
 
+              {currentOption.usesGeneratedToken && (
+                <p className="p-3.5 bg-paper-3 text-ink-muted rounded-xl text-xs leading-relaxed">
+                  libSQL 使用 JWT 鉴权：创建时将自动生成 Ed25519 密钥对，访问令牌保存在环境变量 <code className="font-mono">LIBSQL_AUTH_TOKEN</code> 中。
+                </p>
+              )}
+
               {/* Database Password */}
+              {!currentOption.usesGeneratedToken && (
               <div>
                 <label className="block text-xs font-semibold text-ink-muted mb-1.5">数据库密码 (Database Password)</label>
                 <div className="relative flex items-center">
@@ -641,6 +769,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Database Root password (for MariaDB & MySQL) */}
               {currentOption.hasRootPassword && (

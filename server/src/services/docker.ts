@@ -3,6 +3,7 @@ import path from 'path';
 import { runDocker } from './process.js';
 import YAML from 'yaml';
 import { APPS_DATA_DIR, db } from '../db/index.js';
+import { mysqlClientCommand } from './mysqlClient.js';
 import { ContainerInfo, AppItem, AppDeploySettings, AppDiagnostics, ContainerDiagnostics } from '../types/index.js';
 
 const ZERO_TIME = '0001-01-01T00:00:00Z';
@@ -334,29 +335,14 @@ export class DockerService {
         } else {
           execArgs = ['psql', '-U', user, '-d', dbName, '-c', rawCmd];
         }
-      } else if (isMariaDB) {
-        const user = envVars['MARIADB_USER'] || 'root';
-        const pass = envVars['MARIADB_PASSWORD'] || envVars['MARIADB_ROOT_PASSWORD'] || '';
-        const dbName = envVars['MARIADB_DATABASE'] || '';
+      } else if (isMariaDB || isMySQL) {
+        const tool = isMariaDB ? 'mariadb' : 'mysql';
+        const dbName = envVars['MARIADB_DATABASE'] || envVars['MYSQL_DATABASE'] || '';
         if (rawCmd.startsWith('mariadb') || rawCmd.startsWith('mysql') || rawCmd.startsWith('sh ') || rawCmd.startsWith('bash ')) {
           execArgs = ['sh', '-c', rawCmd];
         } else {
-          execArgs = ['mariadb', '-u', user];
-          if (pass) execArgs.push(`-p${pass}`);
-          if (dbName) execArgs.push(dbName);
-          execArgs.push('-e', rawCmd);
-        }
-      } else if (isMySQL) {
-        const user = envVars['MYSQL_USER'] || 'root';
-        const pass = envVars['MYSQL_PASSWORD'] || envVars['MYSQL_ROOT_PASSWORD'] || '';
-        const dbName = envVars['MYSQL_DATABASE'] || '';
-        if (rawCmd.startsWith('mysql') || rawCmd.startsWith('sh ') || rawCmd.startsWith('bash ')) {
-          execArgs = ['sh', '-c', rawCmd];
-        } else {
-          execArgs = ['mysql', '-u', user];
-          if (pass) execArgs.push(`-p${pass}`);
-          if (dbName) execArgs.push(dbName);
-          execArgs.push('-e', rawCmd);
+          // Terminal queries run as the application user; the password stays out of argv
+          execArgs = mysqlClientCommand(tool, [...(dbName ? [dbName] : []), '-e', rawCmd], { preferRoot: false });
         }
       } else if (isRedis) {
         const pass = envVars['REDIS_PASSWORD'] || '';

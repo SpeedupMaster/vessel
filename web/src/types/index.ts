@@ -59,6 +59,8 @@ export interface R2Config {
   secretAccessKey: string;
   cronSchedule: string;
   retentionCount: number;
+  /** Encrypts system snapshots (AES-256-GCM); masked in API responses */
+  backupPassphrase?: string;
   lastBackupAt?: string;
   lastBackupStatus?: 'success' | 'failed' | 'idle' | 'running';
   lastBackupMessage?: string;

@@ -22,6 +22,8 @@ import { DATA_DIR, APPS_DATA_DIR, db } from '../db/index.js';
 import { BackupRecord, R2Config, AppItem } from '../types/index.js';
 import { caddyService } from './caddy.js';
 import { dockerService } from './docker.js';
+import { mysqlClientCommand } from './mysqlClient.js';
+import { ENCRYPTED_SUFFIX, PASSPHRASE_REQUIRED, PassphraseError, decryptFile, encryptFile, isEncryptedBackup } from './backupCrypto.js';
 
 export function backupObjectKey(record: Pick<BackupRecord, 'type' | 'targetId' | 'fileName'>): string {
   const prefix = record.type === 'system' ? 'system' : `${record.type === 'app_db' ? 'databases' : 'apps'}/${record.targetId}`;
@@ -110,15 +112,19 @@ export class R2BackupService {
     const client = this.getS3Client(r2Config);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `vessel_system_${timestamp}_${randomUUID()}.zip`;
+    const zipName = `vessel_system_${timestamp}_${randomUUID()}.zip`;
     const backupsDir = path.join(DATA_DIR, 'backups');
     if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
 
-    const localZipPath = path.join(backupsDir, fileName);
+    const localZipPath = path.join(backupsDir, zipName);
+    // Snapshots carry every app's .env and vessel_db.json credentials; encrypt them when a passphrase is set
+    const passphrase = r2Config.backupPassphrase;
+    const fileName = passphrase ? zipName + ENCRYPTED_SUFFIX : zipName;
+    const localPath = path.join(backupsDir, fileName);
 
     try {
       // Create zip of DATA_DIR excluding backups
-      const sizeBytes = await new Promise<number>((resolve, reject) => {
+      let sizeBytes = await new Promise<number>((resolve, reject) => {
         const output = fs.createWriteStream(localZipPath);
         const archive = archiver('zip', { zlib: { level: 9 } });
 
@@ -137,6 +143,12 @@ export class R2BackupService {
         archive.finalize().catch(reject);
       });
 
+      if (passphrase) {
+        await encryptFile(localZipPath, localPath, passphrase);
+        fs.rmSync(localZipPath, { force: true });
+        sizeBytes = fs.statSync(localPath).size;
+      }
+
       let status: 'completed' | 'failed' = 'completed';
 
       // If R2 is enabled and configured, upload to Cloudflare R2
@@ -145,8 +157,8 @@ export class R2BackupService {
           new PutObjectCommand({
             Bucket: r2Config.bucketName,
             Key: `system/${fileName}`,
-            Body: fs.createReadStream(localZipPath),
-            ContentType: 'application/zip',
+            Body: fs.createReadStream(localPath),
+            ContentType: passphrase ? 'application/octet-stream' : 'application/zip',
           })
         );
       }
@@ -172,6 +184,9 @@ export class R2BackupService {
       await this.enforceRetention(record);
       return { success: true, record };
     } catch (e: any) {
+      // No record points at a partial or un-uploaded archive, so retention would never remove it
+      fs.rmSync(localZipPath, { force: true });
+      fs.rmSync(localPath, { force: true });
       db.set('r2Config', { ...db.get('r2Config'), lastBackupStatus: 'failed', lastBackupMessage: e.message });
       return { success: false, error: e.message };
     }
@@ -254,6 +269,7 @@ export class R2BackupService {
       await this.enforceRetention(record);
       return { success: true, record };
     } catch (e: any) {
+      fs.rmSync(localZipPath, { force: true });
       return { success: false, error: e.message };
     } finally {
       fs.rmSync(appDir, { recursive: true, force: true });
@@ -293,30 +309,19 @@ export class R2BackupService {
       const user = envVars['POSTGRES_USER'] || 'postgres';
       const pass = envVars['POSTGRES_PASSWORD'] || '';
       if (targetDb === 'all') {
-        dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'pg_dumpall', '-U', user];
+        // --clean lets a full restore replace existing databases instead of duplicating rows
+        dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'pg_dumpall', '-U', user, '--clean', '--if-exists'];
       } else {
         dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'pg_dump', '-U', user, '-d', targetDb, '--clean', '--if-exists'];
       }
-    } else if (isMariaDB) {
-      const user = envVars['MARIADB_USER'] || 'root';
-      const pass = envVars['MARIADB_PASSWORD'] || envVars['MARIADB_ROOT_PASSWORD'] || '';
-      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mariadb-dump', '-u', user];
-      if (pass) dumpArgs.push(`-p${pass}`);
-      if (targetDb === 'all') {
-        dumpArgs.push('--all-databases', '--single-transaction', '--quick');
-      } else {
-        dumpArgs.push('--databases', targetDb, '--single-transaction', '--quick');
-      }
-    } else if (isMySQL) {
-      const user = envVars['MYSQL_USER'] || 'root';
-      const pass = envVars['MYSQL_PASSWORD'] || envVars['MYSQL_ROOT_PASSWORD'] || '';
-      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mysqldump', '-u', user];
-      if (pass) dumpArgs.push(`-p${pass}`);
-      if (targetDb === 'all') {
-        dumpArgs.push('--all-databases', '--single-transaction', '--quick');
-      } else {
-        dumpArgs.push('--databases', targetDb, '--single-transaction', '--quick');
-      }
+    } else if (isMariaDB || isMySQL) {
+      // Credentials come from the container environment (root preferred: full dumps need
+      // privileges the application user lacks). A single database is dumped without
+      // --databases so the file carries no CREATE DATABASE/USE and can be restored under another name.
+      const tool = isMariaDB ? 'mariadb-dump' : 'mysqldump';
+      const scope = targetDb === 'all' ? ['--all-databases'] : [targetDb];
+      dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database',
+        ...mysqlClientCommand(tool, ['--single-transaction', '--quick', '--routines', '--triggers', ...scope])];
     } else if (isMongo) {
       const user = envVars['MONGO_INITDB_ROOT_USERNAME'] || '';
       const pass = envVars['MONGO_INITDB_ROOT_PASSWORD'] || '';
@@ -335,6 +340,9 @@ export class R2BackupService {
       const saved = await runDocker(saveArgs, { cwd: appDir });
       if (saved.stdout.trim() !== 'OK') return { success: false, error: 'Redis SAVE failed: ' + saved.stdout };
       dumpArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', databaseService, 'cat', '/data/dump.rdb'];
+    } else if (yamlLower.includes('libsql') || yamlLower.includes('sqld')) {
+      // libSQL has no logical dump tool; snapshot its data volume instead
+      return this.runAppBackup(app);
     } else {
       return { success: false, error: '此数据库不支持逻辑导出，请使用应用数据卷备份' };
     }
@@ -469,8 +477,8 @@ export class R2BackupService {
    */
   public async restoreBackup(
     id: string,
-    options?: { databaseName?: string }
-  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    options?: { databaseName?: string; passphrase?: string }
+  ): Promise<{ success: boolean; message?: string; error?: string; code?: string }> {
     const backups = db.get('backups') || [];
     const record = backups.find((b) => b.id === id);
     if (!record) return { success: false, error: '未找到该备份记录' };
@@ -529,7 +537,15 @@ export class R2BackupService {
     let databaseReplaced = false;
     let preserveRecovery = false;
     try {
-      this.extractValidatedZip(localPath, stage);
+      let archivePath = localPath;
+      if (isEncryptedBackup(record.fileName)) {
+        // Explicit passphrase first: the configured one may have changed since this snapshot
+        const passphrase = options?.passphrase || db.get('r2Config').backupPassphrase;
+        if (!passphrase) throw new PassphraseError('该系统快照已加密，请输入备份口令');
+        archivePath = path.join(stage, 'snapshot.zip');
+        await decryptFile(localPath, archivePath, passphrase);
+      }
+      this.extractValidatedZip(archivePath, stage);
       const restored = JSON.parse(fs.readFileSync(path.join(stage, 'vessel_db.json'), 'utf8'));
       if (!Array.isArray(restored.apps) || !Array.isArray(restored.domains)) throw new Error('Invalid system snapshot');
       const restoredIds = new Set<string>();
@@ -559,6 +575,13 @@ export class R2BackupService {
         }
         dockerService.prepareAppFiles(app);
       }
+      // Apps created after the snapshot still have running containers; keep managing them
+      // (with their domains) instead of silently dropping them from Vessel.
+      const keptApps = db.get('apps').filter(app => !restoredIds.has(app.id.toLowerCase()));
+      const keptIds = new Set(keptApps.map(app => app.id));
+      const restoredDomains = new Set(restored.domains.map((item: any) => String(item.domain).toLowerCase()));
+      restored.apps.push(...keptApps);
+      restored.domains.push(...db.get('domains').filter(item => keptIds.has(item.appId) && !restoredDomains.has(item.domain.toLowerCase())));
       fs.copyFileSync(databasePath, databasePath + '.before-restore');
       const temporary = databasePath + '.restore';
       fs.writeFileSync(temporary, JSON.stringify(restored, null, 2), { mode: 0o600 });
@@ -566,7 +589,8 @@ export class R2BackupService {
       databaseReplaced = true;
       db.reload();
       caddyService.syncCaddyfile();
-      return { success: true, message: '系统配置快照已恢复；管理员凭据保持不变，应用卷数据需从应用备份单独恢复。' };
+      const keptNote = keptApps.length ? `快照之后创建的 ${keptApps.length} 个应用（${keptApps.map(app => app.name).join('、')}）已保留；` : '';
+      return { success: true, message: `系统配置快照已恢复；${keptNote}管理员凭据保持不变，应用卷数据需从应用备份单独恢复。` };
     } catch (error: any) {
       const failures: string[] = [];
       for (const item of changedApps.reverse()) {
@@ -584,6 +608,7 @@ export class R2BackupService {
         } catch (rollbackError) { failures.push(String(rollbackError)); }
       }
       preserveRecovery = failures.length > 0;
+      if (error instanceof PassphraseError) return { success: false, error: error.message, code: PASSPHRASE_REQUIRED };
       return { success: false, error: `恢复失败: ${error.message}${preserveRecovery ? `；回滚失败，原文件保留在 ${stage} 与 ${databasePath}.before-restore: ${failures.join('; ')}` : ''}` };
     } finally { if (!preserveRecovery) fs.rmSync(stage, { recursive: true, force: true }); }
   }
@@ -637,29 +662,47 @@ export class R2BackupService {
     const isMongo = yamlLower.includes('mongo');
 
     let restoreArgs: string[] = [];
+    let tolerateErrors = false;
+    const exec = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T'];
+    const requestedDb = options?.databaseName?.trim();
+    const explicitTarget = requestedDb && requestedDb !== 'all' ? requestedDb : undefined;
 
     if (isPostgres) {
       const user = envVars['POSTGRES_USER'] || 'postgres';
       const pass = envVars['POSTGRES_PASSWORD'] || '';
       const defaultDb = envVars['POSTGRES_DB'] || 'postgres';
-      const targetDb = options?.databaseName?.trim() || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
-      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', '-e', `PGPASSWORD=${pass}`, 'database', 'psql', '-v', 'ON_ERROR_STOP=1', '-U', user, '-d', targetDb];
-    } else if (isMariaDB) {
-      const user = envVars['MARIADB_USER'] || 'root';
-      const pass = envVars['MARIADB_PASSWORD'] || envVars['MARIADB_ROOT_PASSWORD'] || '';
-      const defaultDb = envVars['MARIADB_DATABASE'] || 'app_db';
-      const targetDb = options?.databaseName?.trim() || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
-      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mariadb', '-u', user];
-      if (pass) restoreArgs.push(`-p${pass}`);
-      if (targetDb && targetDb !== 'all') restoreArgs.push(targetDb);
-    } else if (isMySQL) {
-      const user = envVars['MYSQL_USER'] || 'root';
-      const pass = envVars['MYSQL_PASSWORD'] || envVars['MYSQL_ROOT_PASSWORD'] || '';
-      const defaultDb = envVars['MYSQL_DATABASE'] || 'app_db';
-      const targetDb = options?.databaseName?.trim() || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
-      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mysql', '-u', user];
-      if (pass) restoreArgs.push(`-p${pass}`);
-      if (targetDb && targetDb !== 'all') restoreArgs.push(targetDb);
+      const head = await this.readDumpHead(localPath);
+      if (head.includes('PostgreSQL database cluster dump')) {
+        if (explicitTarget) return { success: false, error: '完整集群备份 (pg_dumpall) 会按原数据库名恢复，不能指定目标数据库；请留空或填写 all' };
+        if (!head.includes('DROP DATABASE')) {
+          return { success: false, error: '该完整备份由旧版本生成，不含清理语句，直接导入会与现有数据冲突或产生重复行；请导入到空实例（psql -U <user> -d postgres），或改用单库备份恢复' };
+        }
+        // --clean dumps drop and recreate databases, which fails while clients are connected
+        await runDocker([...exec, '-e', `PGPASSWORD=${pass}`, databaseService, 'psql', '-U', user, '-d', 'postgres', '-c',
+          'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname IS NOT NULL'], { cwd: appDir });
+        // No ON_ERROR_STOP: a cluster dump always re-creates the connecting role, which already exists
+        restoreArgs = [...exec, '-e', `PGPASSWORD=${pass}`, 'database', 'psql', '-U', user, '-d', 'postgres'];
+        tolerateErrors = true;
+      } else {
+        const targetDb = explicitTarget || (record.databaseName && record.databaseName !== 'all' ? record.databaseName : defaultDb);
+        restoreArgs = [...exec, '-e', `PGPASSWORD=${pass}`, 'database', 'psql', '-v', 'ON_ERROR_STOP=1', '-U', user, '-d', targetDb];
+      }
+    } else if (isMariaDB || isMySQL) {
+      const tool = isMariaDB ? 'mariadb' : 'mysql';
+      const defaultDb = envVars['MARIADB_DATABASE'] || envVars['MYSQL_DATABASE'] || 'app_db';
+      const head = await this.readDumpHead(localPath);
+      // Full dumps and older single-database dumps (--databases) select their own database
+      const pinnedDb = head.match(/^USE `([^`]+)`;/m)?.[1];
+      const sourceDb = record.databaseName && record.databaseName !== 'all' ? record.databaseName : undefined;
+      const targetDb = explicitTarget || sourceDb || (pinnedDb ? undefined : defaultDb);
+      if (pinnedDb && targetDb && targetDb !== pinnedDb) {
+        return { success: false, error: `该备份文件内含 USE \`${pinnedDb}\`，只能恢复到原数据库 ${pinnedDb}；请将目标数据库留空或填写 ${pinnedDb}` };
+      }
+      if (!pinnedDb && targetDb) {
+        if (!/^[A-Za-z0-9_$-]{1,64}$/.test(targetDb)) return { success: false, error: '目标数据库名称无效' };
+        await runDocker([...exec, databaseService, ...mysqlClientCommand(tool, ['-e', `CREATE DATABASE IF NOT EXISTS \`${targetDb}\``])], { cwd: appDir });
+      }
+      restoreArgs = [...exec, 'database', ...mysqlClientCommand(tool, !pinnedDb && targetDb ? [targetDb] : [])];
     } else if (isMongo) {
       const user = envVars['MONGO_INITDB_ROOT_USERNAME'] || '';
       const pass = envVars['MONGO_INITDB_ROOT_PASSWORD'] || '';
@@ -668,7 +711,7 @@ export class R2BackupService {
       if (sourceDb === 'all' && targetDb !== 'all') {
         return { success: false, error: '完整 MongoDB 归档必须恢复全部数据库；请清空目标数据库或填写 all' };
       }
-      restoreArgs = ['compose', '-f', composePath, '--env-file', envPath, 'exec', '-T', 'database', 'mongorestore'];
+      restoreArgs = [...exec, 'database', 'mongorestore'];
       if (user && pass) {
         restoreArgs.push('-u', user, '-p', pass, '--authenticationDatabase', 'admin');
       }
@@ -678,7 +721,8 @@ export class R2BackupService {
           restoreArgs.push('--nsFrom', `${sourceDb}.*`, '--nsTo', `${targetDb}.*`);
         }
       }
-      restoreArgs.push('--archive', '--stopOnError');
+      // --drop replaces each restored collection; without it existing _ids abort the restore
+      restoreArgs.push('--archive', '--drop', '--stopOnError');
     } else {
       return { success: false, error: '此类型数据库暂不支持直接还原，请手动导入' };
     }
@@ -690,11 +734,38 @@ export class R2BackupService {
       const input = localPath.endsWith('.gz') ? zlib.createGunzip() : new PassThrough();
       const read = pipeline(source, input);
       const restored = runDocker(restoreArgs, { cwd: appDir, input, timeout: 30 * 60 * 1000 });
-      await Promise.all([read, restored]);
+      const [, { stderr }] = await Promise.all([read, restored]);
+      const unexpected = tolerateErrors
+        ? stderr.split('\n').filter(line => /ERROR:/.test(line) && !/already exists|current user cannot be dropped/.test(line))
+        : [];
+      if (unexpected.length) {
+        return { success: true, message: `数据库快照 ${record.fileName} 已导入，但有 ${unexpected.length} 条语句报错，请核对数据：${unexpected.slice(0, 3).join(' | ')}` };
+      }
       return { success: true, message: `数据库快照 ${record.fileName} 已成功导入恢复至容器！` };
     } catch (error: any) {
       return { success: false, error: `恢复失败: ${error.message}` };
     }
+  }
+
+  /** First bytes of a (possibly gzipped) SQL dump, used to detect its format. */
+  private async readDumpHead(file: string, limit = 256 * 1024): Promise<string> {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    const source = fs.createReadStream(file);
+    const stream = file.endsWith('.gz') ? source.pipe(zlib.createGunzip()) : source;
+    try {
+      for await (const chunk of stream) {
+        chunks.push(chunk as Buffer);
+        size += (chunk as Buffer).length;
+        if (size >= limit) break;
+      }
+    } catch {
+      // Corrupt input is reported by the restore command itself
+    } finally {
+      source.destroy();
+      stream.destroy();
+    }
+    return Buffer.concat(chunks).toString('utf8');
   }
 
   /**

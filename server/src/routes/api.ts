@@ -11,6 +11,7 @@ import { DATA_DIR, db } from '../db/index.js';
 import { dockerService } from '../services/docker.js';
 import { caddyService } from '../services/caddy.js';
 import { r2BackupService } from '../services/r2Backup.js';
+import { MIN_PASSPHRASE_LENGTH, isEncryptedBackup } from '../services/backupCrypto.js';
 import { registryService } from '../services/registry.js';
 import { cleanerService } from '../services/cleaner.js';
 import { schedulerService } from '../services/scheduler.js';
@@ -19,7 +20,7 @@ import { requireAuth, requirePasswordChanged, loginRateLimit, AuthenticatedReque
 import { wsHub } from '../ws/wsHub.js';
 import { deploymentService, newWebhookToken } from '../services/deployments.js';
 import { notifier, maskChannel, isMasked, CHANNEL_TYPES, NOTIFICATION_EVENTS } from '../services/notifier.js';
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual, generateKeyPairSync, sign } from 'node:crypto';
 import { AppItem, DomainItem, R2Config, RegistryItem, MaintenanceConfig, AppDeploySettings, DeploymentAction, DeploymentRecord, DeploymentTrigger, NotificationChannel } from '../types/index.js';
 
 export const apiRouter = checkedRouter();
@@ -222,6 +223,20 @@ apiRouter.post('/apps', requireAuth, async (req: Request, res: Response) => {
   }
 
   res.status(201).json(newApp);
+});
+
+/**
+ * Generate an Ed25519 key pair for a libSQL (sqld) instance: the public key goes into
+ * SQLD_AUTH_JWT_KEY, the signed non-expiring JWT is the client authToken. The private
+ * key is discarded, so new tokens require rotating the key.
+ */
+apiRouter.post('/databases/libsql-credentials', requireAuth, async (_req: Request, res: Response) => {
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const jwtKey = publicKey.export({ format: 'jwk' }).x as string;
+  const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const signingInput = `${encode({ alg: 'EdDSA', typ: 'JWT' })}.${encode({ iat: Math.floor(Date.now() / 1000) })}`;
+  const signature = sign(null, Buffer.from(signingInput), privateKey).toString('base64url');
+  res.json({ jwtKey, authToken: `${signingInput}.${signature}` });
 });
 
 apiRouter.put('/apps/:id', requireAuth, async (req: Request, res: Response) => {
@@ -581,12 +596,18 @@ apiRouter.get('/r2/config', (req: Request, res: Response) => {
   res.json({
     ...config,
     secretAccessKey: config.secretAccessKey ? '••••••••••••••••' : '',
+    backupPassphrase: config.backupPassphrase ? '••••••••••••••••' : '',
   });
 });
 
 apiRouter.post('/r2/config', requireAuth, (req: Request, res: Response) => {
   const current = db.get('r2Config');
-  const { enabled, endpoint, bucketName, accessKeyId, secretAccessKey, cronSchedule, retentionCount } = req.body;
+  const { enabled, endpoint, bucketName, accessKeyId, secretAccessKey, cronSchedule, retentionCount, backupPassphrase } = req.body;
+  const passphraseChanged = typeof backupPassphrase === 'string' && backupPassphrase !== '' && !backupPassphrase.includes('••');
+  if (backupPassphrase !== undefined && typeof backupPassphrase !== 'string') throw new BadRequest('backupPassphrase must be a string');
+  if (passphraseChanged && backupPassphrase.length < MIN_PASSPHRASE_LENGTH) {
+    throw new BadRequest(`备份口令至少需要 ${MIN_PASSPHRASE_LENGTH} 个字符`);
+  }
 
   const updated: R2Config = {
     enabled: enabled !== undefined ? !!enabled : current.enabled,
@@ -596,6 +617,7 @@ apiRouter.post('/r2/config', requireAuth, (req: Request, res: Response) => {
     secretAccessKey: secretAccessKey && !secretAccessKey.includes('••') ? secretAccessKey : current.secretAccessKey,
     cronSchedule: cronSchedule ?? current.cronSchedule,
     retentionCount: retentionCount ? Number(retentionCount) : current.retentionCount,
+    backupPassphrase: passphraseChanged ? backupPassphrase : current.backupPassphrase,
     lastBackupStatus: current.lastBackupStatus,
     lastBackupAt: current.lastBackupAt,
     lastBackupMessage: current.lastBackupMessage,
@@ -603,7 +625,8 @@ apiRouter.post('/r2/config', requireAuth, (req: Request, res: Response) => {
 
   db.set('r2Config', updated);
   schedulerService.reload();
-  res.json({ success: true, config: { ...updated, secretAccessKey: '••••••••••••••••' } });
+  res.json({ success: true, config: { ...updated, secretAccessKey: '••••••••••••••••',
+    backupPassphrase: updated.backupPassphrase ? '••••••••••••••••' : '' } });
 });
 
 apiRouter.post('/r2/test', requireAuth, async (req: Request, res: Response) => {
@@ -634,7 +657,8 @@ apiRouter.get('/r2/backups/:id/download', requireAuth, async (req: Request, res:
   }
 
   res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.fileName)}`);
-  res.setHeader('Content-Type', result.fileName.endsWith('.gz') ? 'application/gzip' : 'application/zip');
+  res.setHeader('Content-Type', isEncryptedBackup(result.fileName) ? 'application/octet-stream'
+    : result.fileName.endsWith('.gz') ? 'application/gzip' : 'application/zip');
   if (result.contentLength) {
     res.setHeader('Content-Length', result.contentLength);
   }
@@ -654,12 +678,15 @@ apiRouter.delete('/r2/backups/:id', requireAuth, async (req: Request, res: Respo
 
 apiRouter.post('/r2/backups/:id/restore', requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const { databaseName } = req.body || {};
+  const { databaseName, passphrase } = req.body || {};
+  if (passphrase !== undefined && typeof passphrase !== 'string') throw new BadRequest('passphrase must be a string');
   const record = db.get('backups').find(item => item.id === id);
   if (!record) return res.status(404).json({ error: 'Backup not found' });
-  const result = await withAppLock(record.type === 'system' ? '*' : record.targetId, () => r2BackupService.restoreBackup(id, { databaseName }));
+  const result = await withAppLock(record.type === 'system' ? '*' : record.targetId, () => r2BackupService.restoreBackup(id, { databaseName, passphrase }));
   if (result.success) schedulerService.reload();
   if (!result.success) {
+    // The client prompts for the passphrase and retries on this code
+    if (result.code) return res.status(400).json({ error: result.error, code: result.code });
     return res.status(500).json({ error: result.error });
   }
   res.json({ success: true, message: result.message });
@@ -841,7 +868,8 @@ apiRouter.post('/maintenance/check-updates', requireAuth, async (req: Request, r
 });
 
 apiRouter.post('/maintenance/prune', requireAuth, async (req: Request, res: Response) => {
-  const result = await cleanerService.runSafePrune();
+  // Exclusive: `image prune -a` would delete an image a deployment has pulled but not yet started
+  const result = await withAppLock('*', () => cleanerService.runSafePrune());
   res.json(result);
 });
 
