@@ -17,6 +17,15 @@ const app = express();
 const server = http.createServer(app);
 
 app.disable('x-powered-by');
+// The bundled Caddy proxies to 127.0.0.1; trust its X-Forwarded-For so the login limiter sees real client IPs
+app.set('trust proxy', 'loopback');
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  // Backup download links carry the session token in the query string
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
 app.use('/api', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
@@ -28,6 +37,8 @@ app.use('/api', apiErrorHandler);
 // Serve Web Frontend in Production
 const webDistPath = path.resolve(__dirname, '../../web/dist');
 if (fs.existsSync(webDistPath)) {
+  // Vite emits content-hashed file names under /assets, so they never change in place
+  app.use('/assets', express.static(path.join(webDistPath, 'assets'), { immutable: true, maxAge: '1y' }));
   app.use(express.static(webDistPath));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/ws')) return next();

@@ -817,10 +817,11 @@ apiRouter.get('/maintenance/config', (req: Request, res: Response) => {
 
 apiRouter.post('/maintenance/config', requireAuth, (req: Request, res: Response) => {
   const current = db.get('maintenance');
-  const updated: MaintenanceConfig = {
-    ...current,
-    ...req.body,
-  };
+  const updated: MaintenanceConfig = { ...current };
+  // Only user-editable fields; lastPruneAt / lastCheckedAt etc. are owned by the server
+  for (const field of ['autoPrune', 'pruneSchedule', 'pruneDangling', 'pruneBuilderCache', 'unusedRetentionHours', 'autoCheckUpdates', 'checkSchedule'] as const) {
+    if (req.body?.[field] !== undefined) (updated as any)[field] = field === 'unusedRetentionHours' ? Number(req.body[field]) : req.body[field];
+  }
   db.set('maintenance', updated);
   schedulerService.reload();
   res.json(updated);
