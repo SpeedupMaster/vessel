@@ -67,6 +67,7 @@ import { DatabaseMonitorPanel } from './DatabaseMonitorPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { formatBytes } from '../../utils/format.js';
 import { copyText } from '../../utils/clipboard.js';
+import { servicePorts } from '../../utils/composePorts.js';
 
 interface ComposeAppViewProps {
   mode: 'create' | 'edit';
@@ -652,27 +653,11 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const detectedServices = useMemo(() => {
     if (!yamlValidation.valid || !yamlValidation.parsed?.services) return [];
     const servicesObj = yamlValidation.parsed.services;
-    const list: { name: string; ports: number[] }[] = [];
-    for (const [srvName, config] of Object.entries<any>(servicesObj)) {
-      const portSet = new Set<number>();
-      if (Array.isArray(config?.ports)) {
-        for (const p of config.ports) {
-          const str = String(p);
-          const parts = str.split(':');
-          const internalPort = parseInt(parts[parts.length - 1]?.split('/')[0], 10);
-          if (!isNaN(internalPort)) portSet.add(internalPort);
-          if (parts.length > 1) {
-            const hostPort = parseInt(parts[parts.length - 2]?.split('/')[0], 10);
-            if (!isNaN(hostPort)) portSet.add(hostPort);
-          }
-        }
-      }
-      list.push({
-        name: srvName,
-        ports: Array.from(portSet),
-      });
-    }
-    return list;
+    // `ports` holds container ports (what an internal-network proxy dials); `hostPorts` the published ones
+    return Object.entries<any>(servicesObj).map(([srvName, config]) => {
+      const { container, host } = servicePorts(config);
+      return { name: srvName, ports: container, hostPorts: host };
+    });
   }, [yamlValidation]);
 
   // Auto-fill defaults for create mode
@@ -690,8 +675,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   // Open Add Domain Modal handler with intelligent defaults
   const openAddDomainModal = () => {
     setEditingDomain(null);
-    const defaultSrv = detectedServices[0]?.name || 'web';
-    const defaultPort = detectedServices[0]?.ports[0] ? String(detectedServices[0].ports[0]) : '80';
+    // Prefer a service that declares a port over e.g. a database listed first
+    const defaultService = detectedServices.find((s) => s.ports.length > 0) || detectedServices[0];
+    const defaultSrv = defaultService?.name || 'web';
+    const defaultPort = defaultService?.ports[0] ? String(defaultService.ports[0]) : '80';
     setModalServiceName(defaultSrv);
     setModalTargetPort(defaultPort);
     setModalTargetType('internal');
@@ -700,6 +687,17 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     setPortError('');
     setRecentFilledPort(null);
     setIsAddDomainModalOpen(true);
+  };
+
+  // Switching between container network and host port changes which side of a port mapping applies
+  const switchModalTargetType = (type: 'internal' | 'host') => {
+    setModalTargetType(type);
+    const s = detectedServices.find((ds) => ds.name === modalServiceName);
+    const candidates = s ? (type === 'host' ? s.hostPorts : s.ports) : [];
+    if (candidates.length > 0 && !candidates.includes(Number(modalTargetPort))) {
+      setModalTargetPort(String(candidates[0]));
+      if (portError) setPortError('');
+    }
   };
 
   // Open Edit Domain Modal handler
@@ -3821,8 +3819,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         onChange={(val) => {
                           setModalServiceName(val);
                           const s = detectedServices.find((ds) => ds.name === val);
-                          if (s && s.ports.length > 0) {
-                            setModalTargetPort(String(s.ports[0]));
+                          const candidates = s ? (modalTargetType === 'host' ? s.hostPorts : s.ports) : [];
+                          if (candidates.length > 0) {
+                            setModalTargetPort(String(candidates[0]));
                             if (portError) setPortError('');
                           }
                         }}
@@ -3880,7 +3879,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
 
                 {/* Quick Select Pill Buttons */}
-                {detectedServices.length > 0 && (
+                {detectedServices.some((s) => (modalTargetType === 'host' ? s.hostPorts : s.ports).length > 0) && (
                   <div className="space-y-1.5 pt-0.5">
                     <span className="text-[11px] text-ink-faint flex items-center gap-1 font-medium">
                       <Lightning className="w-3.5 h-3.5 text-amber-500" weight="fill" />
@@ -3888,7 +3887,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       {detectedServices.flatMap((s) =>
-                        s.ports.map((p) => {
+                        (modalTargetType === 'host' ? s.hostPorts : s.ports).map((p) => {
                           const portStr = String(p);
                           const isSelected = modalServiceName === s.name && modalTargetPort === portStr;
                           const isJustFilled = recentFilledPort === `${s.name}-${portStr}`;
@@ -3933,7 +3932,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       type="button"
                       role="radio"
                       aria-checked={modalTargetType === 'internal'}
-                      onClick={() => setModalTargetType('internal')}
+                      onClick={() => switchModalTargetType('internal')}
                       className={`p-3.5 sm:p-4 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] border ${
                         modalTargetType === 'internal'
                           ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring shadow-sm'
@@ -3961,7 +3960,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       type="button"
                       role="radio"
                       aria-checked={modalTargetType === 'host'}
-                      onClick={() => setModalTargetType('host')}
+                      onClick={() => switchModalTargetType('host')}
                       className={`p-3.5 sm:p-4 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] border ${
                         modalTargetType === 'host'
                           ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring shadow-sm'

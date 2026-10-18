@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import YAML from 'yaml';
 import { createPortal } from 'react-dom';
 import {
   Globe,
@@ -18,12 +19,36 @@ import {
   PencilSimple,
 } from '@phosphor-icons/react';
 import { DomainItem, AppItem } from '../../types/index.js';
+import { servicePorts } from '../../utils/composePorts.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { Modal } from '../common/Modal.js';
 import { EmptyState } from '../common/EmptyState.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { useNotification } from '../../context/NotificationContext.js';
+
+interface DetectedService {
+  name: string;
+  ports: number[];
+  hostPorts: number[];
+}
+
+const detectServices = (app?: AppItem): DetectedService[] => {
+  if (!app?.composeYaml) return [];
+  try {
+    const services = YAML.parse(app.composeYaml)?.services;
+    if (!services || typeof services !== 'object') return [];
+    return Object.entries<any>(services).map(([name, config]) => {
+      const { container, host } = servicePorts(config);
+      return { name, ports: container, hostPorts: host };
+    });
+  } catch {
+    return [];
+  }
+};
+
+const candidatePorts = (service: DetectedService | undefined, type: 'internal' | 'host') =>
+  service ? (type === 'host' ? service.hostPorts : service.ports) : [];
 
 interface DomainsViewProps {
   domains: DomainItem[];
@@ -89,9 +114,23 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
       setTargetPortInput('3900');
       setTargetTypeInput('host');
     } else {
-      setServiceNameInput('web');
-      setTargetPortInput('3000');
+      // Prefer a service that declares a port over e.g. a database listed first
+      const services = detectServices(apps.find((a) => a.id === val));
+      const service = services.find((s) => s.ports.length > 0) || services[0];
+      setServiceNameInput(service?.name || 'web');
+      setTargetPortInput(String(service?.ports[0] || 80));
       setTargetTypeInput('internal');
+    }
+  };
+
+  const selectedServices = appIdInput === 'vessel-system' ? [] : detectServices(apps.find((a) => a.id === appIdInput));
+
+  // Switching between container network and host port changes which side of a port mapping applies
+  const handleSelectTargetType = (type: 'internal' | 'host') => {
+    setTargetTypeInput(type);
+    const candidates = candidatePorts(selectedServices.find((s) => s.name === serviceNameInput), type);
+    if (candidates.length > 0 && !candidates.includes(Number(targetPortInput))) {
+      setTargetPortInput(String(candidates[0]));
     }
   };
 
@@ -134,8 +173,9 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
     setEditingDomain(dom);
     setDomainInput(dom.domain);
     setAppIdInput(dom.appId);
-    setServiceNameInput(dom.serviceName || (dom.appId === 'vessel-system' ? 'vessel' : 'web'));
-    setTargetPortInput(String(dom.targetPort || (dom.appId === 'vessel-system' ? 3900 : 3000)));
+    const fallback = detectServices(apps.find((a) => a.id === dom.appId)).find((s) => s.ports.length > 0);
+    setServiceNameInput(dom.serviceName || (dom.appId === 'vessel-system' ? 'vessel' : fallback?.name || 'web'));
+    setTargetPortInput(String(dom.targetPort || (dom.appId === 'vessel-system' ? 3900 : fallback?.ports[0] || 80)));
     setTargetTypeInput(dom.targetType || (dom.appId === 'vessel-system' ? 'host' : 'internal'));
     setIsAddOpen(true);
   };
@@ -592,6 +632,34 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                         </div>
                       </div>
 
+                      {selectedServices.some((s) => candidatePorts(s, targetTypeInput).length > 0) && (
+                        <div className="flex flex-wrap items-center gap-1.5 -mt-1">
+                          <span className="text-[11px] text-ink-faint font-medium">编排检测端口:</span>
+                          {selectedServices.flatMap((s) =>
+                            candidatePorts(s, targetTypeInput).map((port) => {
+                              const active = serviceNameInput === s.name && targetPortInput === String(port);
+                              return (
+                                <button
+                                  key={`${s.name}:${port}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setServiceNameInput(s.name);
+                                    setTargetPortInput(String(port));
+                                  }}
+                                  className={`px-2 py-0.5 rounded-lg border text-[11px] font-mono transition-colors ${
+                                    active
+                                      ? 'border-signal/70 bg-paper-3 dark:bg-paper-4 text-ink'
+                                      : 'border-line-subtle bg-paper-2/60 dark:bg-paper-3/40 text-ink-muted hover:border-line-strong'
+                                  }`}
+                                >
+                                  {s.name}:{port}
+                                </button>
+                              );
+                            }),
+                          )}
+                        </div>
+                      )}
+
                       {/* 代理对接方式 */}
                       <div>
                         <label className="block text-xs font-semibold text-ink mb-1.5">
@@ -610,7 +678,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                                 type="radio"
                                 name="targetType"
                                 checked={targetTypeInput === 'internal'}
-                                onChange={() => setTargetTypeInput('internal')}
+                                onChange={() => handleSelectTargetType('internal')}
                                 className="text-accent focus:ring-accent"
                               />
                               <strong className={`text-xs ${targetTypeInput === 'internal' ? 'text-ink font-semibold' : 'text-ink/75 font-medium'}`}>容器内部网络 (推荐)</strong>
@@ -632,7 +700,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                                 type="radio"
                                 name="targetType"
                                 checked={targetTypeInput === 'host'}
-                                onChange={() => setTargetTypeInput('host')}
+                                onChange={() => handleSelectTargetType('host')}
                                 className="text-accent focus:ring-accent"
                               />
                               <strong className={`text-xs ${targetTypeInput === 'host' ? 'text-ink font-semibold' : 'text-ink/75 font-medium'}`}>宿主机端口转发</strong>
