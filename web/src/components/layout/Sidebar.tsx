@@ -59,23 +59,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navRef = useRef<HTMLElement>(null);
   const itemRefs = useRef<Partial<Record<NavTab, HTMLButtonElement | null>>>({});
-  const [indicator, setIndicator] = useState<{ top: number; height: number; ready: boolean; animate: boolean }>({
+  const [indicator, setIndicator] = useState<{ top: number; height: number; ready: boolean }>({
     top: 0,
     height: 0,
     ready: false,
-    animate: false,
   });
+  // The transition is switched on only after the first placement has been painted;
+  // enabling it in the same frame would animate the pill in from the top on load.
+  const [animateIndicator, setAnimateIndicator] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setAnimateIndicator(true), 150);
+    return () => window.clearTimeout(id);
+  }, []);
 
-  // Slide the active pill to the selected item. The first placement is instant; later ones spring.
+  // Slide the active pill to the selected item
   useLayoutEffect(() => {
     const measure = () => {
       const el = itemRefs.current[currentTab];
       if (!el) return;
-      setIndicator((prev) => ({ top: el.offsetTop, height: el.offsetHeight, ready: true, animate: prev.ready }));
+      setIndicator({ top: el.offsetTop, height: el.offsetHeight, ready: true });
     };
     measure();
+    // Re-measure when layout shifts after first paint (web fonts arriving, drawer resizing)
+    const ro = new ResizeObserver(measure);
+    if (navRef.current) ro.observe(navRef.current);
+    const activeEl = itemRefs.current[currentTab];
+    if (activeEl) ro.observe(activeEl);
+    document.fonts?.ready.then(measure);
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, [currentTab]);
 
   useEffect(() => {
@@ -150,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             aria-hidden="true"
             className={clsx(
               'absolute left-3 right-3 rounded-xl bg-paper-3 border border-line shadow-subtle pointer-events-none',
-              indicator.animate && 'transition-[transform,height] duration-[460ms] ease-spring',
+              animateIndicator && 'transition-[transform,height] duration-[460ms] ease-spring',
               !indicator.ready && 'opacity-0'
             )}
             style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height, top: 0 }}

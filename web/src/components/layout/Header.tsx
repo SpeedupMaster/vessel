@@ -218,9 +218,9 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Desktop header (>= md) */}
       <div className="hidden md:flex h-16 px-6 lg:px-8 items-center justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {section && (
-            <div className="flex items-center gap-1 text-[11px] text-ink-faint leading-none mb-1.5">
+            <div className="flex items-center gap-1 whitespace-nowrap text-[11px] text-ink-faint leading-none mb-1.5">
               <span>Vessel</span>
               <CaretRight className="w-2.5 h-2.5" />
               <span>{section}</span>
@@ -236,7 +236,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="flex items-center gap-3 shrink-0">
           {/* Telemetry strip */}
-          <div className="hidden lg:flex items-stretch rounded-xl border border-line bg-paper-2/70 shadow-subtle text-xs divide-x divide-line">
+          <div className="hidden xl:flex items-stretch rounded-xl border border-line bg-paper-2/70 shadow-subtle text-xs divide-x divide-line">
             <div
               className={clsx(
                 'flex items-center gap-2 px-3 py-1.5 font-medium',
