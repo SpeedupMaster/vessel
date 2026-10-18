@@ -176,3 +176,36 @@ export interface NotificationChannel {
   lastStatus?: 'success' | 'failed';
   lastError?: string;
 }
+
+export interface ContainerDiagnostics {
+  id: string;
+  name: string;
+  service: string;
+  image: string;
+  /** docker State.Status: created | running | paused | restarting | removing | exited | dead */
+  state: string;
+  running: boolean;
+  exitCode: number;
+  oomKilled: boolean;
+  error: string;
+  startedAt?: string;
+  finishedAt?: string;
+  restartCount: number;
+  restartPolicy: string;
+  health?: {
+    status: 'starting' | 'healthy' | 'unhealthy';
+    failingStreak: number;
+    lastOutput?: string;
+    lastCheckAt?: string;
+  };
+  mounts: { type: string; source: string; destination: string; name?: string; readOnly: boolean }[];
+  networks: string[];
+  ports: { container: string; hostIp?: string; hostPort?: string }[];
+}
+
+export interface AppDiagnostics {
+  dockerAvailable: boolean;
+  error?: string;
+  containers: ContainerDiagnostics[];
+  checkedAt: string;
+}

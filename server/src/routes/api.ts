@@ -445,6 +445,12 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
   }
 });
 
+apiRouter.get('/apps/:id/diagnostics', async (req: Request, res: Response) => {
+  const app = db.get('apps').find(item => item.id === req.params.id);
+  if (!app) return res.status(404).json({ error: 'App not found' });
+  res.json(await dockerService.diagnoseApp(app));
+});
+
 apiRouter.get('/apps/:id/databases', async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);

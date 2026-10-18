@@ -221,6 +221,12 @@ export const CreateDatabaseModal: React.FC<CreateDatabaseModalProps> = ({
     image: \${POSTGRES_IMAGE:-${imageToUse}}
     container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$\${POSTGRES_USER}" -d "$\${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     environment:
       POSTGRES_DB: \${POSTGRES_DB:-${finalDbName}}
       POSTGRES_USER: \${POSTGRES_USER:-${finalDbUser}}
@@ -252,6 +258,12 @@ INTERNAL_DATABASE_URL=postgresql://${finalDbUser}:${dbPassword}@${generatedId}:5
     image: \${MONGO_IMAGE:-${imageToUse}}
     container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand({ ping: 1 })" || mongo --quiet --eval "db.adminCommand({ ping: 1 })"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     environment:
       MONGO_INITDB_DATABASE: \${MONGO_INITDB_DATABASE:-${finalDbName}}
       MONGO_INITDB_ROOT_USERNAME: \${MONGO_INITDB_ROOT_USERNAME:-${finalDbUser}}
@@ -282,6 +294,12 @@ INTERNAL_MONGO_URL=mongodb://${finalDbUser}:${dbPassword}@${generatedId}:27017/$
     image: \${MARIADB_IMAGE:-${imageToUse}}
     container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'healthcheck.sh --connect --innodb_initialized || mariadb-admin ping -h 127.0.0.1 -uroot -p"$\${MARIADB_ROOT_PASSWORD}" --silent || mysqladmin ping -h 127.0.0.1 -uroot -p"$\${MARIADB_ROOT_PASSWORD}" --silent']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     environment:
       MARIADB_DATABASE: \${MARIADB_DATABASE:-${finalDbName}}
       MARIADB_USER: \${MARIADB_USER:-${finalDbUser}}
@@ -322,6 +340,12 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${
     image: \${MYSQL_IMAGE:-${imageToUse}}
     container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -uroot -p"$\${MYSQL_ROOT_PASSWORD}" --silent']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     environment:
       MYSQL_DATABASE: \${MYSQL_DATABASE:-${finalDbName}}
       MYSQL_USER: \${MYSQL_USER:-${finalDbUser}}
@@ -356,6 +380,12 @@ INTERNAL_DATABASE_ROOT_URL=mysql://root:${dbRootPassword}@${generatedId}:3306/${
     image: \${REDIS_IMAGE:-${imageToUse}}
     container_name: \${CONTAINER_NAME:-${generatedId}}
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli --no-auth-warning -a "\${REDIS_PASSWORD}" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     command: redis-server --requirepass \${REDIS_PASSWORD} --appendonly yes
     volumes:
       - ./data:/data

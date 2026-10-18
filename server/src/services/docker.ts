@@ -3,7 +3,50 @@ import path from 'path';
 import { runDocker } from './process.js';
 import YAML from 'yaml';
 import { APPS_DATA_DIR, db } from '../db/index.js';
-import { ContainerInfo, AppItem, AppDeploySettings } from '../types/index.js';
+import { ContainerInfo, AppItem, AppDeploySettings, AppDiagnostics, ContainerDiagnostics } from '../types/index.js';
+
+const ZERO_TIME = '0001-01-01T00:00:00Z';
+const realTime = (value: unknown) => (typeof value === 'string' && value && value !== ZERO_TIME ? value : undefined);
+
+/** Map one `docker inspect` object to the fields the monitoring view needs */
+export function toDiagnostics(raw: any): ContainerDiagnostics {
+  const state = raw?.State || {};
+  const health = state.Health;
+  const lastProbe = Array.isArray(health?.Log) && health.Log.length ? health.Log[health.Log.length - 1] : undefined;
+  const portMap = raw?.NetworkSettings?.Ports || {};
+  const ports = Object.entries<any>(portMap).flatMap(([container, bindings]) =>
+    Array.isArray(bindings) && bindings.length
+      ? bindings.map((b: any) => ({ container, hostIp: b.HostIp || undefined, hostPort: b.HostPort || undefined }))
+      : [{ container }]);
+  return {
+    id: String(raw?.Id || '').slice(0, 12),
+    name: String(raw?.Name || '').replace(/^\//, ''),
+    service: raw?.Config?.Labels?.['com.docker.compose.service'] || '',
+    image: raw?.Config?.Image || '',
+    state: state.Status || 'unknown',
+    running: !!state.Running,
+    exitCode: Number(state.ExitCode) || 0,
+    oomKilled: !!state.OOMKilled,
+    error: state.Error || '',
+    startedAt: realTime(state.StartedAt),
+    finishedAt: realTime(state.FinishedAt),
+    restartCount: Number(raw?.RestartCount) || 0,
+    restartPolicy: raw?.HostConfig?.RestartPolicy?.Name || 'no',
+    health: health?.Status && health.Status !== 'none'
+      ? {
+          status: health.Status,
+          failingStreak: Number(health.FailingStreak) || 0,
+          lastOutput: lastProbe?.Output ? String(lastProbe.Output).trim().slice(-500) : undefined,
+          lastCheckAt: realTime(lastProbe?.End),
+        }
+      : undefined,
+    mounts: (raw?.Mounts || []).map((m: any) => ({
+      type: m.Type || '', source: m.Source || '', destination: m.Destination || '', name: m.Name || undefined, readOnly: m.RW === false,
+    })),
+    networks: Object.keys(raw?.NetworkSettings?.Networks || {}),
+    ports,
+  };
+}
 
 export type DeployOptions = Partial<Pick<AppDeploySettings, 'pullPolicy' | 'removeOrphans' | 'waitHealthy' | 'timeoutMinutes'>>;
 
@@ -140,6 +183,20 @@ export class DockerService {
 
   public restartApp(app: AppItem, onLog?: (text: string) => void) {
     return this.lifecycle(app, [['restart']], onLog);
+  }
+
+  /** Live container state from docker inspect; never throws */
+  public async diagnoseApp(app: AppItem): Promise<AppDiagnostics> {
+    const checkedAt = new Date().toISOString();
+    try {
+      const { stdout } = await this.compose(app, ['ps', '--all', '-q'], undefined, 15000);
+      const ids = stdout.trim().split(/\s+/).filter(Boolean);
+      if (!ids.length) return { dockerAvailable: true, containers: [], checkedAt };
+      const inspected = JSON.parse((await runDocker(['inspect', ...ids], { timeout: 10000 })).stdout);
+      return { dockerAvailable: true, containers: (Array.isArray(inspected) ? inspected : []).map(toDiagnostics), checkedAt };
+    } catch (error: any) {
+      return { dockerAvailable: false, error: String(error?.message || error).slice(0, 500), containers: [], checkedAt };
+    }
   }
 
   public async syncAppContainers(appId: string): Promise<ContainerInfo[]> {

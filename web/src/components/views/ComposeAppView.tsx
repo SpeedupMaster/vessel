@@ -62,6 +62,7 @@ import { Switch } from '../common/Switch.js';
 import { LogsPanel } from './LogsPanel.js';
 import { DeploymentsPanel } from './DeploymentsPanel.js';
 import { AppSettingsPanel } from './AppSettingsPanel.js';
+import { DatabaseMonitorPanel } from './DatabaseMonitorPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { formatBytes } from '../../utils/format.js';
 
@@ -3082,117 +3083,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
       {/* ================= TAB CONTENT: MONITORING (DATABASE CONTAINER METRICS & HEALTH) ================= */}
       {activeTab === 'monitoring' && mode === 'edit' && app && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <div>
-            <h3 className="font-semibold text-sm text-ink tracking-tight">运行监控与遥测</h3>
+            <h3 className="font-semibold text-sm text-ink tracking-tight">运行监控</h3>
             <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-              实时监控此数据库容器实例的运行状态、健康检查、端口网络与数据卷持久化
+              容器实时状态、健康检查、退出原因与重启情况，每 10 秒刷新
             </p>
           </div>
-
-          {/* Quick Metrics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Status Card */}
-            <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="eyebrow">
-                容器运行状态
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    app?.status === 'running'
-                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
-                      : 'bg-rose-500'
-                  }`}
-                />
-                <span className="text-base font-semibold text-ink capitalize">
-                  {app?.status === 'running' ? '运行中' : app?.status || '未知'}
-                </span>
-              </div>
-              <p className="text-[11px] text-ink-muted">
-                {app?.containers?.[0]?.status || (app?.status === 'running' ? '正常运行且响应' : '容器未在运行')}
-              </p>
-            </div>
-
-            {/* Port Card */}
-            <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="eyebrow">
-                外部暴露端口
-              </div>
-              <div className="text-base font-semibold font-mono text-ink">
-                {dbInfo?.detectedExternalPort || '未映射'}
-              </div>
-              <p className="text-[11px] text-ink-muted">
-                {dbInfo?.detectedExternalPort
-                  ? `0.0.0.0:${dbInfo.detectedExternalPort} (宿主机映射)`
-                  : '外部网络连接已关闭 (仅限容器内网)'}
-              </p>
-            </div>
-
-            {/* Engine Image Card */}
-            <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="eyebrow">
-                数据库引擎与镜像
-              </div>
-              <div className="text-base font-semibold text-ink truncate">
-                {dbInfo?.engine || '数据库'}
-              </div>
-              <p className="text-[11px] font-mono text-ink-muted truncate">
-                {app?.containers?.[0]?.image || '官方 Docker 镜像'}
-              </p>
-            </div>
-
-            {/* Restart Policy Card */}
-            <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="eyebrow">
-                重启策略
-              </div>
-              <div className="text-base font-semibold text-ink">
-                unless-stopped
-              </div>
-              <p className="text-[11px] text-ink-muted">
-                故障或系统重启时自动恢复
-              </p>
-            </div>
-          </div>
-
-          {/* Container Details & Storage Table */}
-          <div className="rounded-2xl bg-paper-2 border border-line overflow-hidden shadow-card">
-            <div className="px-5 py-3.5 bg-paper-3/40 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Stack className="w-4 h-4 text-accent" />
-                <h4 className="font-semibold text-xs sm:text-sm text-ink tracking-tight">
-                  容器运行详情
-                </h4>
-              </div>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted">
-                Docker Engine
-              </span>
-            </div>
-
-            <div className="p-2 sm:p-3 space-y-1 text-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-xl hover:bg-paper-3/50 transition-colors">
-                <span className="text-ink-muted">容器名称</span>
-                <span className="font-mono text-ink font-semibold">{app?.containers?.[0]?.name || app?.name || 'database'}</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-xl hover:bg-paper-3/50 transition-colors">
-                <span className="text-ink-muted">容器 ID</span>
-                <span className="font-mono text-ink">{app?.containers?.[0]?.id ? app.containers[0].id.slice(0, 12) : '未生成'}</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-xl hover:bg-paper-3/50 transition-colors">
-                <span className="text-ink-muted">持久化数据卷挂载</span>
-                <span className="font-mono text-ink">./data &rarr; 持久化数据存储</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-xl hover:bg-paper-3/50 transition-colors">
-                <span className="text-ink-muted">内部虚拟网络</span>
-                <span className="font-mono text-ink">vessel-network (Bridge 桥接)</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 px-3 rounded-xl hover:bg-paper-3/50 transition-colors">
-                <span className="text-ink-muted">最近部署时间</span>
-                <span className="font-mono text-ink-muted">{app?.lastDeployedAt || app?.updatedAt || '从未部署'}</span>
-              </div>
-            </div>
-          </div>
+          <DatabaseMonitorPanel app={app} engine={dbInfo?.engine || '数据库'} onOpenLogs={() => setActiveTab('logs')} />
         </div>
       )}
 
