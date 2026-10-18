@@ -1,5 +1,6 @@
 import fs from 'fs';
 import tls from 'node:tls';
+import http from 'node:http';
 import { validateDomain } from '../middleware/validation.js';
 import path from 'path';
 import { DATA_DIR, db } from '../db/index.js';
@@ -7,6 +8,8 @@ import { DomainItem } from '../types/index.js';
 
 export class CaddyService {
   private caddyApiUrl = process.env.CADDY_API || 'http://127.0.0.1:2019';
+  // The certificate Caddy actually serves; probing the public name would hit a CDN edge (e.g. Cloudflare's proxy)
+  private tlsProbeHost = process.env.CADDY_TLS_HOST || '127.0.0.1';
   private caddyfilePath = path.join(DATA_DIR, 'Caddyfile');
   private caddyProcess: any = null;
   private certificateChecks = new Map<string, { at: number; result: { status: 'active' | 'issuing' | 'expired' | 'error' | 'unknown'; issuer: string; expiresAt?: string } }>();
@@ -71,7 +74,7 @@ export class CaddyService {
    */
   public async ensureDaemon(): Promise<void> {
     try {
-      const res = await fetch(`${this.caddyApiUrl}/config/`, { signal: AbortSignal.timeout(1500) });
+      const res = await this.adminRequest('GET', '/config/', undefined, 1500);
       if (res.ok) {
         console.log('[Vessel] Caddy daemon API is active and reachable.');
         return;
@@ -120,19 +123,39 @@ export class CaddyService {
    */
   public async reloadCaddyApi(caddyfileContent: string): Promise<boolean> {
     try {
-      const res = await fetch(`${this.caddyApiUrl}/load`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/caddyfile',
-        },
-        body: caddyfileContent,
-        signal: AbortSignal.timeout(5000),
-      });
+      const res = await this.adminRequest('POST', '/load', caddyfileContent, 5000);
+      if (!res.ok) console.warn(`[Caddy] Admin API rejected /load (${res.status}): ${res.body.slice(0, 500)}`);
       return res.ok;
     } catch {
       // Caddy daemon may not be directly reachable in dev mode, Caddyfile on disk is preserved
       return false;
     }
+  }
+
+  /**
+   * Caddy's admin API refuses requests carrying Sec-Fetch-Mode without an allowed Origin, and Node's
+   * fetch always sends `Sec-Fetch-Mode: cors`. Plain node:http sends only the headers given here.
+   */
+  private adminRequest(method: 'GET' | 'POST', pathname: string, body: string | undefined, timeout: number) {
+    return new Promise<{ ok: boolean; status: number; body: string }>((resolve, reject) => {
+      const url = new URL(pathname, this.caddyApiUrl);
+      const req = http.request(url, {
+        method,
+        headers: body === undefined ? {} : { 'Content-Type': 'text/caddyfile', 'Content-Length': Buffer.byteLength(body) },
+        timeout,
+      }, res => {
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', chunk => { data += chunk; });
+        res.on('end', () => {
+          const status = res.statusCode ?? 0;
+          resolve({ ok: status >= 200 && status < 300, status, body: data });
+        });
+      });
+      req.on('timeout', () => req.destroy(new Error('Caddy admin API timed out')));
+      req.on('error', reject);
+      req.end(body);
+    });
   }
 
   /**
@@ -144,7 +167,7 @@ export class CaddyService {
     validateDomain(domain);
     return new Promise(resolve => {
       let settled = false;
-      const socket = tls.connect({ host: domain, port: 443, servername: domain, rejectUnauthorized: false });
+      const socket = tls.connect({ host: this.tlsProbeHost, port: 443, servername: domain, rejectUnauthorized: false });
       const finish = (result: { status: 'active' | 'expired' | 'error' | 'unknown'; issuer: string; expiresAt?: string }) => {
         if (settled) return;
         settled = true; socket.destroy(); resolve(result);

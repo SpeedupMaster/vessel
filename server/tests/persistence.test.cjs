@@ -67,6 +67,38 @@ test('unreachable certificate reports unknown instead of a fabricated expiry', a
   assert.equal(result.status, 'unknown'); assert.equal(result.expiresAt, undefined);
 });
 
+test('Caddy reloads are sent without browser fetch headers the admin API rejects', async () => {
+  const http = require('node:http');
+  const seen = [];
+  // Mirrors Caddy's admin origin check: browser-style requests without an allowed Origin get 403
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      seen.push({ url: req.url, type: req.headers['content-type'], body });
+      res.statusCode = req.headers['sec-fetch-mode'] && !req.headers.origin ? 403 : 200;
+      res.end();
+    });
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const previous = process.env.CADDY_API;
+  process.env.CADDY_API = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const context = database();
+    const caddy = load('server/src/services/caddy.ts', {
+      '../db/index.js': { db: context.db, DATA_DIR: '/isolated' }, fs: { writeFileSync() {} },
+      '../middleware/validation.js': { validateDomain() {} },
+    }, { Buffer, URL, AbortSignal, console, process }).caddyService;
+    assert.equal(await caddy.reloadCaddyApi(':80 {\n}\n'), true);
+    const load_ = seen.find(request => request.body === ':80 {\n}\n');
+    assert.equal(load_.url, '/load');
+    assert.equal(load_.type, 'text/caddyfile');
+  } finally {
+    if (previous === undefined) delete process.env.CADDY_API; else process.env.CADDY_API = previous;
+    server.close();
+  }
+});
+
 test('prune completion preserves configuration changed while Docker was running', async () => {
   const store = database({ maintenance: { unusedRetentionHours: 72, autoPrune: true } });
   const cleaner = load('server/src/services/cleaner.ts', {
