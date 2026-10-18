@@ -20,6 +20,7 @@ import { useNotification } from '../../context/NotificationContext.js';
 import { Switch } from '../common/Switch.js';
 import { NumberInput } from '../common/NumberInput.js';
 import { formatRelative } from './DeploymentsPanel.js';
+import { copyText } from '../../utils/clipboard.js';
 
 interface AppSettingsPanelProps {
   app: AppItem;
@@ -190,7 +191,7 @@ export const AppSettingsPanel: React.FC<AppSettingsPanelProps> = ({ app, onOpenD
   };
 
   const copy = (key: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    void copyText(text);
     setCopied(key);
     setTimeout(() => setCopied((current) => (current === key ? null : current)), 1800);
   };

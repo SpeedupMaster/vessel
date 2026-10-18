@@ -295,6 +295,7 @@ function MainConsole() {
                 r2Config={r2Config}
                 backups={backups}
                 onNavigate={handleSelectTab}
+                onOpenApp={(appId) => handleNavigateSubRoute('detail', appId)}
                 onDeploy={deployApp}
                 onTriggerBackup={triggerSystemBackup}
                 onTriggerPrune={triggerPrune}

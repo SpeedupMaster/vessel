@@ -25,6 +25,7 @@ interface OverviewViewProps {
   r2Config: R2Config | null;
   backups: BackupRecord[];
   onNavigate: (tab: any) => void;
+  onOpenApp: (appId: string) => void;
   onDeploy: (id: string) => void;
   onTriggerBackup: () => void;
   onTriggerPrune: () => void;
@@ -99,6 +100,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   r2Config,
   backups,
   onNavigate,
+  onOpenApp,
   onDeploy,
   onTriggerBackup,
   onTriggerPrune,
@@ -273,7 +275,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => onNavigate('apps')}
+                          onClick={() => onOpenApp(app.id)}
                           className="btn-vessel-secondary w-full sm:w-auto min-h-[40px] sm:min-h-[32px] px-3.5 py-1.5 rounded-xl"
                         >
                           <span>详情 / 终端</span>

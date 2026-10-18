@@ -507,7 +507,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                         <span>https://</span>
                       </div>
                       <input
-                        type="url"
+                        type="text"
+                        inputMode="url"
                         autoCapitalize="none"
                         autoCorrect="off"
                         spellCheck={false}

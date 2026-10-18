@@ -21,6 +21,7 @@ import { AppItem, DeploymentAction, DeploymentRecord, DeploymentTrigger } from '
 import { apiFetch } from '../../hooks/useData.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { EmptyState } from '../common/EmptyState.js';
+import { copyText } from '../../utils/clipboard.js';
 
 interface DeploymentsPanelProps {
   app: AppItem;
@@ -176,7 +177,7 @@ export const DeploymentsPanel: React.FC<DeploymentsPanelProps> = ({ app, onDeplo
       toast.info('暂无内容可复制');
       return;
     }
-    navigator.clipboard.writeText(lines.join('\n'));
+    void copyText(lines.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

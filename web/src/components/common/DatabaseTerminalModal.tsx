@@ -15,6 +15,7 @@ import {
 import { AppItem } from '../../types/index.js';
 import { apiFetch } from '../../hooks/useData.js';
 import { DATABASE_OPTIONS } from './CreateDatabaseModal.js';
+import { copyText } from '../../utils/clipboard.js';
 
 interface DatabaseTerminalModalProps {
   isOpen: boolean;
@@ -329,7 +330,7 @@ export const DatabaseTerminalModal: React.FC<DatabaseTerminalModalProps> = ({
     const text = history
       .map((h) => `${h.prompt}${h.command}\n${h.output}`)
       .join('\n\n');
-    navigator.clipboard.writeText(text);
+    void copyText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

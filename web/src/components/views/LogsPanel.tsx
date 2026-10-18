@@ -19,6 +19,7 @@ import {
 import clsx from 'clsx';
 import { AppItem } from '../../types/index.js';
 import { Modal } from '../common/Modal.js';
+import { copyText } from '../../utils/clipboard.js';
 
 interface LogsPanelProps {
   app: AppItem;
@@ -213,7 +214,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ app }) => {
 
   const handleCopy = () => {
     const text = filteredLogs.map((l) => l.raw).join('\n');
-    navigator.clipboard.writeText(text);
+    void copyText(text);
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(15);

@@ -66,6 +66,7 @@ import { AppSettingsPanel } from './AppSettingsPanel.js';
 import { DatabaseMonitorPanel } from './DatabaseMonitorPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { formatBytes } from '../../utils/format.js';
+import { copyText } from '../../utils/clipboard.js';
 
 interface ComposeAppViewProps {
   mode: 'create' | 'edit';
@@ -210,7 +211,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
   const handleCopyDbField = (text: string, fieldKey: string) => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
+    void copyText(text);
     setCopiedDbField(fieldKey);
     setTimeout(() => setCopiedDbField(null), 2000);
   };
@@ -784,7 +785,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   // Copy UUID handler
   const handleCopyUUID = (uuid: string) => {
     if (!uuid) return;
-    navigator.clipboard.writeText(uuid);
+    void copyText(uuid);
     setCopiedUUID(true);
     toast.success('应用 UUID 已复制到剪贴板');
     setTimeout(() => setCopiedUUID(false), 2000);
@@ -917,7 +918,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   };
 
   const handleCopyYaml = () => {
-    navigator.clipboard.writeText(composeYaml);
+    void copyText(composeYaml);
     setCopiedYaml(true);
     toast.success('Compose 配置已复制到剪贴板');
     setTimeout(() => setCopiedYaml(false), 1800);
@@ -997,7 +998,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   };
 
   const handleCopyUrl = (url: string) => {
-    navigator.clipboard.writeText(url);
+    void copyText(url);
     setCopiedUrl(true);
     toast.success('公网路由地址已复制到剪贴板');
     setTimeout(() => setCopiedUrl(false), 2000);
@@ -1477,7 +1478,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     type="button"
                     onClick={() => {
                       if (app?.id) {
-                        navigator.clipboard.writeText(app.id);
+                        void copyText(app.id);
                         setCopiedUUID(true);
                         toast.success('应用 ID 已复制');
                         setTimeout(() => setCopiedUUID(false), 2000);
@@ -3774,7 +3775,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     </div>
                     <input
                       ref={domainInputRef}
-                      type="url"
+                      type="text"
+                      inputMode="url"
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
