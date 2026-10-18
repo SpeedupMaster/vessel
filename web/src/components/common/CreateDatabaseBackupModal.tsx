@@ -70,9 +70,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
         const data = await res.json();
         if (Array.isArray(data.databases) && data.databases.length > 0) {
           setAvailableDatabases(data.databases);
-          if (!selectedDb) {
-            setSelectedDb(data.databases[0]);
-          }
+          setSelectedDb((current) => current || data.databases[0]);
         }
       }
     } catch {
@@ -80,7 +78,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
     } finally {
       setLoadingDbs(false);
     }
-  }, [app.id, selectedDb]);
+  }, [app.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -123,7 +121,10 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
 
       fetchDatabases();
     }
-  }, [isOpen, app.envContent, app.backupSchedule, engineName, fetchDatabases]);
+    // Initialise once per opening: re-running on app refreshes or a new fetchDatabases would
+    // overwrite the database the user just picked
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, app.id]);
 
   const handleSubmit = async (runNow: boolean = true) => {
     if (isSubmitting) return;

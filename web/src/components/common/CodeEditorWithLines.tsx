@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useLayoutEffect } from 'react';
 import clsx from 'clsx';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-yaml.js';
@@ -42,7 +42,7 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
-  const preRef = useRef<HTMLPreElement>(null);
+  const codeRef = useRef<HTMLElement>(null);
 
   const lines = value.split('\n');
   const lineCount = Math.max(lines.length, 1);
@@ -60,17 +60,21 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
     return '';
   }, [value, language]);
 
+  // Layers follow the textarea by transform rather than their own scrollTop: the textarea can scroll
+  // further (its horizontal scrollbar adds to the range), and a clamped overlay drifts off the caret.
   const syncScroll = () => {
-    if (textareaRef.current) {
-      if (gutterRef.current) {
-        gutterRef.current.scrollTop = textareaRef.current.scrollTop;
-      }
-      if (preRef.current) {
-        preRef.current.scrollTop = textareaRef.current.scrollTop;
-        preRef.current.scrollLeft = textareaRef.current.scrollLeft;
-      }
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    if (gutterRef.current) {
+      gutterRef.current.style.transform = `translateY(${-textarea.scrollTop}px)`;
+    }
+    if (codeRef.current) {
+      codeRef.current.style.transform = `translate(${-textarea.scrollLeft}px, ${-textarea.scrollTop}px)`;
     }
   };
+
+  // Content changes (e.g. deleting lines) can move scrollTop without a scroll event
+  useLayoutEffect(syncScroll);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (readOnly) return;
@@ -136,23 +140,24 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
     >
       {/* Line Numbers Gutter */}
       <div
-        ref={gutterRef}
         aria-hidden="true"
         className={clsx(
           'select-none py-3 px-3 text-ink-muted text-right font-mono text-xs leading-[1.625rem] overflow-hidden flex-shrink-0 min-w-[3rem] border-r border-zinc-200/60 dark:border-white/5',
           borderless ? 'bg-paper-3/20' : 'bg-paper-2'
         )}
       >
-        {Array.from({ length: lineCount }).map((_, idx) => (
-          <div
-            key={idx}
-            onClick={() => handleLineClick(idx)}
-            className="tabular-nums cursor-pointer hover:text-ink transition-colors select-none"
-            data-tooltip={`点击选中第 ${idx + 1} 行`}
-          >
-            {idx + 1}
-          </div>
-        ))}
+        <div ref={gutterRef}>
+          {Array.from({ length: lineCount }).map((_, idx) => (
+            <div
+              key={idx}
+              onClick={() => handleLineClick(idx)}
+              className="tabular-nums cursor-pointer hover:text-ink transition-colors select-none"
+              data-tooltip={`点击选中第 ${idx + 1} 行`}
+            >
+              {idx + 1}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Code Area: Container for Syntax Overlay & Editable Textarea */}
@@ -160,12 +165,13 @@ export const CodeEditorWithLines: React.FC<CodeEditorWithLinesProps> = ({
         {/* Highlighting Overlay (Pre) */}
         {isHighlighting && (
           <pre
-            ref={preRef}
             aria-hidden="true"
             className="absolute inset-0 p-3 m-0 bg-transparent text-ink font-mono text-xs leading-[1.625rem] whitespace-pre overflow-hidden pointer-events-none select-none font-normal"
             style={{ tabSize: 2 }}
           >
             <code
+              ref={codeRef}
+              className="block w-max"
               dangerouslySetInnerHTML={{
                 __html: highlightedCode + (value.endsWith('\n') ? ' ' : ''),
               }}
