@@ -36,8 +36,8 @@ const DEFAULT_MAINTENANCE_CONFIG: MaintenanceConfig = {
 
 function createAdmin(): AdminUser {
   const supplied = process.env.VESSEL_ADMIN_PASSWORD;
-  if (supplied && (supplied.length < 12 || supplied.length > 1024 || supplied === 'vessel2026')) {
-    throw new Error('VESSEL_ADMIN_PASSWORD must contain at least 12 characters and cannot be the legacy default');
+  if (supplied && (supplied.length < 8 || supplied.length > 1024 || supplied === 'vessel2026')) {
+    throw new Error('VESSEL_ADMIN_PASSWORD must contain at least 8 characters and cannot be the legacy default');
   }
   const password = supplied || crypto.randomBytes(24).toString('base64url');
   if (!supplied) {

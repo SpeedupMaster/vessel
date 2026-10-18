@@ -14,7 +14,7 @@ const TAG_BYTES = 16;
 const HEADER_BYTES = MAGIC.length + SALT_BYTES + IV_BYTES;
 
 export const ENCRYPTED_SUFFIX = '.enc';
-export const MIN_PASSPHRASE_LENGTH = 12;
+export const MIN_PASSPHRASE_LENGTH = 8;
 export const PASSPHRASE_REQUIRED = 'BACKUP_PASSPHRASE_REQUIRED';
 
 /** Thrown when an encrypted backup cannot be opened with the available passphrase. */

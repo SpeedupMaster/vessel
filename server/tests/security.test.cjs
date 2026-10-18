@@ -67,8 +67,9 @@ test('initial password accounts can change password but cannot use management AP
   await serve(context.app, async base => {
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
     assert.equal((await fetch(base + '/api/apps', { headers })).status, 403);
+    assert.equal((await fetch(base + '/api/auth/change-password', { method: 'POST', headers, body: JSON.stringify({ currentPassword: 'test-password-12345', newPassword: 'short-7' }) })).status, 400);
     const changed = await fetch(base + '/api/auth/change-password', { method: 'POST', headers,
-      body: JSON.stringify({ currentPassword: 'test-password-12345', newPassword: 'updated-password-12345' }) });
+      body: JSON.stringify({ currentPassword: 'test-password-12345', newPassword: 'valid-8c' }) });
     assert.equal(changed.status, 200);
     assert.equal(context.authService.verifyToken(token).valid, false);
     const fresh = (await changed.json()).token;

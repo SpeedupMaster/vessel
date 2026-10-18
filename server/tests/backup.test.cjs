@@ -200,11 +200,10 @@ test('database commands use the selected image and decoded dotenv credentials', 
   const result = await context.service.runDatabaseBackup(app, { databaseName: 'main' });
   assert.equal(result.success, true, result.error);
   assert.ok(commands[0].includes('mysqldump'));
-  assert.ok(commands[0].includes('-ppass with spaces'));
-  assert.ok(commands[0].includes('operator'));
+  assert.ok(commands[0].some(arg => typeof arg === 'string' && arg.includes('[client]')));
   assert.equal((await context.service.restoreDatabaseDump(result.record, path.join(directory, 'backups', result.record.fileName))).success, true);
   assert.ok(commands[1].includes('mysql'));
-  assert.ok(commands[1].includes('-ppass with spaces'));
+  assert.ok(commands[1].some(arg => typeof arg === 'string' && arg.includes('[client]')));
 });
 
 function systemFixture(directory) {

@@ -14,7 +14,16 @@ function load(relative, mocks = {}, globals) {
   const module = { exports: {} };
   const code = `(function(require,module,exports){${js}\n})`;
   const fn = globals ? vm.runInNewContext(code, globals, { filename }) : vm.runInThisContext(code, { filename });
-  fn(id => Object.hasOwn(mocks, id) ? mocks[id] : requireServer(id), module, module.exports);
+  const fileRequire = createRequire(filename);
+  fn(id => {
+    if (Object.hasOwn(mocks, id)) return mocks[id];
+    if (id.startsWith('.')) {
+      const targetTs = path.resolve(path.dirname(filename), id.replace(/\.js$/, '.ts'));
+      if (fs.existsSync(targetTs)) return load(path.relative(root, targetTs), mocks, globals);
+      return fileRequire(id);
+    }
+    return requireServer(id);
+  }, module, module.exports);
   return module.exports;
 }
 

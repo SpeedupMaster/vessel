@@ -120,7 +120,7 @@ sudo sh install.sh
   sudo cat /opt/vessel/data/initial-admin-password
   ```
 - **安全要求**：首次登录控制台后**必须立即修改密码**。密码修改成功后，系统会自动销毁并删除该初始密码文件。
-- **预设密码选项**：若希望跳过初始文件密码，可在首次安装启动前设置环境变量 `VESSEL_ADMIN_PASSWORD`（长度不得少于 12 位）。
+- **预设密码选项**：若希望跳过初始文件密码，可在首次安装启动前设置环境变量 `VESSEL_ADMIN_PASSWORD`（长度不得少于 8 位）。
 
 ---
 

@@ -136,8 +136,8 @@ export class AuthService {
       return { success: false, error: '当前密码与新密码均不能为空' };
     }
 
-    if (newPassword.length < 12 || newPassword.length > 1024 || newPassword === 'vessel2026' || newPassword === currentPassword) {
-      return { success: false, error: '新密码须为 12–1024 个字符，且不能与旧密码或默认密码相同' };
+    if (newPassword.length < 8 || newPassword.length > 1024 || newPassword === 'vessel2026' || newPassword === currentPassword) {
+      return { success: false, error: '新密码长度不能少于 8 位，且不能与旧密码或默认密码相同' };
     }
 
     if (!matchesPassword(currentPassword, admin.passwordHash)) {

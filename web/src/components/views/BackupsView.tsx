@@ -413,7 +413,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       type={showPassphrase ? 'text' : 'password'}
                       value={backupPassphrase}
                       onChange={(e) => setBackupPassphrase(e.target.value)}
-                      placeholder={hasBackupPassphrase ? '已设置，留空则保持不变' : '至少 12 个字符'}
+                      placeholder={hasBackupPassphrase ? '已设置，留空则保持不变' : '至少 8 个字符'}
                       autoComplete="new-password"
                       autoCapitalize="none"
                       autoCorrect="off"
