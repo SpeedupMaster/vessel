@@ -43,7 +43,6 @@ export interface UpdateResult {
 
 interface Installation {
   installDir: string;
-  composeFile: string;
   socket: string;
   repository: string;
   image: string;
@@ -192,21 +191,22 @@ class SelfUpdateService {
     } catch {
       throw new Error(`未找到 ${CONTAINER} 容器，请使用安装脚本部署后再在线更新`);
     }
-    if (!info?.Id?.startsWith(os.hostname())) throw new Error('当前进程不在 Vessel 容器中运行，无法在线更新');
+    if (!info?.Id?.startsWith(os.hostname())) throw new Error('当前进程不在 Vessel 容器中运行，无法在线更新，请在服务器上重新运行安装脚本升级');
     const labels = info.Config?.Labels || {};
     const installDir = labels['com.docker.compose.project.working_dir'];
-    const composeFile = labels['com.docker.compose.project.config_files'];
-    if (labels['com.docker.compose.project'] !== 'vessel' || !installDir || composeFile !== path.posix.join(installDir, 'docker-compose.yml')) {
+    // config_files is not checked: the installer runs Compose against a staged copy in a temporary
+    // directory. The updater verifies the managed header of <installDir>/docker-compose.yml instead.
+    if (labels['com.docker.compose.project'] !== 'vessel' || !installDir) {
       throw new Error('当前容器不是由安装脚本创建的，请通过安装脚本升级');
     }
     const mounts: any[] = info.Mounts || [];
     const dataMount = mounts.find(mount => mount.Destination === '/app/data');
-    if (dataMount?.Source !== path.posix.join(installDir, 'data')) throw new Error('数据目录与安装目录不一致，无法在线更新');
+    if (dataMount?.Source !== path.posix.join(installDir, 'data')) throw new Error('数据目录与安装目录不一致，无法在线更新，请在服务器上重新运行安装脚本升级');
     const socket = mounts.find(mount => mount.Destination === '/var/run/docker.sock')?.Source;
-    if (!socket) throw new Error('未挂载 Docker socket');
+    if (!socket) throw new Error('未挂载 Docker socket，请在服务器上重新运行安装脚本升级');
     const image = String(info.Config?.Image || '');
-    if (!IMAGE_PATTERN.test(image) || !IMAGE_PATTERN.test(installDir)) throw new Error('无法识别当前镜像');
-    return { installDir, composeFile, socket, repository: imageRepository(image), image };
+    if (!IMAGE_PATTERN.test(image) || !IMAGE_PATTERN.test(installDir)) throw new Error('无法识别当前镜像，请在服务器上重新运行安装脚本升级');
+    return { installDir, socket, repository: imageRepository(image), image };
   }
 
   private readResult(): UpdateResult | null {

@@ -108,7 +108,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, statu
         {status?.updateAvailable && !status.supported && (
           <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-300 flex gap-2">
             <Warning className="w-4 h-4 shrink-0 mt-px" />
-            <span>{status.unsupportedReason} 可在服务器上重新运行新版本的安装脚本完成升级。</span>
+            <span>{status.unsupportedReason}</span>
           </div>
         )}
 
