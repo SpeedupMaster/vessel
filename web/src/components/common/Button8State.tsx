@@ -42,7 +42,7 @@ export const Button8State: React.FC<Button8StateProps> = ({
       case 'ghost':
         return 'bg-transparent text-ink-muted hover:text-ink hover:bg-paper-3 focus-visible:ring-focus active:bg-paper-4 disabled:text-ink-muted/60';
       default:
-        return 'bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 font-semibold shadow-sm focus-visible:ring-focus';
+        return 'btn-vessel-primary font-semibold focus-visible:ring-line-focus';
     }
   };
 
@@ -52,10 +52,10 @@ export const Button8State: React.FC<Button8StateProps> = ({
       data-state={state}
       data-variant={variant}
       className={clsx(
-        'relative inline-flex items-center justify-center rounded-xl transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-paper',
+        'relative inline-flex items-center justify-center rounded-xl transition-[background-color,color,box-shadow,transform] duration-200 ease-out-expo select-none outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-paper active:scale-[0.97]',
         getSizeClasses(),
         getVariantClasses(),
-        isDisabled && 'cursor-not-allowed hover:bg-auto active:translate-y-0',
+        isDisabled && 'cursor-not-allowed active:scale-100',
         state === 'loading' && 'cursor-wait',
         className
       )}

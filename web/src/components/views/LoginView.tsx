@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useLayoutEffect, useRef } from 'react';
+import gsap from 'gsap';
 import {
-  Anchor,
   User,
   LockKey,
   Eye,
   EyeSlash,
   SignIn,
   WarningCircle,
-  Key,
 } from '@phosphor-icons/react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { Button8State } from '../common/Button8State.js';
+import { VesselMark } from '../common/ViewReveal.js';
+import { EASE_OUT, prefersReducedMotion } from '../../lib/motion.js';
 
 interface LoginViewProps {
   onLoginSuccess?: () => void;
@@ -23,13 +24,39 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorNonce, setErrorNonce] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Staggered entrance: brand, fields and footer settle in sequence
+  useLayoutEffect(() => {
+    if (prefersReducedMotion() || !rootRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '[data-login-card]',
+        { opacity: 0, y: 24, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: EASE_OUT, clearProps: 'transform,opacity' }
+      );
+      gsap.fromTo(
+        '[data-login-item]',
+        { opacity: 0, y: 12, filter: 'blur(4px)' },
+        { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.6, ease: EASE_OUT, stagger: 0.06, delay: 0.12, clearProps: 'transform,opacity,filter' }
+      );
+    }, rootRef);
+    return () => ctx.revert();
+  }, []);
+
+  // Re-keying the alert replays the shake even when the message repeats
+  const fail = (message: string) => {
+    setError(message);
+    setErrorNonce((n) => n + 1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!username.trim() || !password) {
-      setError('请输入用户名和密码');
+      fail('请输入用户名和密码');
       return;
     }
 
@@ -42,29 +69,37 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       if (res.success) {
         onLoginSuccess?.();
       } else {
-        setError(res.error || '登录失败，请检查账号和密码');
+        fail(res.error || '登录失败，请检查账号和密码');
       }
     } catch (err: any) {
-      setError(err.message || '网络连接失败，请稍后重试');
+      fail(err.message || '网络连接失败，请稍后重试');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex flex-col justify-start sm:justify-center items-center px-4 pt-12 pb-8 sm:py-12 relative overflow-x-hidden font-sans selection:bg-accent/20">
-      {/* Ambient background glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 left-1/3 w-[300px] h-[250px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+    <div
+      ref={rootRef}
+      className="vessel-canvas min-h-screen bg-paper text-ink flex flex-col justify-start sm:justify-center items-center px-4 pt-12 pb-8 sm:py-12 relative overflow-hidden font-sans"
+    >
+      {/* Ambience: drifting aurora over a fading dot grid */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-dot-grid opacity-70 [mask-image:radial-gradient(ellipse_70%_55%_at_50%_40%,black,transparent)]" />
+        <div className="animate-aurora absolute left-1/2 top-[18%] -ml-[360px] w-[720px] h-[420px] rounded-full blur-[110px] opacity-60 dark:opacity-50 bg-[conic-gradient(from_180deg_at_50%_50%,var(--color-signal-ring),transparent_35%,rgba(16,185,129,0.14)_55%,transparent_75%,var(--color-signal-soft))]" />
+      </div>
 
-      {/* Main Container: Mobile full-bleed flush, Desktop floating card */}
-      <div className="w-full max-w-md bg-transparent sm:bg-paper-2 sm:rounded-3xl sm:shadow-2xl sm:p-8 p-1 relative z-10">
-        {/* Brand Header */}
-        <div className="text-center mb-7 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-paper-3 text-accent mb-3.5 sm:mb-4">
-            <Anchor className="w-7 h-7" weight="duotone" />
+      <div
+        data-login-card
+        className="w-full max-w-[400px] relative z-10 p-1 sm:p-8 sm:rounded-[22px] sm:bg-paper-2/80 sm:backdrop-blur-xl sm:border sm:border-line sm:shadow-pop"
+      >
+        {/* Brand */}
+        <div data-login-item className="text-center mb-7 sm:mb-8">
+          <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent text-accent-contrast mb-4 shadow-[var(--shadow-button)] overflow-hidden">
+            <span className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent dark:from-transparent dark:to-black/10" />
+            <VesselMark className="relative w-7 h-7" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink font-sans">VESSEL 控制台</h1>
+          <h1 className="text-xl sm:text-[22px] font-semibold tracking-[-0.02em] text-ink">登录 Vessel 控制台</h1>
           <p className="text-xs text-ink-muted mt-1.5 leading-relaxed">
             Cloud-Native Docker Compose &amp; SSL Control Plane
           </p>
@@ -72,7 +107,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         {/* Error Notification */}
         {error && (
-          <div className="mb-5 p-3.5 rounded-xl bg-rose-500/10 flex items-center gap-3 text-rose-500 text-xs animate-shake">
+          <div
+            key={errorNonce}
+            role="alert"
+            className="mb-5 p-3 rounded-xl border border-rose-500/25 bg-rose-500/[0.08] flex items-center gap-2.5 text-rose-600 dark:text-rose-400 text-xs animate-shake"
+          >
             <WarningCircle className="w-4 h-4 shrink-0" weight="fill" />
             <div className="flex-1 font-medium">{error}</div>
           </div>
@@ -81,8 +120,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {/* Form with native <form> tag and standard autocomplete semantics */}
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5" method="POST" action="#">
           {/* Username */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-muted mb-1.5">
+          <div data-login-item>
+            <label className="block text-xs font-medium text-ink-muted mb-1.5">
               管理员账号
             </label>
             <div className="relative">
@@ -101,14 +140,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 placeholder="admin"
                 disabled={loading}
                 autoFocus
-                className="w-full pl-10 pr-3.5 py-3 min-h-[48px] rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 text-base sm:text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm disabled:opacity-50"
+                className="w-full pl-10 pr-3.5 py-3 min-h-[48px] rounded-xl bg-paper-2 dark:bg-white/[0.03] border border-line text-base sm:text-[13px] text-ink placeholder:text-ink-faint/70 hover:border-line-strong shadow-subtle disabled:opacity-50"
               />
             </div>
           </div>
 
           {/* Password */}
-          <div>
-            <label className="block text-xs font-semibold text-ink-muted mb-1.5">
+          <div data-login-item>
+            <label className="block text-xs font-medium text-ink-muted mb-1.5">
               访问密码
             </label>
             <div className="relative">
@@ -123,7 +162,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 disabled={loading}
-                className="w-full pl-10 pr-12 py-3 min-h-[48px] rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 text-base sm:text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm disabled:opacity-50 font-mono"
+                className="w-full pl-10 pr-12 py-3 min-h-[48px] rounded-xl bg-paper-2 dark:bg-white/[0.03] border border-line text-base sm:text-[13px] text-ink placeholder:text-ink-faint/70 hover:border-line-strong shadow-subtle disabled:opacity-50 font-mono"
               />
               <button
                 type="button"
@@ -141,7 +180,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
 
           {/* Submit CTA */}
-          <div className="pt-2">
+          <div data-login-item className="pt-2">
             <Button8State
               type="submit"
               variant="primary"
@@ -149,20 +188,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               state={loading ? 'loading' : 'default'}
               disabled={loading}
               icon={<SignIn className="w-4 h-4" weight="bold" />}
-              className="w-full min-h-[48px] py-3 justify-center text-sm font-semibold rounded-xl"
+              className="w-full min-h-[48px] py-3 justify-center text-sm font-semibold rounded-xl active:scale-[0.98]"
             >
               {loading ? '正在验证身份...' : '登录管理控制台'}
             </Button8State>
           </div>
         </form>
 
-        <p className="mt-6 text-xs text-ink-muted">
+        <p data-login-item className="mt-6 pt-5 border-t border-line-subtle text-[11px] leading-relaxed text-ink-faint">
           首次登录：账号为 admin，初始密码见服务器数据目录中的 initial-admin-password 文件，或使用安装时设置的密码。
         </p>
       </div>
 
       {/* Footer copyright / info */}
-      <div className="mt-8 sm:mt-12 text-center text-xs text-ink-faint">
+      <div className="relative z-10 mt-8 sm:mt-10 text-center text-[11px] text-ink-faint tracking-wide">
         Vessel Platform Engine &bull; Pure Docker &amp; Caddy Automation
       </div>
     </div>

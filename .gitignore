@@ -12,3 +12,6 @@ data
 !.env.example
 *.pem
 *.key
+
+# Local UI sandbox
+.sandbox-data

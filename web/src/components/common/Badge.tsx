@@ -52,21 +52,18 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, pul
       case 'running':
       case 'active':
       case 'connected':
-        return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 dark:border-transparent font-medium';
+        return 'bg-emerald-500/[0.08] text-emerald-700 dark:text-emerald-400 border-emerald-500/20';
       case 'deploying':
       case 'rebuilding':
       case 'issuing':
-        return 'bg-amber-500/10 text-amber-800 dark:text-amber-400 border border-amber-500/25 dark:border-transparent font-medium';
-      case 'stopped':
-      case 'unverified':
-        return 'bg-paper-3 text-ink-muted border border-zinc-200 dark:border-white/5';
+        return 'bg-amber-500/[0.08] text-amber-700 dark:text-amber-400 border-amber-500/25';
       case 'error':
       case 'expired':
-        return 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/25 dark:border-transparent font-medium';
+        return 'bg-rose-500/[0.08] text-rose-700 dark:text-rose-400 border-rose-500/20';
       case 'accent':
-        return 'bg-paper-3 text-ink font-semibold border border-zinc-200 dark:border-white/10';
+        return 'bg-signal-soft text-signal border-signal-ring font-semibold';
       default:
-        return 'bg-paper-3 text-ink-muted border border-zinc-200 dark:border-white/5';
+        return 'bg-paper-3 text-ink-muted border-line';
     }
   };
 
@@ -75,16 +72,16 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, pul
       case 'running':
       case 'active':
       case 'connected':
-        return 'bg-emerald-500 dark:bg-emerald-400';
+        return 'text-emerald-500 dark:text-emerald-400';
       case 'deploying':
       case 'rebuilding':
       case 'issuing':
-        return 'bg-amber-500 dark:bg-amber-400';
+        return 'text-amber-500 dark:text-amber-400';
       case 'error':
       case 'expired':
-        return 'bg-rose-500 dark:bg-rose-400';
+        return 'text-rose-500 dark:text-rose-400';
       default:
-        return 'bg-zinc-400 dark:bg-zinc-500';
+        return 'text-zinc-400 dark:text-zinc-500';
     }
   };
 
@@ -99,19 +96,12 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, pul
   return (
     <span
       className={clsx(
-        'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-medium transition-colors',
+        'inline-flex items-center gap-1.5 px-2 py-[3px] rounded-full border text-[10.5px] leading-none font-medium whitespace-nowrap transition-colors duration-300',
         getStyles(),
         className
       )}
     >
-      {showPulse && (
-        <span className="relative flex h-1.5 w-1.5">
-          <span
-            className={clsx('animate-ping absolute inline-flex h-full w-full rounded-full opacity-75', getDotColor())}
-          />
-          <span className={clsx('relative inline-flex rounded-full h-1.5 w-1.5', getDotColor())} />
-        </span>
-      )}
+      {showPulse && <span className={clsx('status-dot !w-1.5 !h-1.5', getDotColor())} data-live="true" />}
       {displayText}
     </span>
   );

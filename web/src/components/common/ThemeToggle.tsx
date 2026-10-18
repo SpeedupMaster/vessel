@@ -53,7 +53,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
       label: '跟随系统',
       icon: (active) => (
         <Desktop
-          className={clsx('w-3.5 h-3.5 transition-transform duration-200', active ? 'text-accent scale-110' : 'text-ink-faint hover:scale-105')}
+          className={clsx('w-3.5 h-3.5 transition-transform duration-200', active ? 'text-signal scale-110' : 'text-ink-faint hover:scale-105')}
           weight={active ? 'bold' : 'bold'}
         />
       ),
@@ -70,15 +70,23 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
     },
   ];
 
+  const activeIndex = Math.max(0, options.findIndex((o) => o.id === theme));
+
   return (
     <div
       role="group"
       aria-label="主题切换"
       className={clsx(
-        'inline-flex items-center p-1 bg-paper-3 rounded-xl transition-colors select-none',
+        'relative inline-flex items-center p-[3px] bg-paper-3 border border-line-subtle rounded-xl select-none',
         className
       )}
     >
+      {/* Sliding thumb */}
+      <span
+        aria-hidden="true"
+        className="absolute top-[3px] left-[3px] w-[30px] h-[30px] rounded-[9px] bg-paper-2 border border-line shadow-subtle transition-transform duration-[420ms] ease-spring"
+        style={{ transform: `translateX(${activeIndex * 30}px)` }}
+      />
       {options.map((opt) => {
         const isActive = theme === opt.id;
         return (
@@ -87,11 +95,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className, variant = '
             type="button"
             onClick={(e) => setTheme(opt.id, e)}
             data-tooltip={opt.label}
+            aria-pressed={isActive}
             className={clsx(
-              'relative min-w-[34px] min-h-[34px] p-2 rounded-lg text-xs transition-all duration-150 flex items-center justify-center cursor-pointer outline-none active:scale-95',
-              isActive
-                ? 'bg-paper-4 text-ink shadow-sm font-medium'
-                : 'text-ink-muted hover:text-ink hover:bg-paper-4/50'
+              'relative w-[30px] h-[30px] rounded-[9px] text-xs transition-colors duration-200 flex items-center justify-center cursor-pointer outline-none active:scale-90',
+              isActive ? 'text-ink' : 'text-ink-muted hover:text-ink'
             )}
           >
             {opt.icon(isActive)}

@@ -70,7 +70,7 @@ export const Switch: React.FC<SwitchProps> = ({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={clsx(
-        'relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out select-none outline-none',
+        'relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-300 ease-out-expo select-none outline-none active:[&>span]:scale-x-110',
         'focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
         sizeConfig.track,
         checked
@@ -82,7 +82,7 @@ export const Switch: React.FC<SwitchProps> = ({
     >
       <span
         className={clsx(
-          'pointer-events-none inline-block rounded-full shadow-sm transition-transform duration-200 ease-in-out transform',
+          'pointer-events-none inline-block rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform duration-[380ms] ease-spring transform',
           sizeConfig.thumb,
           checked ? sizeConfig.translate : 'translate-x-0',
           checked

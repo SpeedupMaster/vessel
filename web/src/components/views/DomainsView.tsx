@@ -21,6 +21,7 @@ import { DomainItem, AppItem } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { Modal } from '../common/Modal.js';
+import { EmptyState } from '../common/EmptyState.js';
 import { CustomSelect } from '../common/CustomSelect.js';
 import { useNotification } from '../../context/NotificationContext.js';
 
@@ -185,7 +186,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
       {/* Page Header (De-boxed, modern SaaS standard with compressed mobile footprint) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-2 dark:bg-white/[0.04] border border-line/60 dark:border-white/[0.08] flex items-center justify-center text-accent flex-shrink-0 shadow-subtle mt-0.5">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-3 border border-line flex items-center justify-center text-accent flex-shrink-0 shadow-subtle mt-0.5">
             <LockKey className="w-5 h-5" weight="bold" />
           </div>
           <div className="min-w-0 flex-1">
@@ -194,7 +195,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 Caddy 智能反向代理与自动证书续订
               </h2>
               {domains.length > 0 && (
-                <span className="text-[11px] px-2 py-0.2 rounded-full bg-paper-2 dark:bg-white/[0.05] text-ink-muted border border-line/50 dark:border-white/[0.06] font-mono">
+                <span className="text-[11px] px-2 py-0.2 rounded-full bg-paper-3 text-ink-muted border border-line-subtle font-mono">
                   共 {domains.length} 个路由
                 </span>
               )}
@@ -247,9 +248,17 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
       {/* Domains List Card */}
       <div className="card-vessel overflow-hidden p-3 sm:p-4">
         {domains.length === 0 ? (
-          <div className="py-16 text-center text-ink-muted text-xs">
-            暂无已绑定的域名。点击右上角「绑定新域名」为应用或控制台配置 HTTPS 访问。
-          </div>
+          <EmptyState
+            icon={<Globe className="w-5 h-5" weight="duotone" />}
+            title="暂无已绑定的域名"
+            description="为应用或控制台绑定域名，Vessel 会通过内置 Caddy 自动签发并续期 HTTPS 证书。"
+            action={
+              <button type="button" onClick={handleOpenAdd} className="btn-vessel-primary text-xs px-3.5 py-2 cursor-pointer">
+                <Plus className="w-3.5 h-3.5" weight="bold" />
+                绑定新域名
+              </button>
+            }
+          />
         ) : (
           <div className="space-y-1.5">
             {domains.map((d) => {
@@ -390,7 +399,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                 }}
                 placeholder={deletingDomain.domain}
                 autoFocus
-                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 focus:outline-none transition-colors shadow-sm"
               />
             </div>
 
@@ -424,7 +433,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 bg-black/60 sm:bg-black/50 sm:dark:bg-black/75 backdrop-blur-sm animate-fade-in font-sans"
+            className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in font-sans"
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-domain-title"
@@ -437,11 +446,11 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
           >
             {/* Modal / Bottom Sheet Card */}
             <div
-              className="w-full sm:max-w-xl max-h-[92vh] sm:max-h-[90vh] bg-paper-2 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-bottom-sheet sm:animate-none"
+              className="w-full sm:max-w-xl max-h-[92vh] sm:max-h-[90vh] surface-pop rounded-t-[24px] sm:rounded-[22px] flex flex-col overflow-hidden animate-bottom-sheet sm:animate-none"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Mobile Drag Handle Indicator */}
-              <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+              <div className="w-9 h-1 bg-ink-faint/30 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
 
               {/* Sticky Top Header */}
               <header className="px-5 sm:px-6 py-4 flex items-center justify-between shrink-0">
@@ -492,8 +501,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                       <span className="text-[11px] text-ink-faint">支持主域名或子域名</span>
                     </div>
 
-                    <div className="flex items-stretch rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group focus-within:border-zinc-400 dark:focus-within:border-white/30 transition-colors">
-                      <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none shrink-0 border-r border-zinc-200 dark:border-white/10">
+                    <div className="flex items-stretch rounded-xl bg-paper-2 dark:bg-paper-3 border border-line shadow-sm overflow-hidden group focus-within:border-signal focus-within:ring-[3px] focus-within:ring-signal-soft transition-colors">
+                      <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none shrink-0 border-r border-line">
                         <LockKey className="w-3.5 h-3.5" weight="bold" />
                         <span>https://</span>
                       </div>
@@ -510,7 +519,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                           setDomainInput(val);
                         }}
                         placeholder="app.example.com"
-                        className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none min-h-[44px]"
+                        className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none min-h-[44px]"
                         autoFocus
                       />
                     </div>
@@ -561,7 +570,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                             value={serviceNameInput}
                             onChange={(e) => setServiceNameInput(e.target.value)}
                             placeholder="例如: web, app, n8n"
-                            className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                            className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                           />
                         </div>
 
@@ -577,7 +586,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                             value={targetPortInput}
                             onChange={(e) => setTargetPortInput(e.target.value.replace(/[^0-9]/g, ''))}
                             placeholder="例如: 3000, 5678, 80"
-                            className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                            className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                           />
                         </div>
                       </div>
@@ -591,8 +600,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                           <label
                             className={`p-3.5 rounded-2xl cursor-pointer flex flex-col gap-1.5 transition-colors select-none border ${
                               targetTypeInput === 'internal'
-                                ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 text-ink shadow-sm'
-                                : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 text-ink-muted hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
+                                ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring text-ink shadow-sm'
+                                : 'bg-paper-2/60 dark:bg-paper-3/40 border-line-subtle text-ink-muted hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-line-strong'
                             }`}
                           >
                             <div className="flex items-center gap-2">
@@ -613,8 +622,8 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
                           <label
                             className={`p-3.5 rounded-2xl cursor-pointer flex flex-col gap-1.5 transition-colors select-none border ${
                               targetTypeInput === 'host'
-                                ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 text-ink shadow-sm'
-                                : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 text-ink-muted hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
+                                ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring text-ink shadow-sm'
+                                : 'bg-paper-2/60 dark:bg-paper-3/40 border-line-subtle text-ink-muted hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-line-strong'
                             }`}
                           >
                             <div className="flex items-center gap-2">
@@ -679,7 +688,7 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
           handleOpenAdd();
         }}
         aria-label="绑定新域名"
-        className="sm:hidden fixed bottom-6 right-5 z-40 w-12 h-12 rounded-full bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 shadow-floating flex items-center justify-center active:scale-95 transition-all focus:outline-none cursor-pointer"
+        className="sm:hidden fixed bottom-6 right-5 z-40 w-12 h-12 rounded-full btn-vessel-primary shadow-floating flex items-center justify-center active:scale-95 focus:outline-none cursor-pointer"
       >
         <Plus className="w-5 h-5" weight="bold" />
       </button>

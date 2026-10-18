@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import { X } from '@phosphor-icons/react';
+import { EASE_OUT, prefersReducedMotion } from '../../lib/motion.js';
 
 interface ModalProps {
   isOpen: boolean;
@@ -24,35 +25,61 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const backdropRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
+  // Stays true through the exit animation so the panel can animate out before unmounting
+  const [rendered, setRendered] = useState(isOpen);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (isOpen) setRendered(true);
+  }, [isOpen]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const backdrop = backdropRef.current;
+    const panel = panelRef.current;
+    if (!rendered || !backdrop || !panel) return;
+
+    const isMobile = window.innerWidth < 640;
+    const reduced = prefersReducedMotion();
+
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      if (backdropRef.current && panelRef.current) {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-        gsap.fromTo(
-          backdropRef.current,
-          { opacity: 0 },
-          { opacity: 1, duration: 0.25, ease: 'power2.out' }
-        );
-        gsap.fromTo(
-          panelRef.current,
-          { opacity: 0, scale: isMobile ? 1 : 0.96, y: isMobile ? 40 : 15 },
-          { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: isMobile ? 'power3.out' : 'back.out(1.2)' }
-        );
-      }
-    } else {
-      document.body.style.overflow = '';
+      if (reduced) return;
+      gsap.fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+      gsap.fromTo(
+        panel,
+        isMobile ? { yPercent: 100 } : { opacity: 0, y: 18, scale: 0.97, filter: 'blur(6px)' },
+        {
+          opacity: 1,
+          y: 0,
+          yPercent: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          duration: isMobile ? 0.5 : 0.55,
+          ease: EASE_OUT,
+          clearProps: 'transform,filter',
+        }
+      );
+      return;
     }
+
+    // Closing
+    document.body.style.overflow = '';
+    if (reduced) {
+      setRendered(false);
+      return;
+    }
+    const tl = gsap.timeline({ onComplete: () => setRendered(false) });
+    tl.to(panel, isMobile ? { yPercent: 100, duration: 0.28, ease: 'power3.in' } : { opacity: 0, y: 8, scale: 0.98, duration: 0.18, ease: 'power2.in' }, 0);
+    tl.to(backdrop, { opacity: 0, duration: 0.22, ease: 'power2.in' }, 0);
+    return () => {
+      tl.kill();
+    };
+  }, [isOpen, rendered]);
+
+  useEffect(() => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,40 +92,45 @@ export const Modal: React.FC<ModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !mounted) return null;
+  if (!rendered || typeof document === 'undefined') return null;
 
   const modalElement = (
-    <div className={`fixed inset-0 ${zIndex} flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 overflow-y-auto`}>
+    <div
+      className={`fixed inset-0 ${zIndex} flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 overflow-y-auto`}
+      aria-hidden={!isOpen}
+    >
       {/* Backdrop */}
       <div
         ref={backdropRef}
-        onClick={onClose}
-        className="fixed inset-0 bg-black/50 dark:bg-black/75 backdrop-blur-sm transition-opacity"
+        onClick={isOpen ? onClose : undefined}
+        className="fixed inset-0 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px]"
       />
 
       {/* Modal / Bottom Sheet Panel */}
       <div
         ref={panelRef}
-        className={`relative w-full ${maxWidth} bg-paper-2 border border-line dark:border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 sm:p-7 z-10 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-7`}
+        role="dialog"
+        aria-modal="true"
+        className={`relative w-full ${maxWidth} surface-pop rounded-t-[24px] sm:rounded-[22px] p-5 sm:p-7 z-10 flex flex-col max-h-[92vh] sm:max-h-[90vh] overflow-hidden pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-7`}
       >
         {/* Mobile Grab Handle */}
-        <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto -mt-1.5 mb-3 sm:hidden shrink-0" />
+        <div className="w-9 h-1 bg-ink-faint/30 rounded-full mx-auto -mt-1.5 mb-3 sm:hidden shrink-0" />
 
-        <div className="flex items-start justify-between pb-3 sm:pb-4 shrink-0">
+        <div className="flex items-start justify-between pb-4 border-b border-line-subtle shrink-0">
           <div className="min-w-0 pr-3">
-            <h3 className="text-base sm:text-lg font-semibold text-ink font-sans tracking-tight truncate sm:whitespace-normal">{title}</h3>
-            {subtitle && <p className="text-xs text-ink-muted mt-0.5 truncate sm:whitespace-normal">{subtitle}</p>}
+            <h3 className="text-base sm:text-[17px] font-semibold text-ink tracking-[-0.015em] truncate sm:whitespace-normal">{title}</h3>
+            {subtitle && <p className="text-xs text-ink-muted mt-1 truncate sm:whitespace-normal">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
             aria-label="关闭"
-            className="min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 text-ink-muted hover:text-ink p-1.5 sm:p-1 rounded-xl hover:bg-paper-3 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+            className="group min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 text-ink-muted hover:text-ink p-1.5 rounded-xl hover:bg-paper-3 transition-colors flex items-center justify-center shrink-0 cursor-pointer -mr-1.5 -mt-0.5"
           >
-            <X className="w-5 h-5" />
+            <X className="w-[18px] h-[18px] transition-transform duration-300 ease-spring group-hover:rotate-90" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pt-3.5 sm:pt-4 px-0.5 sm:px-1.5 pb-1">{children}</div>
+        <div className="flex-1 overflow-y-auto pt-4 sm:pt-5 px-0.5 sm:px-1.5 pb-1">{children}</div>
       </div>
     </div>
   );

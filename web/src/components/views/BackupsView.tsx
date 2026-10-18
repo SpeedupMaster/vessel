@@ -24,6 +24,7 @@ import { R2Config, BackupRecord } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
 import { Badge } from '../common/Badge.js';
 import { Modal } from '../common/Modal.js';
+import { EmptyState } from '../common/EmptyState.js';
 import { Switch } from '../common/Switch.js';
 import { NumberInput } from '../common/NumberInput.js';
 import { useNotification } from '../../context/NotificationContext.js';
@@ -313,7 +314,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
                     R2 S3 API Endpoint <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <input
@@ -324,12 +325,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
                     Bucket 存储桶名称 <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <input
@@ -340,12 +341,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
                     Access Key ID <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <input
@@ -356,12 +357,12 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
                     Secret Access Key <span className="text-rose-500 font-semibold">*</span>
                   </label>
                   <div className="relative">
@@ -373,7 +374,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
-                      className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                      className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                     />
                     <button
                       type="button"
@@ -388,7 +389,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
                 {/* CRON Schedule with Quick-pick Chips */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300">
+                  <label className="block text-xs font-medium text-ink/85">
                     Cron 定时周期表达式
                   </label>
                   <input
@@ -399,7 +400,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                   {/* Quick-pick Chips Container */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
@@ -423,7 +424,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                             'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
                             isSelected
                               ? 'bg-accent text-accent-contrast font-medium shadow-sm'
-                              : 'bg-paper-3/80 hover:bg-paper-4 text-ink-muted hover:text-ink border border-zinc-200/50 dark:border-white/5'
+                              : 'bg-paper-3/80 hover:bg-paper-4 text-ink-muted hover:text-ink border border-line-subtle'
                           )}
                         >
                           {preset.label}
@@ -435,7 +436,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
 
                 {/* Retention Count with numeric constraint */}
                 <div>
-                  <label className="block text-xs font-medium text-ink/85 dark:text-zinc-300 mb-1.5">
+                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
                     保留版本数 <span className="text-ink-muted font-normal">(超过自动清理旧归档)</span>
                   </label>
                   <NumberInput
@@ -538,9 +539,11 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         </div>
 
         {backups.length === 0 ? (
-          <div className="py-12 text-center text-ink-muted text-xs">
-            暂无备份历史。点击上方「立即执行系统快照」或在应用详情中进行备份。
-          </div>
+          <EmptyState
+            icon={<FileArchive className="w-5 h-5" weight="duotone" />}
+            title="暂无备份历史"
+            description="点击上方「立即执行系统快照」或在应用详情中进行备份。"
+          />
         ) : (
           <div className="space-y-3">
             {backups.map((b) => (
@@ -551,7 +554,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 {/* 行 1: 标题与状态标签 */}
                 <div className="flex items-start justify-between gap-2.5">
                   <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                    <span className="font-semibold text-ink dark:text-zinc-100 text-sm font-sans truncate">
+                    <span className="font-semibold text-ink text-sm font-sans truncate">
                       {b.targetName}
                     </span>
                     {b.databaseName && (
@@ -569,15 +572,15 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 </div>
 
                 {/* 行 2: 文件名 (等宽字体，允许 break-all，绝不撑破卡片) */}
-                <div className="text-xs font-mono text-ink-muted/90 dark:text-zinc-400 break-all select-all flex items-start gap-1.5">
+                <div className="text-xs font-mono text-ink-muted/90 break-all select-all flex items-start gap-1.5">
                   <FileArchive className="w-3.5 h-3.5 text-ink-muted/70 flex-shrink-0 mt-0.5" />
                   <span>{b.fileName}</span>
                 </div>
 
                 {/* 行 3: 元数据 (尺寸与时间) */}
-                <div className="flex items-center gap-2 text-xs text-ink-muted/80 dark:text-zinc-400 font-mono">
+                <div className="flex items-center gap-2 text-xs text-ink-muted/80 font-mono">
                   <span>{formatBytes(b.fileSizeBytes)}</span>
-                  <span className="w-1 h-1 bg-ink-muted/40 dark:bg-white/20 rounded-full"></span>
+                  <span className="w-1 h-1 bg-ink-muted/40 rounded-full"></span>
                   <span className="font-sans">{new Date(b.createdAt).toLocaleString()}</span>
                 </div>
 
@@ -669,7 +672,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                       setDeleteBackupInput(deletingBackup.fileName);
                     }
                   }}
-                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-zinc-200/60 dark:border-white/10 px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
+                  className="inline-flex items-center font-mono font-semibold text-ink hover:text-accent bg-paper-3 hover:bg-paper-4 border border-line px-1.5 py-0.5 rounded-md cursor-pointer transition-all active:scale-95 text-xs select-all"
                   title="点击直接填入"
                 >
                   {deletingBackup.fileName}
@@ -690,7 +693,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 }}
                 placeholder={deletingBackup.fileName}
                 autoFocus
-                className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/70 dark:placeholder:text-zinc-600 focus:outline-none focus:border-rose-500/80 dark:focus:border-rose-500/70 transition-colors shadow-sm"
+                className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/70 focus:outline-none focus:border-rose-500/80 dark:focus:border-rose-500/70 transition-colors shadow-sm"
               />
             </div>
 
@@ -800,7 +803,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 }}
                 placeholder="确认恢复 或 RESTORE"
                 autoFocus
-                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 focus:outline-none transition-colors shadow-sm"
               />
             </div>
 

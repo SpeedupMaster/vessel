@@ -20,6 +20,7 @@ import {
 import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
 import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
+import { EmptyState } from '../common/EmptyState.js';
 const ComposeAppView = lazy(() => import('./ComposeAppView.js').then(module => ({ default: module.ComposeAppView })));
 import { CreateDatabaseModal } from '../common/CreateDatabaseModal.js';
 
@@ -237,7 +238,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索受管应用 (名称 / ID)..."
-              className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-10 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 font-sans transition-colors shadow-sm"
+              className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl pl-10 pr-8 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none font-sans transition-colors shadow-sm"
             />
             {search && (
               <button
@@ -256,7 +257,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
             <button
               type="button"
               onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
-              className="w-full sm:w-auto min-h-[44px] px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-y-px shadow-sm"
+              className="w-full sm:w-auto min-h-[44px] px-4 py-2 btn-vessel-primary text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
             >
               <Plus className="w-4 h-4" weight="bold" />
               <span>新建应用</span>
@@ -265,7 +266,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
 
             {/* Desktop Dropdown Popover */}
             {isCreateMenuOpen && (
-              <div className="hidden md:block absolute right-0 mt-2 w-64 rounded-2xl bg-paper-2 shadow-2xl p-1.5 z-30 animate-fade-in font-sans">
+              <div className="hidden md:block absolute right-0 mt-2 w-64 rounded-2xl surface-pop p-1.5 z-30 animate-fade-in font-sans">
                 <button
                   type="button"
                   onClick={() => {
@@ -310,16 +311,16 @@ export const AppsView: React.FC<AppsViewProps> = ({
         isCreateMenuOpen &&
         createPortal(
           <div
-            className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end"
+            className="md:hidden fixed inset-0 z-50 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in flex flex-col justify-end"
             onClick={() => setIsCreateMenuOpen(false)}
           >
             <div
               ref={actionSheetRef}
-              className="w-full bg-paper-2 rounded-t-3xl shadow-2xl p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
+              className="w-full surface-pop rounded-t-[24px] p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag Handle Indicator */}
-              <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-1 shrink-0" />
+              <div className="w-9 h-1 bg-ink-faint/30 rounded-full mx-auto mb-1 shrink-0" />
 
               {/* Header */}
               <div className="flex items-center justify-between pb-2">
@@ -393,18 +394,15 @@ export const AppsView: React.FC<AppsViewProps> = ({
 
       {/* Applications Grid */}
       {filteredApps.length === 0 ? (
-        <div className="card-vessel p-16 text-center space-y-4 shadow-subtle">
-          <div className="w-12 h-12 rounded-xl bg-paper-3 flex items-center justify-center mx-auto text-ink-muted">
-            <Code className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="text-base font-semibold text-ink">未找到任何应用</h4>
-            <p className="text-xs text-ink-muted mt-1.5">
-              {search ? '请尝试更换搜索关键字' : '当前暂无托管应用，点击下方按钮创建第一个应用或数据库服务'}
-            </p>
-          </div>
-          {!search && (
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+        <div className="card-vessel p-3 sm:p-4">
+          <EmptyState
+            className="min-h-[320px]"
+            icon={<Code className="w-5 h-5" weight="duotone" />}
+            title="未找到任何应用"
+            description={search ? '请尝试更换搜索关键字' : '当前暂无托管应用，点击下方按钮创建第一个应用或数据库服务'}
+            action={
+              !search && (
+            <>
               <Button8State
                 variant="primary"
                 size="sm"
@@ -421,8 +419,10 @@ export const AppsView: React.FC<AppsViewProps> = ({
               >
                 Database 数据库
               </Button8State>
-            </div>
-          )}
+            </>
+              )
+            }
+          />
         </div>
       ) : (
         <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -430,7 +430,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
             <div
               key={app.id}
               onClick={() => navigateTo('detail', app.id)}
-              className="card-vessel p-5 sm:p-6 lg:p-7 flex flex-col justify-between hover:bg-paper-3 transition-colors group cursor-pointer active:scale-[0.995]"
+              className="card-vessel card-interactive p-5 sm:p-6 lg:p-7 flex flex-col justify-between group"
             >
               <div className="space-y-4">
                 {/* Header */}
@@ -517,7 +517,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
                       type="button"
                       disabled={deployingId === app.id}
                       onClick={(e) => handleDeployApp(e, app.id)}
-                      className="min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 transition-all cursor-pointer active:translate-y-px disabled:cursor-not-allowed"
+                      className="min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium btn-vessel-primary cursor-pointer"
                     >
                       {deployingId === app.id ? (
                         <>

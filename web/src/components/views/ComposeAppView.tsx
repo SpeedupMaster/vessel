@@ -52,6 +52,7 @@ import { Badge } from '../common/Badge.js';
 import { Button8State } from '../common/Button8State.js';
 import { CodeEditorWithLines } from '../common/CodeEditorWithLines.js';
 import { Modal } from '../common/Modal.js';
+import { EmptyState } from '../common/EmptyState.js';
 import { DatabaseTerminalModal } from '../common/DatabaseTerminalModal.js';
 import { CreateDatabaseBackupModal } from '../common/CreateDatabaseBackupModal.js';
 import { RestoreDatabaseBackupModal } from '../common/RestoreDatabaseBackupModal.js';
@@ -1144,11 +1145,11 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 {dbOption?.icon || <Database className="w-6 h-6 text-emerald-500" />}
               </div>
               <span
-                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-paper dark:ring-[#0f0f12] ${
+                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-paper ${
                   app?.status === 'running'
                     ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
                     : app?.status === 'deploying' || app?.status === 'rebuilding'
-                    ? 'bg-blue-500 animate-pulse'
+                    ? 'bg-signal animate-pulse'
                     : 'bg-rose-500'
                 }`}
               />
@@ -1214,16 +1215,18 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             {/* Status Dot */}
             <div className="relative flex items-center justify-center">
               {mode === 'create' ? (
-                <div className="w-3 h-3 rounded-full bg-accent animate-pulse" />
+                <span className="status-dot text-accent" data-live="true" />
               ) : (
-                <div
-                  className={`w-3 h-3 rounded-full ${
+                <span
+                  className={clsx(
+                    'status-dot',
                     app?.status === 'running'
-                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse'
+                      ? 'text-emerald-500'
                       : app?.status === 'deploying' || app?.status === 'rebuilding'
-                      ? 'bg-blue-500 shadow-sm shadow-blue-500/50 animate-ping'
-                      : 'bg-rose-500'
-                  }`}
+                      ? 'text-signal'
+                      : 'text-rose-500'
+                  )}
+                  data-live={app?.status === 'running' || app?.status === 'deploying' || app?.status === 'rebuilding'}
                 />
               )}
             </div>
@@ -1247,12 +1250,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         type="text"
                         value={tempName}
                         onChange={(e) => setTempName(e.target.value)}
-                        className="bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-1 text-sm text-ink font-semibold focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                        className="bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3 py-1 text-sm text-ink font-semibold focus:outline-none transition-colors shadow-sm"
                         autoFocus
                       />
                       <button
                         onClick={handleSaveNameRename}
-                        className="text-xs px-3 py-1 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 font-semibold rounded-xl cursor-pointer"
+                        className="text-xs px-3 py-1 btn-vessel-primary font-semibold rounded-xl cursor-pointer"
                       >
                         保存
                       </button>
@@ -1656,7 +1659,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <CaretDown className="w-3 h-3 text-ink-muted" />
                   </button>
                   {isMoreMenuOpen && (
-                    <div className="absolute left-0 mt-1.5 w-48 bg-paper-2 rounded-2xl shadow-2xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="absolute left-0 mt-1.5 w-48 surface-pop rounded-2xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
                       <button
                         type="button"
                         disabled={isDirty}
@@ -1743,7 +1746,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <CaretDown className="w-3 h-3 text-ink-muted" />
                   </button>
                   {isMoreMenuOpen && (
-                    <div className="absolute left-0 mt-1.5 w-48 bg-paper-2 rounded-2xl shadow-2xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="absolute left-0 mt-1.5 w-48 surface-pop rounded-2xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
                       <button
                         type="button"
                         disabled={isDirty}
@@ -1809,7 +1812,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <>
                 <button
                   disabled
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900/80 text-white dark:bg-neutral-100 dark:text-neutral-900 font-medium text-xs rounded-lg cursor-wait"
+                  className="inline-flex items-center gap-2 px-4 py-2 btn-vessel-primary opacity-80 font-medium text-xs rounded-lg cursor-wait"
                 >
                   <CircleNotch className="w-3.5 h-3.5 text-current animate-spin" />
                   <span>部署执行中...</span>
@@ -1874,7 +1877,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       setTempName(e.target.value);
                     }}
                     placeholder="例如: n8n-automation"
-                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-ink font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 text-sm text-ink font-medium placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
 
@@ -1887,7 +1890,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="例如: 企业级工作流自动化编排与应用管理"
-                    className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
               </div>
@@ -1923,8 +1926,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         <span className="text-[11px] text-ink-faint">部署时自动注册 Caddyfile</span>
                       </div>
 
-                      <div className="flex items-stretch rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group focus-within:border-zinc-400 dark:focus-within:border-white/30 transition-colors">
-                        <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-zinc-200 dark:border-white/10">
+                      <div className="flex items-stretch rounded-xl bg-paper-2 dark:bg-paper-3 border border-line shadow-sm overflow-hidden group focus-within:border-signal focus-within:ring-[3px] focus-within:ring-signal-soft transition-colors">
+                        <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-line">
                           <LockKey className="w-3.5 h-3.5" weight="bold" />
                           <span>https://</span>
                         </div>
@@ -1937,7 +1940,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             setDeployDomain(val);
                           }}
                           placeholder="n8n.yourdomain.com"
-                          className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none"
+                          className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1971,7 +1974,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             value={deployServiceName}
                             onChange={(e) => setDeployServiceName(e.target.value)}
                             placeholder="web"
-                            className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                            className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                           />
                         )}
                       </div>
@@ -1985,7 +1988,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                           value={deployTargetPort}
                           onChange={(e) => setDeployTargetPort(e.target.value)}
                           placeholder="5678"
-                          className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                          className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                         />
                       </div>
                     </div>
@@ -2008,9 +2011,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
 
                 {/* IDE Card Container */}
-                <div className="rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-paper-2 shadow-subtle">
+                <div className="rounded-2xl border border-line overflow-hidden bg-paper-2 shadow-card">
                   {/* Card Window Header */}
-                  <div className="px-4 py-2.5 bg-paper-2/80 dark:bg-paper-3/40 border-b border-zinc-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="px-4 py-2.5 bg-paper-2/80 dark:bg-paper-3/40 border-b border-line flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <span className="font-mono text-xs font-semibold text-ink flex items-center gap-1.5">
                         <FileText className="w-3.5 h-3.5 text-accent" />
@@ -2101,7 +2104,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   />
 
                   {/* Card Window Footer */}
-                  <div className="px-4 py-2 bg-paper-2/60 dark:bg-paper-3/20 border-t border-zinc-200/80 dark:border-white/10 flex items-center justify-between text-xs text-ink-muted">
+                  <div className="px-4 py-2 bg-paper-2/60 dark:bg-paper-3/20 border-t border-line flex items-center justify-between text-xs text-ink-muted">
                     <div className="flex items-center gap-2 text-[11px]">
                       <span>Tab 键缩进 2 格</span>
                       <span className="text-ink-faint">·</span>
@@ -2117,11 +2120,11 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               </div>
 
               {/* Desktop Create Mode Actions Footer */}
-              <div className="hidden md:flex pt-5 mt-6 border-t border-zinc-200/80 dark:border-white/10 items-center justify-between">
+              <div className="hidden md:flex pt-5 mt-6 border-t border-line items-center justify-between">
                 <button
                   type="button"
                   onClick={onBack}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-ink-muted hover:text-ink hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer"
                 >
                   取消
                 </button>
@@ -2138,7 +2141,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     type="button"
                     onClick={() => handleCreate(true)}
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 font-semibold text-xs rounded-xl transition-all active:translate-y-px cursor-pointer flex items-center gap-2 disabled:cursor-not-allowed shadow-sm"
+                    className="px-6 py-2.5 btn-vessel-primary font-semibold text-xs rounded-xl cursor-pointer flex items-center gap-2"
                   >
                     {isSubmitting ? (
                       <>
@@ -2169,7 +2172,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       type="button"
                       onClick={() => app && onDeploy(app.id)}
                       disabled={app?.status === 'deploying' || app?.status === 'rebuilding'}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold btn-vessel-primary cursor-pointer"
                     >
                       {app?.status === 'deploying' || app?.status === 'rebuilding' ? (
                         <CircleNotch className="w-3.5 h-3.5 animate-spin" />
@@ -2453,7 +2456,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         value={externalPortInput}
                         onChange={(e) => setExternalPortInput(e.target.value)}
                         placeholder=""
-                        className="w-full bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                        className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-4 py-2.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                       />
                     </div>
 
@@ -2526,7 +2529,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         type="button"
                         onClick={handleSaveExternalPort}
                         disabled={isSavingExternalPort}
-                        className="px-5 py-2 rounded-xl text-xs font-semibold bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
+                        className="px-5 py-2 rounded-xl text-xs font-semibold btn-vessel-primary cursor-pointer flex items-center gap-1.5"
                       >
                         {isSavingExternalPort && <CircleNotch className="w-3.5 h-3.5 animate-spin" />}
                         <span>{isSavingExternalPort ? '保存中...' : '保存'}</span>
@@ -2538,7 +2541,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
               {/* COMPOSE YAML EDITOR WORKSPACE - INDEPENDENT IDE CARD (FOR COMPOSE APPS) */}
               {!isDb && (
-                <div className="rounded-2xl bg-paper-2 overflow-hidden shadow-subtle">
+                <div className="rounded-2xl bg-paper-2 border border-line overflow-hidden shadow-card">
                   {/* Card Window Header */}
                   <div className="px-4 py-2.5 bg-paper-3/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-3">
@@ -2657,7 +2660,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
 
           {/* COMPOSE ENV EDITOR WORKSPACE - INDEPENDENT IDE CARD */}
-          <div className="rounded-2xl bg-paper-2 overflow-hidden shadow-subtle">
+          <div className="rounded-2xl bg-paper-2 border border-line overflow-hidden shadow-card">
             {/* Card Window Header */}
             <div className="px-4 py-2.5 bg-paper-3/40 flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2">
@@ -2716,7 +2719,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               </p>
             </div>
             <div className="sm:hidden flex items-center gap-1.5 text-xs text-ink-muted font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="status-dot text-emerald-500" data-live="true" />
               <span>实时流</span>
             </div>
           </div>
@@ -2724,14 +2727,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           {/* Terminal Screen Window Card */}
           <div
             className={clsx(
-              "rounded-2xl bg-paper-2 dark:bg-[#0d1117] border border-zinc-200/50 dark:border-white/5 overflow-hidden shadow-lg font-mono transition-colors",
+              "rounded-2xl bg-paper-2 dark:bg-paper border border-line-subtle overflow-hidden shadow-lg font-mono transition-colors",
               isDeploymentFullscreen
                 ? "fixed inset-0 z-50 rounded-none border-0 w-screen h-[100dvh] flex flex-col"
                 : ""
             )}
           >
             {/* Terminal Card Window Header */}
-            <div className="px-3.5 sm:px-4 py-2.5 bg-paper-3 dark:bg-[#161b22] border-b border-zinc-200/50 dark:border-white/5 flex items-center justify-between gap-2 select-none shrink-0 transition-colors">
+            <div className="px-3.5 sm:px-4 py-2.5 bg-paper-3 dark:bg-paper-2 border-b border-line-subtle flex items-center justify-between gap-2 select-none shrink-0 transition-colors">
               {/* Left: Window controls & Title */}
               <div className="flex items-center gap-2 min-w-0">
                 <div className="flex items-center gap-1 shrink-0">
@@ -2741,7 +2744,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5 min-w-0 ml-1">
                   <Terminal className="w-3.5 h-3.5 text-ink dark:text-accent shrink-0" />
-                  <span className="text-xs font-semibold text-ink dark:text-zinc-200 truncate">
+                  <span className="text-xs font-semibold text-ink truncate">
                     {isDeploymentFullscreen ? '实时部署全屏输出' : '实时部署输出'}
                   </span>
                   {app.status === 'deploying' || app.status === 'rebuilding' ? (
@@ -2764,10 +2767,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
                     isAutoScroll
                       ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/60 border border-emerald-500/20 dark:border-emerald-500/30 hover:bg-emerald-500/20 dark:hover:bg-emerald-900/60"
-                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08]"
+                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4"
                   )}
                 >
-                  <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", isAutoScroll ? "bg-emerald-500 dark:bg-emerald-400 animate-pulse" : "bg-ink-muted/50 dark:bg-zinc-500")} />
+                  <span className={clsx("status-dot shrink-0", isAutoScroll ? "text-emerald-500" : "text-ink-faint")} data-live={isAutoScroll} />
                   <span>{isAutoScroll ? '滚屏' : '暂停'}</span>
                 </button>
 
@@ -2776,7 +2779,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   type="button"
                   onClick={handleClearDeploymentLogs}
                   title="清空当前日志视图"
-                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
+                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4 rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
                 >
                   <Trash className="w-3 h-3 shrink-0" />
                   <span>清空</span>
@@ -2787,7 +2790,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   type="button"
                   onClick={handleCopyDeploymentLogs}
                   title="复制全部部署日志"
-                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08] rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
+                  className="px-2 py-1 text-xs text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4 rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]"
                 >
                   {copiedTerminalLogs ? (
                     <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400 shrink-0" />
@@ -2805,7 +2808,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     onDeploy(app.id);
                   }}
                   disabled={app.status === 'deploying' || app.status === 'rebuilding'}
-                  className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-xs text-ink dark:text-accent hover:bg-paper-2/80 dark:hover:bg-accent/20 border border-zinc-200/50 dark:border-white/10 dark:hover:border-accent/30 rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 font-mono text-[11px]"
+                  className="hidden sm:flex items-center gap-1 px-2.5 py-1 text-xs text-ink dark:text-accent hover:bg-paper-2/80 dark:hover:bg-accent/20 border border-line dark:hover:border-accent/30 rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 font-mono text-[11px]"
                 >
                   <Play className="w-3 h-3 text-current" weight="fill" />
                   <span>重新部署</span>
@@ -2820,7 +2823,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     "px-2 py-1 text-xs rounded-md transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-[11px]",
                     isDeploymentFullscreen
                       ? "text-accent bg-accent/10 border border-accent/30 font-semibold"
-                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-white/[0.04] border border-zinc-200/50 dark:border-white/10 hover:bg-paper-4/60 dark:hover:bg-white/[0.08]"
+                      : "text-ink-muted hover:text-ink bg-paper-2/80 dark:bg-paper-3 border border-line hover:bg-paper-4/60 dark:hover:bg-paper-4"
                   )}
                 >
                   {isDeploymentFullscreen ? (
@@ -2841,7 +2844,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             {/* Terminal Screen Body */}
             <div
               className={clsx(
-                "p-3 sm:p-4 text-xs font-mono leading-[1.65] overflow-y-auto space-y-1 select-text overscroll-contain bg-paper-1/40 dark:bg-[#0d1117] transition-colors",
+                "p-3 sm:p-4 text-xs font-mono leading-[1.65] overflow-y-auto space-y-1 select-text overscroll-contain bg-paper-1/40 dark:bg-paper transition-colors",
                 isDeploymentFullscreen ? "flex-1 h-auto" : "h-[380px] sm:h-[440px]"
               )}
             >
@@ -2853,7 +2856,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setClearedLogOffset(0)}
-                      className="text-xs text-ink dark:text-zinc-200 font-semibold hover:underline cursor-pointer"
+                      className="text-xs text-ink font-semibold hover:underline cursor-pointer"
                     >
                       恢复已清空的 {clearedLogOffset} 行历史日志
                     </button>
@@ -2861,7 +2864,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 </div>
               ) : (
                 displayLogs.map((line, idx) => (
-                  <div key={idx} className={clsx("whitespace-pre-wrap break-all flex items-start gap-2 hover:bg-paper-3/50 dark:hover:bg-white/[0.02] px-1 -mx-1 rounded transition-colors", getLogLineStyle(line))}>
+                  <div key={idx} className={clsx("whitespace-pre-wrap break-all flex items-start gap-2 hover:bg-paper-3/50 px-1 -mx-1 rounded transition-colors", getLogLineStyle(line))}>
                     <span className="text-ink-faint select-none text-[10px] tabular-nums shrink-0 pt-0.5 w-6 text-right font-mono">
                       {idx + 1}
                     </span>
@@ -2875,24 +2878,24 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </div>
 
             {/* Terminal Window Footer */}
-            <div className="px-4 py-2 bg-paper-3 dark:bg-[#161b22] border-t border-zinc-200/50 dark:border-white/5 flex items-center justify-between text-xs text-ink-muted dark:text-zinc-400 font-mono text-[11px] select-none shrink-0 transition-colors">
+            <div className="px-4 py-2 bg-paper-3 dark:bg-paper-2 border-t border-line-subtle flex items-center justify-between text-xs text-ink-muted font-mono text-[11px] select-none shrink-0 transition-colors">
               <div className="flex items-center gap-2">
                 <span>共输出 {displayLogs.length} 行构建日志</span>
                 {clearedLogOffset > 0 && (
                   <button
                     type="button"
                     onClick={() => setClearedLogOffset(0)}
-                    className="text-ink dark:text-zinc-200 font-medium hover:underline cursor-pointer"
+                    className="text-ink font-medium hover:underline cursor-pointer"
                   >
                     (已隐藏 {clearedLogOffset} 行，点击恢复)
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-ink-muted dark:text-zinc-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="flex items-center gap-1.5 text-ink-muted">
+                <span className="status-dot text-emerald-500" data-live="true" />
                 <span className="hidden xs:inline">管道就绪</span>
                 <span className="text-ink-faint">·</span>
-                <span className="text-ink-faint dark:text-zinc-500">docker-compose</span>
+                <span className="text-ink-faint">docker-compose</span>
               </div>
             </div>
           </div>
@@ -2909,11 +2912,14 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </p>
           </div>
 
-          <div className="rounded-2xl bg-paper-2 overflow-hidden shadow-subtle">
+          <div className="rounded-2xl bg-paper-2 border border-line overflow-hidden shadow-card">
             {(app.containers || []).length === 0 ? (
-              <div className="py-14 text-center text-ink-muted text-xs">
-                暂未检测到运行中的容器实例。请点击上方「启动应用」启动应用编排。
-              </div>
+              <EmptyState
+                className="m-3 sm:m-4"
+                icon={<Package className="w-5 h-5" weight="duotone" />}
+                title="暂未检测到运行中的容器实例"
+                description="请点击上方「启动应用」启动应用编排。"
+              />
             ) : (
               <div className="p-3 sm:p-4 space-y-1.5">
                 {app.containers.map((c) => (
@@ -2988,8 +2994,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                     <span className="text-[11px] text-ink-faint">部署时自动下发至 Caddyfile</span>
                   </div>
 
-                  <div className="flex items-stretch rounded-xl bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden group focus-within:border-zinc-400 dark:focus-within:border-white/30 transition-colors">
-                    <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-zinc-200 dark:border-white/10">
+                  <div className="flex items-stretch rounded-xl bg-paper-2 dark:bg-paper-3 border border-line shadow-sm overflow-hidden group focus-within:border-signal focus-within:ring-[3px] focus-within:ring-signal-soft transition-colors">
+                    <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-line">
                       <LockKey className="w-3.5 h-3.5" weight="bold" />
                       <span>https://</span>
                     </div>
@@ -3002,7 +3008,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         setDeployDomain(val);
                       }}
                       placeholder="n8n.yourdomain.com"
-                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none"
+                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -3043,7 +3049,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         value={deployServiceName}
                         onChange={(e) => setDeployServiceName(e.target.value)}
                         placeholder="web"
-                        className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                        className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                       />
                     )}
                   </div>
@@ -3057,7 +3063,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       value={deployTargetPort}
                       onChange={(e) => setDeployTargetPort(e.target.value)}
                       placeholder="5678"
-                      className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                      className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                     />
                   </div>
                 </div>
@@ -3104,8 +3110,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       onClick={() => setDeployTargetType('internal')}
                       className={`p-3.5 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer border ${
                         deployTargetType === 'internal'
-                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
-                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-line-subtle hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-line-strong'
                       }`}
                     >
                       <div>
@@ -3115,7 +3121,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             <span className={`text-xs font-semibold ${deployTargetType === 'internal' ? 'text-ink' : 'text-ink-muted'}`}>容器内部网络</span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">推荐</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${deployTargetType === 'internal' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${deployTargetType === 'internal' ? 'border-accent bg-accent' : 'border-line-strong bg-transparent'}`}>
                             {deployTargetType === 'internal' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
@@ -3130,8 +3136,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       onClick={() => setDeployTargetType('host')}
                       className={`p-3.5 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer border ${
                         deployTargetType === 'host'
-                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
-                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-line-subtle hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-line-strong'
                       }`}
                     >
                       <div>
@@ -3140,7 +3146,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             <HardDrives className={`w-4 h-4 ${deployTargetType === 'host' ? 'text-accent' : 'text-ink-faint'}`} weight="bold" />
                             <span className={`text-xs font-semibold ${deployTargetType === 'host' ? 'text-ink' : 'text-ink-muted'}`}>宿主机端口</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${deployTargetType === 'host' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${deployTargetType === 'host' ? 'border-accent bg-accent' : 'border-line-strong bg-transparent'}`}>
                             {deployTargetType === 'host' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
@@ -3173,7 +3179,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <button
                 onClick={() => handleCreate(true)}
                 disabled={isSubmitting}
-                className="px-5 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 font-semibold text-xs rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer disabled:cursor-not-allowed"
+                className="px-5 py-2 btn-vessel-primary font-semibold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 text-current" weight="fill" />
                 <span>{isSubmitting ? '正在创建并部署...' : '创建并立即部署'}</span>
@@ -3207,25 +3213,22 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
 
           {appDomains.length === 0 ? (
-            <div className="py-16 px-6 text-center rounded-2xl bg-paper-2 flex flex-col items-center justify-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-paper-3 text-ink-muted flex items-center justify-center">
-                <Globe className="w-6 h-6" />
-              </div>
-              <div className="space-y-1 max-w-md">
-                <h4 className="text-sm font-semibold text-ink">该应用尚未绑定自定义公网域名</h4>
-                <p className="text-xs text-ink-muted leading-relaxed">
-                  可直接在此为本应用添加公网域名。Vessel 内置 Caddy 将自动向证书机构签发 SSL/TLS 证书，并在到期前 30 天静默自动续期。
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={openAddDomainModal}
-                className="mt-2 px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 font-semibold text-xs rounded-xl inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-              >
-                <Plus className="w-3.5 h-3.5 text-current" weight="bold" />
-                <span>添加公网域名</span>
-              </button>
-            </div>
+            <EmptyState
+              className="bg-paper-2"
+              icon={<Globe className="w-5 h-5" weight="duotone" />}
+              title="该应用尚未绑定自定义公网域名"
+              description="可直接在此为本应用添加公网域名。Vessel 内置 Caddy 将自动向证书机构签发 SSL/TLS 证书，并在到期前 30 天静默自动续期。"
+              action={
+                <button
+                  type="button"
+                  onClick={openAddDomainModal}
+                  className="btn-vessel-primary text-xs px-3.5 py-2 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 text-current" weight="bold" />
+                  <span>添加公网域名</span>
+                </button>
+              }
+            />
           ) : (
             <div className="space-y-2">
               {appDomains.map((dom) => (
@@ -3359,7 +3362,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Status Card */}
             <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+              <div className="eyebrow">
                 容器运行状态
               </div>
               <div className="flex items-center gap-2">
@@ -3381,7 +3384,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
             {/* Port Card */}
             <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+              <div className="eyebrow">
                 外部暴露端口
               </div>
               <div className="text-base font-semibold font-mono text-ink">
@@ -3396,7 +3399,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
             {/* Engine Image Card */}
             <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+              <div className="eyebrow">
                 数据库引擎与镜像
               </div>
               <div className="text-base font-semibold text-ink truncate">
@@ -3409,7 +3412,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
             {/* Restart Policy Card */}
             <div className="p-4 rounded-2xl bg-paper-2 space-y-2">
-              <div className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+              <div className="eyebrow">
                 重启策略
               </div>
               <div className="text-base font-semibold text-ink">
@@ -3422,7 +3425,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           </div>
 
           {/* Container Details & Storage Table */}
-          <div className="rounded-2xl bg-paper-2 overflow-hidden shadow-subtle">
+          <div className="rounded-2xl bg-paper-2 border border-line overflow-hidden shadow-card">
             <div className="px-5 py-3.5 bg-paper-3/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Stack className="w-4 h-4 text-accent" />
@@ -3513,9 +3516,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
           {/* Active Schedule Status Banner */}
           {isDb && app?.backupSchedule?.enabled && (
-            <div className="p-4 rounded-2xl bg-paper-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-subtle">
+            <div className="p-4 rounded-2xl bg-paper-2 border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-card">
               <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="status-dot text-emerald-500 shrink-0" data-live="true" />
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-ink">定时自动备份已开启</span>
@@ -3546,28 +3549,28 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </div>
           )}
 
-          <div className="rounded-2xl bg-paper-2 overflow-hidden shadow-subtle">
+          <div className="rounded-2xl bg-paper-2 border border-line overflow-hidden shadow-card">
             {appBackups.length === 0 ? (
               isDb ? (
-                <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-12 h-12 rounded-2xl bg-paper-3 text-ink-muted flex items-center justify-center">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ink-muted">
+                <EmptyState
+                  className="m-3 sm:m-4"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M4 6c0 1.66 3.58 3 8 3s8-1.34 8-3-3.58-3-8-3-8 1.34-8 3z" />
                       <path d="M4 6v6c0 1.66 3.58 3 8 3" />
                       <path d="M20 6v3" />
                       <path d="M4 12v6c0 1.66 3.58 3 8 3" />
                       <path d="M16 19h6m-3-3l3 3-3 3" />
                     </svg>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-ink-muted">暂无备份配置</p>
-                    <p className="text-[11px] text-ink-faint font-sans">No backups configured</p>
-                  </div>
-                  <div className="flex items-center gap-3 pt-1">
+                  }
+                  title="暂无备份配置"
+                  description="No backups configured"
+                  action={
+                    <>
                     <button
                       type="button"
                       onClick={handleAppBackup}
-                      className="px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      className="px-4 py-2 btn-vessel-primary text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5 text-current" weight="bold" />
                       <span>新建备份</span>
@@ -3580,24 +3583,21 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       <ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />
                       <span>恢复备份</span>
                     </button>
-                  </div>
-                </div>
+                    </>
+                  }
+                />
               ) : (
-                <div className="py-14 flex flex-col items-center justify-center text-center space-y-3">
-                  <div className="w-11 h-11 rounded-2xl bg-paper-3 text-ink-muted flex items-center justify-center">
-                    <Archive className="w-5 h-5 text-ink-muted" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-ink">暂无此应用的独立备份归档</p>
-                    <p className="text-[11px] text-ink-muted max-w-sm leading-relaxed">
-                      点击「立即备份」可将 Compose 编排、.env 与持久化数据卷打包归档，或直接从本地上传备份包还原
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2.5 pt-1">
+                <EmptyState
+                  className="m-3 sm:m-4"
+                  icon={<Archive className="w-5 h-5" weight="duotone" />}
+                  title="暂无此应用的独立备份归档"
+                  description="点击「立即备份」可将 Compose 编排、.env 与持久化数据卷打包归档，或直接从本地上传备份包还原"
+                  action={
+                    <>
                     <button
                       type="button"
                       onClick={handleAppBackup}
-                      className="px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      className="px-4 py-2 btn-vessel-primary text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5 text-current" weight="bold" />
                       <span>立即备份此应用</span>
@@ -3610,8 +3610,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       <ArrowCounterClockwise className="w-3.5 h-3.5 text-accent" />
                       <span>从本地备份包恢复</span>
                     </button>
-                  </div>
-                </div>
+                    </>
+                  }
+                />
               )
             ) : (
               <div className="p-3 sm:p-4 space-y-1.5">
@@ -3769,15 +3770,15 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         isMoreMenuOpen &&
         createPortal(
           <div
-            className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-in flex flex-col justify-end"
+            className="md:hidden fixed inset-0 z-50 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in flex flex-col justify-end"
             onClick={() => setIsMoreMenuOpen(false)}
           >
             <div
-              className="w-full bg-paper-2 rounded-t-3xl shadow-2xl p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
+              className="w-full surface-pop rounded-t-[24px] p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag Handle Indicator */}
-              <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mb-1 shrink-0" />
+              <div className="w-9 h-1 bg-ink-faint/30 rounded-full mx-auto mb-1 shrink-0" />
 
               {/* Header */}
               <div className="flex items-center justify-between pb-2">
@@ -3908,9 +3909,9 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
       {/* ================= DESKTOP STICKY FLOATING ACTION BAR (FOR DIRTY STATE) ================= */}
       {isDirty && mode === 'edit' && (
-        <div className="hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-3rem)] max-w-4xl backdrop-blur-xl bg-paper-2/90 rounded-2xl shadow-floating p-3 px-5 items-center justify-between gap-4 animate-sticky-bar">
+        <div className="hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-3rem)] max-w-4xl backdrop-blur-xl bg-paper-2/90 border border-line rounded-2xl shadow-pop p-3 px-5 items-center justify-between gap-4 animate-sticky-bar">
           <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+            <span className="status-dot text-amber-500" data-live="true" />
             <div>
               <span className="text-xs font-semibold text-ink">检测到未保存的配置更改</span>
               <span className="text-[11px] text-ink-muted ml-2">
@@ -3936,7 +3937,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             <button
               onClick={handleSaveAndDeploy}
               disabled={isSubmitting}
-              className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              className="px-4 py-1.5 rounded-xl text-xs font-semibold btn-vessel-primary flex items-center gap-1.5 cursor-pointer"
             >
               {isSubmitting ? (
                 <CircleNotch className="w-3.5 h-3.5 animate-spin" />
@@ -3957,13 +3958,13 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           <div
             role="alert"
             className={clsx(
-              "md:hidden fixed bottom-0 left-0 right-0 z-50 bg-paper-2/95 backdrop-blur-xl shadow-2xl p-3.5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] transition-transform duration-300 transform",
+              "md:hidden fixed bottom-0 left-0 right-0 z-50 bg-paper-2/90 backdrop-blur-xl border-t border-line shadow-pop p-3.5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] transition-transform duration-300 transform",
               isEditorFocused ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
             )}
           >
             <div className="text-xs text-ink-muted mb-2.5 font-medium flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="status-dot text-amber-500" data-live="true" />
                 <span className="text-ink font-semibold">检测到未保存的更改</span>
               </div>
               <span className="text-[11px] text-ink-faint">请保存后生效</span>
@@ -3988,7 +3989,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 type="button"
                 onClick={handleSaveAndDeploy}
                 disabled={isSubmitting}
-                className="flex-[2] min-h-[42px] px-2 py-2 text-xs font-semibold bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
+                className="flex-[2] min-h-[42px] px-2 py-2 text-xs font-semibold btn-vessel-primary rounded-xl cursor-pointer flex items-center justify-center gap-1.5"
               >
                 {isSubmitting ? (
                   <CircleNotch className="w-3.5 h-3.5 animate-spin" />
@@ -4082,7 +4083,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               <span>数据卷内所有数据将彻底清空且无法撤回！</span>
             </div>
             <p className="leading-relaxed">
-              此操作将执行 <code className="font-mono bg-rose-100 dark:bg-rose-900/60 px-1.5 py-0.5 rounded text-rose-900 dark:text-white font-semibold">docker compose down -v</code>。
+              此操作将执行 <code className="font-mono bg-rose-100 dark:bg-rose-900/60 px-1.5 py-0.5 rounded text-rose-900 dark:text-rose-100 font-semibold">docker compose down -v</code>。
               所有挂载在该应用下的<strong>持久化数据卷（Volumes）将被彻底销毁</strong>，包括数据库中所有数据表记录、用户上传的本地持久文件等，随后以<strong>全新空白初始状态</strong>重新创建容器。
             </p>
           </div>
@@ -4125,7 +4126,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       {/* ================= BIND DOMAIN MODAL (NATIVE BOTTOM SHEET ON MOBILE / CENTERED ON DESKTOP) ================= */}
       {isAddDomainModalOpen && createPortal(
         <div
-          className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 bg-black/60 sm:bg-black/50 sm:dark:bg-black/75 backdrop-blur-sm animate-fade-in font-sans"
+          className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in font-sans"
           role="dialog"
           aria-modal="true"
           aria-labelledby="bind-domain-title"
@@ -4138,11 +4139,11 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         >
           {/* Modal / Bottom Sheet Container: Native Bottom Sheet on mobile (rounded-t-3xl), centered dialog on desktop */}
           <div
-            className="w-full sm:max-w-xl max-h-[92vh] sm:max-h-[90vh] bg-paper-2 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-bottom-sheet sm:animate-none"
+            className="w-full sm:max-w-xl max-h-[92vh] sm:max-h-[90vh] surface-pop rounded-t-[24px] sm:rounded-[22px] flex flex-col overflow-hidden animate-bottom-sheet sm:animate-none"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Handle Indicator (Image 2 style) */}
-            <div className="w-10 h-1 bg-ink-muted/30 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+            <div className="w-9 h-1 bg-ink-faint/30 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
 
             {/* Top Header */}
             <div className="bg-paper-2/95 backdrop-blur-md px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between shrink-0">
@@ -4190,12 +4191,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                   </div>
 
                   <div className={clsx(
-                    "flex items-stretch rounded-xl bg-white dark:bg-paper-3 border shadow-sm overflow-hidden group transition-all",
+                    "flex items-stretch rounded-xl bg-paper-2 dark:bg-paper-3 border shadow-sm overflow-hidden group transition-all",
                     domainError
                       ? "border-rose-500/70"
-                      : "border-zinc-200 dark:border-white/10 focus-within:border-zinc-400 dark:focus-within:border-white/30"
+                      : "border-line focus-within:border-signal focus-within:ring-[3px] focus-within:ring-signal-soft"
                   )}>
-                    <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-zinc-200 dark:border-white/10 shrink-0">
+                    <div className="bg-paper-2 dark:bg-paper-4/40 px-3.5 flex items-center gap-1.5 text-ink-muted text-xs font-mono font-medium select-none border-r border-line shrink-0">
                       <LockKey className="w-3.5 h-3.5" weight="bold" />
                       <span>https://</span>
                     </div>
@@ -4214,7 +4215,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         if (domainError) setDomainError('');
                       }}
                       placeholder="app.yourdomain.com"
-                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none min-h-[44px]"
+                      className="flex-1 min-w-0 bg-transparent px-3.5 py-2.5 text-sm text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none min-h-[44px]"
                       autoFocus
                     />
                   </div>
@@ -4266,7 +4267,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                         value={modalServiceName}
                         onChange={(e) => setModalServiceName(e.target.value)}
                         placeholder="web"
-                        className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                        className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                       />
                     )}
                   </div>
@@ -4289,10 +4290,10 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       }}
                       placeholder="8080"
                       className={clsx(
-                        "w-full min-h-[44px] bg-white dark:bg-paper-3 border rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none transition-colors shadow-sm",
+                        "w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink font-mono font-medium placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm",
                         portError
                           ? "border-rose-500/70"
-                          : "border-zinc-200 dark:border-white/10 focus:border-zinc-400 dark:focus:border-white/30"
+                          : "border-line"
                       )}
                     />
                     {portError && (
@@ -4361,8 +4362,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       onClick={() => setModalTargetType('internal')}
                       className={`p-3.5 sm:p-4 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] border ${
                         modalTargetType === 'internal'
-                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
-                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-line-subtle hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-line-strong'
                       }`}
                     >
                       <div>
@@ -4372,7 +4373,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             <span className={`text-xs font-semibold ${modalTargetType === 'internal' ? 'text-ink' : 'text-ink-muted'}`}>容器内部网络</span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">推荐</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${modalTargetType === 'internal' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${modalTargetType === 'internal' ? 'border-accent bg-accent' : 'border-line-strong bg-transparent'}`}>
                             {modalTargetType === 'internal' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
@@ -4389,8 +4390,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                       onClick={() => setModalTargetType('host')}
                       className={`p-3.5 sm:p-4 text-left rounded-xl transition-colors relative flex flex-col justify-between cursor-pointer select-none active:scale-[0.99] border ${
                         modalTargetType === 'host'
-                          ? 'bg-paper-3 dark:bg-paper-4 border-zinc-400 dark:border-white/30 ring-1 ring-zinc-400/50 dark:ring-white/20 shadow-sm'
-                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-zinc-200/60 dark:border-white/5 hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-zinc-300 dark:hover:border-white/10'
+                          ? 'bg-paper-3 dark:bg-paper-4 border-signal/70 ring-1 ring-signal-ring shadow-sm'
+                          : 'bg-paper-2/60 dark:bg-paper-3/40 border-line-subtle hover:bg-paper-3 hover:dark:bg-paper-3/80 hover:border-line-strong'
                       }`}
                     >
                       <div>
@@ -4399,7 +4400,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                             <HardDrives className={`w-4 h-4 ${modalTargetType === 'host' ? 'text-accent' : 'text-ink-faint'}`} weight="bold" />
                             <span className={`text-xs font-semibold ${modalTargetType === 'host' ? 'text-ink' : 'text-ink-muted'}`}>宿主机端口</span>
                           </div>
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${modalTargetType === 'host' ? 'border-accent bg-accent' : 'border-zinc-300 dark:border-white/20 bg-transparent'}`}>
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${modalTargetType === 'host' ? 'border-accent bg-accent' : 'border-line-strong bg-transparent'}`}>
                             {modalTargetType === 'host' && <div className="w-1.5 h-1.5 rounded-full bg-accent-contrast" />}
                           </div>
                         </div>
@@ -4418,7 +4419,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 <button
                   type="submit"
                   disabled={isBindingDomain}
-                  className="w-full sm:w-auto min-h-[46px] sm:min-h-[38px] px-6 py-2.5 sm:py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 text-sm sm:text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto min-h-[46px] sm:min-h-[38px] px-6 py-2.5 sm:py-2 btn-vessel-primary text-sm sm:text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isBindingDomain ? (
                     <>
@@ -4463,7 +4464,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
         >
           <div className="space-y-4 font-sans text-xs">
             <p className="text-ink-muted leading-relaxed">
-              将立即执行 <code className="font-mono bg-paper-3 dark:bg-white/5 border border-zinc-200/80 dark:border-white/10 px-1.5 py-0.5 rounded text-ink font-semibold">docker compose down</code> 销毁所有关联容器与虚拟网络，并彻底清除本地配置文件与持久化元数据。
+              将立即执行 <code className="font-mono bg-paper-3 border border-line px-1.5 py-0.5 rounded text-ink font-semibold">docker compose down</code> 销毁所有关联容器与虚拟网络，并彻底清除本地配置文件与持久化元数据。
             </p>
 
             {/* Target Identifier Input with Clean Minimalist Prompt */}
@@ -4499,7 +4500,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 autoCorrect="off"
                 spellCheck={false}
                 autoFocus
-                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 focus:outline-none transition-colors shadow-sm"
               />
             </div>
 
@@ -4572,7 +4573,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
                 value={restoreConfirmInput}
                 onChange={(e) => setRestoreConfirmInput(e.target.value)}
                 placeholder={app?.id}
-                className="w-full h-10 bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs font-mono text-ink placeholder:text-ink-faint/60 focus:outline-none transition-colors shadow-sm"
               />
             </div>
 
@@ -4691,7 +4692,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       {mode === 'create' &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-paper-2/95 backdrop-blur-md p-3.5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 flex items-center gap-2.5 shadow-2xl">
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-paper-2/90 backdrop-blur-xl border-t border-line p-3.5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 flex items-center gap-2.5 shadow-pop">
             <button
               type="button"
               onClick={() => handleCreate(false)}
@@ -4704,7 +4705,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
               type="button"
               onClick={() => handleCreate(true)}
               disabled={isSubmitting}
-              className="flex-1 min-h-[44px] bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 font-semibold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:cursor-not-allowed shadow-sm"
+              className="flex-1 min-h-[44px] btn-vessel-primary font-semibold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-1.5"
             >
               {isSubmitting ? (
                 <>

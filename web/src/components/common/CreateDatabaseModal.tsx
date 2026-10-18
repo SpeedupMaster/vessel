@@ -425,7 +425,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col sm:items-center sm:justify-center sm:p-4 bg-black/60 sm:bg-black/40 sm:dark:bg-black/75 backdrop-blur-sm animate-fade-in font-sans"
+      className="fixed inset-0 z-50 flex flex-col sm:items-center sm:justify-center sm:p-4 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in font-sans"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-db-title"
@@ -437,7 +437,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
     >
       {/* Modal / Full-screen Container: 100% full-screen on mobile, centered dialog on desktop */}
       <div
-        className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-xl bg-paper sm:bg-paper-2 sm:rounded-3xl sm:shadow-2xl flex flex-col overflow-hidden"
+        className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-xl bg-paper sm:bg-paper-2 sm:rounded-[22px] sm:border sm:border-line sm:shadow-pop flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Top Header */}
@@ -478,7 +478,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                       onClick={() => handleSelectType(db.type)}
                       className={`flex flex-col items-center justify-center p-3.5 sm:p-4 rounded-2xl text-center transition-colors cursor-pointer select-none active:scale-[0.98] ${
                         isSelected
-                          ? 'bg-paper-4 shadow-sm ring-1 ring-zinc-400 dark:ring-white/30'
+                          ? 'bg-paper-4 shadow-sm ring-1 ring-signal-ring'
                           : 'bg-paper-3 hover:bg-paper-4/60'
                       }`}
                     >
@@ -519,7 +519,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                  className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                 />
               </div>
 
@@ -542,7 +542,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
               )}
@@ -566,7 +566,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                 </div>
               )}
@@ -587,7 +587,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                     value={dbPassword}
                     onChange={(e) => setDbPassword(e.target.value)}
                     placeholder="请输入或点击右侧生成密码"
-                    className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                    className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                   />
                   <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
                     <button
@@ -629,7 +629,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                       value={dbRootPassword}
                       onChange={(e) => setDbRootPassword(e.target.value)}
                       placeholder="请输入或点击右侧生成 Root 密码"
-                      className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 transition-colors shadow-sm"
+                      className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl pl-3.5 pr-20 py-2 text-xs sm:text-sm text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
                     />
                     <div className="absolute right-2 flex items-center gap-1 text-ink-muted">
                       <button
@@ -673,7 +673,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full min-h-[44px] bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-white/30 font-mono transition-colors shadow-sm"
+                  className="w-full min-h-[44px] bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2 text-xs sm:text-sm text-ink placeholder:text-ink-faint/80 focus:outline-none font-mono transition-colors shadow-sm"
                 />
               </div>
             </div>
@@ -695,7 +695,7 @@ INTERNAL_LIBSQL_URL=http://${generatedId}:8080
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:w-auto min-h-[44px] sm:min-h-[36px] px-6 py-2.5 sm:py-2 bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 disabled:bg-neutral-200 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 text-sm sm:text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed active:translate-y-px"
+              className="w-full sm:w-auto min-h-[44px] sm:min-h-[36px] px-6 py-2.5 sm:py-2 btn-vessel-primary text-sm sm:text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

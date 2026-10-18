@@ -1,0 +1,31 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "./server", "dev"],
+      "port": 3900
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "./web", "dev"],
+      "port": 5174
+    },
+    {
+      "name": "server-sandbox",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "./server", "dev"],
+      "env": { "PORT": "3901", "HOST": "127.0.0.1", "DATA_DIR": "../.sandbox-data" },
+      "port": 3901
+    },
+    {
+      "name": "web-sandbox",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "./web", "dev"],
+      "env": { "PORT": "5175", "VESSEL_API_PORT": "3901" },
+      "port": 5175
+    }
+  ]
+}
