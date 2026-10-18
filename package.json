@@ -1,6 +1,6 @@
 {
   "name": "vessel",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "description": "Vessel — Lean Docker Compose Self-Hosted Application Management Hub",
   "scripts": {

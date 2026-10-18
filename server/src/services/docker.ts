@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { runDocker } from './process.js';
 import YAML from 'yaml';
-import { APPS_DATA_DIR, db } from '../db/index.js';
+import { db } from '../db/index.js';
+import { hostPathService } from './hostPaths.js';
 import { mysqlClientCommand } from './mysqlClient.js';
 import { ContainerInfo, AppItem, AppDeploySettings, AppDiagnostics, ContainerDiagnostics } from '../types/index.js';
 
@@ -88,7 +89,8 @@ export class DockerService {
    */
   public prepareAppFiles(app: AppItem): { appDir: string; composePath: string; envPath: string } {
     if (!/^[a-z0-9][a-z0-9_-]*$/i.test(app.id)) throw new Error('Invalid application ID');
-    const appDir = path.join(APPS_DATA_DIR, app.id);
+    // Reached through the host path of the data directory so relative binds resolve on the host too
+    const appDir = path.join(hostPathService.appsDir(), app.id);
     if (!fs.existsSync(appDir)) {
       fs.mkdirSync(appDir, { recursive: true });
     }
@@ -139,6 +141,7 @@ export class DockerService {
   }
 
   public async compose(app: AppItem, args: string[], onLog?: (chunk: string) => void, timeoutMs = DEFAULT_TIMEOUT_MINUTES * 60 * 1000) {
+    await hostPathService.ready();
     const command = this.composeArgs(app, args);
     return runDocker(command.args, { cwd: command.cwd, onLog, timeout: timeoutMs });
   }

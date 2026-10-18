@@ -23,6 +23,7 @@
   - [3. 生产模式一键编译启动](#3-生产模式一键编译启动)
 - [🔄 版本升级与旧版迁移](#-版本升级与旧版迁移)
   - [常规重复运行升级](#常规重复运行升级)
+  - [相对路径挂载迁移（v1.0.9 及更早版本部署的应用）](#相对路径挂载迁移v109-及更早版本部署的应用)
   - [历史安全修复版本迁移（旧版 `/app/server/data` 迁移）](#历史安全修复版本迁移旧版-appserverdata-迁移)
 - [💾 数据备份与恢复深度语义](#-数据备份与恢复深度语义)
   - [系统快照 vs 应用卷备份](#系统快照-vs-应用卷备份)
@@ -252,6 +253,32 @@ curl -fsSL https://github.com/SpeedupMaster/vessel/releases/latest/download/inst
     sudo docker compose -p vessel -f /opt/vessel/docker-compose.yml logs --tail 100
     ```
 - **配置防篡改**：安装器会校验 Compose 配置签名与容器归属，拒绝覆盖未托管的同名容器或第三方挂载目录。
+
+### 相对路径挂载迁移（v1.0.9 及更早版本部署的应用）
+
+v1.0.9 及更早的版本在 `vessel-hub` 容器内执行 Compose，相对路径挂载（如 `./files:/data`）会被宿主机 Docker 解析为宿主机上的 `/app/data/apps/<应用ID>/...`，而不是安装目录 `/opt/vessel/data/apps/<应用ID>/...`。这些数据仍然存在，只是不在 Vessel 的数据目录中，也不会进入应用备份。命名卷（如 `pgdata:/var/lib/postgresql/data`）不受影响。
+
+从 v1.0.10 起，相对路径统一解析到 `/opt/vessel/data/apps/<应用ID>/`。升级后，应用在**下一次部署或更新**时会改用新路径，此时新目录为空。因此请在升级后、重新部署之前完成迁移（开启自动更新的应用请尽快处理）：
+
+```bash
+# 1. 查看哪些应用在旧位置留有数据
+sudo ls /app/data/apps/
+```
+
+2. 在 Vessel 中**停止**该应用（停止不会重建容器，也不会切换路径）。
+
+```bash
+# 3. 将旧数据合并到新目录（以 antigravity-manager-7a5a6c74 为例）
+sudo cp -a /app/data/apps/antigravity-manager-7a5a6c74/. /opt/vessel/data/apps/antigravity-manager-7a5a6c74/
+```
+
+4. 在 Vessel 中**重新部署**该应用，然后确认挂载已指向新目录：
+
+```bash
+docker inspect antigravity-manager --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}'
+```
+
+5. 确认应用数据正常后，删除旧目录：`sudo rm -rf /app/data/apps/antigravity-manager-7a5a6c74`。所有应用迁移完成后，可删除空的 `/app/data`。
 
 ### 历史安全修复版本迁移（旧版 `/app/server/data` 迁移）
 

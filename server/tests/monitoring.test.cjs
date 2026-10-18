@@ -6,6 +6,7 @@ function dockerWith(runDocker) {
   const store = database({ apps: [appFixture()] });
   const module = load('server/src/services/docker.ts', {
     '../db/index.js': { db: store.db, APPS_DATA_DIR: '/isolated' }, './process.js': { runDocker }, fs: {},
+    './hostPaths.js': { hostPathService: { ready: async () => {}, appsDir: () => '/isolated' } },
   });
   module.dockerService.prepareAppFiles = () => ({ composePath: 'compose.yml', appDir: '.', envPath: '.env' });
   return { ...module, app: store.state.apps[0] };

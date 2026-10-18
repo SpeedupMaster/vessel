@@ -5,6 +5,7 @@ import { DATA_DIR } from '../db/index.js';
 import { runDocker } from './process.js';
 import { withAppLock, hasActiveOperations } from './appOperations.js';
 import { notifier } from './notifier.js';
+import { isHostPath } from './hostPaths.js';
 
 // The image runs from /app and `pnpm dev` from server/; both reach server/package.json
 export const CURRENT_VERSION: string = (() => {
@@ -23,9 +24,6 @@ const DEFAULT_REPO = 'SpeedupMaster/vessel';
 const STATE_FILE = path.join(DATA_DIR, 'update-state.json');
 const CHECK_TTL = 60 * 60 * 1000;
 const IMAGE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_./:@-]*$/;
-// Same rule the installer applies to VESSEL_INSTALL_DIR
-const HOST_PATH_PATTERN = /^\/[a-zA-Z0-9_./-]+$/;
-const isHostPath = (value: string) => HOST_PATH_PATTERN.test(value) && !value.split('/').includes('..');
 const VERSION_PATTERN = /^v?(\d+)\.(\d+)\.(\d+)$/;
 
 export interface ReleaseInfo {

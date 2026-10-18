@@ -10,6 +10,7 @@ import { caddyService } from './services/caddy.js';
 import { apiErrorHandler } from './middleware/validation.js';
 import { schedulerService } from './services/scheduler.js';
 import { selfUpdateService } from './services/selfUpdate.js';
+import { hostPathService } from './services/hostPaths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,7 @@ server.listen(PORT, HOST, async () => {
   const daemon = await dockerService.checkDaemon();
   if (daemon.available) {
     console.log(`[Vessel] Docker Engine detected (v${daemon.version}).`);
+    await hostPathService.ready();
     await dockerService.ensureNetwork();
   } else {
     console.log(`[Vessel] Docker Engine currently offline: ${daemon.error}`);
