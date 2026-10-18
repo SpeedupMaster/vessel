@@ -96,6 +96,9 @@ export interface MaintenanceConfig {
   pruneDangling: boolean;
   pruneBuilderCache: boolean;
   unusedRetentionHours: number;
+  /** Remove containers outside Vessel apps that have been stopped for stoppedContainerDays */
+  pruneStoppedContainers?: boolean;
+  stoppedContainerDays?: number;
   lastPruneAt?: string;
   lastFreedBytes?: number;
   autoCheckUpdates: boolean;

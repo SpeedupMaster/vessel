@@ -264,16 +264,6 @@ export class DockerService {
     }
   }
 
-  /**
-   * Get Docker disk usage details
-   */
-  public async getDiskUsage(): Promise<{ imagesSize: string; containersSize: string; volumesSize: string; raw: string }> {
-    const { stdout } = await runDocker(['system', 'df', '--format', '{{json .}}'], { timeout: 5000 });
-    const rows = stdout.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
-    const size = (type: string) => rows.find(row => row.Type === type)?.Size || '未知';
-    return { imagesSize: size('Images'), containersSize: size('Containers'), volumesSize: size('Local Volumes'), raw: stdout };
-  }
-
   public async getEngineCounts(): Promise<{ runningContainers: number; totalImages: number }> {
     const { stdout } = await runDocker(['info', '--format', '{{json .}}'], { timeout: 4000 });
     const info = JSON.parse(stdout);

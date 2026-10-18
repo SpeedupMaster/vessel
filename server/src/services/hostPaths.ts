@@ -18,6 +18,7 @@ export const isHostPath = (value: string) => HOST_PATH_PATTERN.test(value) && !v
 class HostPathService {
   private appsRoot = APPS_DATA_DIR;
   private hostDataDir: string | null = null;
+  private selfImageId: string | null = null;
   private settled = false;
   private pending: Promise<void> | null = null;
 
@@ -28,6 +29,12 @@ class HostPathService {
 
   hostDataPath() {
     return this.hostDataDir;
+  }
+
+  /** Image ID of the running Vessel container, always present locally for helper containers. */
+  async selfImage() {
+    await this.ready();
+    return this.selfImageId;
   }
 
   /** Resolves the mapping once; retried on the next Compose run while Docker is unreachable. */
@@ -52,6 +59,7 @@ class HostPathService {
     this.settled = true;
     // A hostname that names some other container
     if (!info?.Id?.startsWith(hostname) && info?.Config?.Hostname !== hostname) return null;
+    this.selfImageId = typeof info.Image === 'string' ? info.Image : null;
     const mount = (info.Mounts || []).find((m: any) => path.posix.normalize(m.Destination || '') === DATA_DIR);
     return mount?.Source || null;
   }

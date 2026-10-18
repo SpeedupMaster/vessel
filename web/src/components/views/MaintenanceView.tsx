@@ -21,6 +21,7 @@ import { Badge } from '../common/Badge.js';
 import { Switch } from '../common/Switch.js';
 import { NumberInput } from '../common/NumberInput.js';
 import { useNotification } from '../../context/NotificationContext.js';
+import { DiskUsagePanel } from './DiskUsagePanel.js';
 
 interface MaintenanceViewProps {
   maintenance: MaintenanceConfig | null;
@@ -70,6 +71,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   const [pruneDangling, setPruneDangling] = useState(maintenance?.pruneDangling ?? true);
   const [pruneBuilderCache, setPruneBuilderCache] = useState(maintenance?.pruneBuilderCache ?? true);
   const [unusedRetentionHours, setUnusedRetentionHours] = useState(maintenance?.unusedRetentionHours || 72);
+  const [pruneStoppedContainers, setPruneStoppedContainers] = useState(maintenance?.pruneStoppedContainers ?? false);
+  const [stoppedContainerDays, setStoppedContainerDays] = useState(maintenance?.stoppedContainerDays || 7);
 
   const [autoCheckUpdates, setAutoCheckUpdates] = useState(maintenance?.autoCheckUpdates ?? true);
   const [checkSchedule, setCheckSchedule] = useState(maintenance?.checkSchedule || '0 */6 * * *');
@@ -168,6 +171,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
         pruneDangling,
         pruneBuilderCache,
         unusedRetentionHours,
+        pruneStoppedContainers,
+        stoppedContainerDays,
         autoCheckUpdates,
         checkSchedule,
       });
@@ -191,6 +196,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
         pruneDangling,
         pruneBuilderCache,
         unusedRetentionHours,
+        pruneStoppedContainers,
+        stoppedContainerDays,
         autoCheckUpdates,
         checkSchedule,
       });
@@ -251,7 +258,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                 </div>
                 <p className="leading-relaxed text-ink-muted">
                   <strong className="text-ink font-medium">阶梯磁盘安全防误删：</strong>
-                  仅自动清除无标签孤立层（dangling）与废弃 BuildKit 缓存；未使用的独立镜像强制要求超过设定的安全冷却保留时长（默认 72 小时）且未被任何容器间接引用才被纳入清理，防止误删热备镜像。
+                  镜像从失去最后一个容器引用（包括已停止的容器）时开始计时，满设定的冷却期（默认 72 小时）后才会删除，应用更新后被替换的旧镜像因此可在冷却期内用于回滚；构建缓存按最后使用时间计算。数据卷与 Vessel 应用的容器从不清理。
                 </p>
                 <p className="leading-relaxed text-ink-muted">
                   <strong className="text-ink font-medium">镜像巡检与自动升级：</strong>
@@ -279,7 +286,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                     安全阶梯磁盘瘦身
                   </h4>
                   <span className="text-[11px] text-ink-muted block mt-0.5">
-                    安全清理无引用镜像与构建缓存
+                    按失去引用时长清理镜像、构建缓存与停止的容器
                   </span>
                 </div>
               </div>
@@ -332,10 +339,10 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line transition-colors">
                 <div className="pr-3">
                   <span className="text-xs font-semibold text-ink block">
-                    自动清理悬空镜像
+                    包含悬空镜像
                   </span>
                   <span className="text-[11px] text-ink-muted mt-0.5 block leading-relaxed">
-                    清理构建中断或覆盖后无引用的孤立镜像层 (dangling &lt;none&gt;:&lt;none&gt;)
+                    无标签镜像 (&lt;none&gt;:&lt;none&gt;)，例如更新后被新版本替换的旧镜像，同样满冷却期后清理
                   </span>
                 </div>
                 <Switch
@@ -350,10 +357,10 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line transition-colors">
                 <div className="pr-3">
                   <span className="text-xs font-semibold text-ink block">
-                    自动清理废弃构建缓存
+                    清理构建缓存
                   </span>
                   <span className="text-[11px] text-ink-muted mt-0.5 block leading-relaxed">
-                    清理 Docker BuildKit 构建过程遗留的历史缓存层，释放高额磁盘占用
+                    清理超过冷却期未被使用的 BuildKit 构建缓存，近期构建用到的缓存保留
                   </span>
                 </div>
                 <Switch
@@ -372,7 +379,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                       未使用镜像安全冷却保留期
                     </label>
                     <span className="text-[11px] text-ink-muted block mt-0.5">
-                      未被任何容器引用的镜像需满足冷却保留时长才会被清理，防止误删热备
+                      镜像从不再被任何容器引用时开始计时，满冷却期后才会被清理，保留回滚余地
                     </span>
                   </div>
                   <div className="w-full sm:w-36 shrink-0">
@@ -384,6 +391,39 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Stopped containers */}
+              <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="pr-3">
+                    <span className="text-xs font-semibold text-ink block">
+                      清理长期停止的容器
+                    </span>
+                    <span className="text-[11px] text-ink-muted mt-0.5 block leading-relaxed">
+                      删除不属于 Vessel 应用、停止超过设定天数的容器（如一次性 docker run 遗留），数据卷保留
+                    </span>
+                  </div>
+                  <Switch
+                    checked={pruneStoppedContainers}
+                    onChange={setPruneStoppedContainers}
+                    size="sm"
+                    aria-label="清理长期停止的容器"
+                  />
+                </div>
+                {pruneStoppedContainers && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-ink-muted">停止超过</span>
+                    <div className="w-full sm:w-36 shrink-0">
+                      <NumberInput
+                        min={1}
+                        value={stoppedContainerDays}
+                        onChange={setStoppedContainerDays}
+                        unit="天"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Cron Expression */}
@@ -746,6 +786,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
           </div>
         </div>
       </div>
+
+      <DiskUsagePanel />
     </div>
   );
 };

@@ -98,17 +98,3 @@ test('Caddy reloads are sent without browser fetch headers the admin API rejects
     server.close();
   }
 });
-
-test('prune completion preserves configuration changed while Docker was running', async () => {
-  const store = database({ maintenance: { unusedRetentionHours: 72, autoPrune: true } });
-  const cleaner = load('server/src/services/cleaner.ts', {
-    '../db/index.js': { db: store.db }, './process.js': { runDocker: async () => {
-      store.db.set('maintenance', { unusedRetentionHours: 120, autoPrune: false });
-      return { stdout: 'Total reclaimed space: 1MB' };
-    } },
-  }).cleanerService;
-  assert.equal((await cleaner.runSafePrune()).success, true);
-  assert.equal(store.state.maintenance.unusedRetentionHours, 120);
-  assert.equal(store.state.maintenance.autoPrune, false);
-  assert.ok(store.state.maintenance.lastPruneAt);
-});

@@ -29,6 +29,8 @@ const DEFAULT_MAINTENANCE_CONFIG: MaintenanceConfig = {
   pruneSchedule: '0 4 * * 0', // Weekly Sunday 4 AM
   pruneDangling: true,
   pruneBuilderCache: true,
+  pruneStoppedContainers: false,
+  stoppedContainerDays: 7,
   unusedRetentionHours: 72,
   autoCheckUpdates: true,
   checkSchedule: '0 */6 * * *', // Every 6 hours

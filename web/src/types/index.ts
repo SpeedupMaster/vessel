@@ -96,6 +96,8 @@ export interface MaintenanceConfig {
   pruneDangling: boolean;
   pruneBuilderCache: boolean;
   unusedRetentionHours: number;
+  pruneStoppedContainers?: boolean;
+  stoppedContainerDays?: number;
   lastPruneAt?: string;
   lastFreedBytes?: number;
   autoCheckUpdates: boolean;

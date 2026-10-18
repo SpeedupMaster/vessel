@@ -11,6 +11,7 @@ import { apiErrorHandler } from './middleware/validation.js';
 import { schedulerService } from './services/scheduler.js';
 import { selfUpdateService } from './services/selfUpdate.js';
 import { hostPathService } from './services/hostPaths.js';
+import { cleanerService } from './services/cleaner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,6 +79,7 @@ server.listen(PORT, HOST, async () => {
   console.log(`[Vessel] Caddyfile synced at: ${caddyService.getCaddyfilePath()}`);
   await caddyService.ensureDaemon();
   selfUpdateService.start();
+  cleanerService.start();
 });
 
 process.on('SIGTERM', () => {

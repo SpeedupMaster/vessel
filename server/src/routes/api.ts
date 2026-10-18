@@ -862,8 +862,15 @@ apiRouter.post('/maintenance/config', requireAuth, (req: Request, res: Response)
   const current = db.get('maintenance');
   const updated: MaintenanceConfig = { ...current };
   // Only user-editable fields; lastPruneAt / lastCheckedAt etc. are owned by the server
-  for (const field of ['autoPrune', 'pruneSchedule', 'pruneDangling', 'pruneBuilderCache', 'unusedRetentionHours', 'autoCheckUpdates', 'checkSchedule'] as const) {
-    if (req.body?.[field] !== undefined) (updated as any)[field] = field === 'unusedRetentionHours' ? Number(req.body[field]) : req.body[field];
+  for (const field of ['autoPrune', 'pruneSchedule', 'pruneDangling', 'pruneBuilderCache', 'unusedRetentionHours', 'pruneStoppedContainers', 'stoppedContainerDays', 'autoCheckUpdates', 'checkSchedule'] as const) {
+    if (req.body?.[field] === undefined) continue;
+    if (field === 'unusedRetentionHours' || field === 'stoppedContainerDays') {
+      const value = Math.floor(Number(req.body[field]));
+      if (!Number.isFinite(value) || value < 1) return res.status(400).json({ error: `${field} must be a positive integer` });
+      updated[field] = value;
+    } else {
+      (updated as any)[field] = req.body[field];
+    }
   }
   db.set('maintenance', updated);
   schedulerService.reload();
@@ -888,8 +895,13 @@ apiRouter.post('/maintenance/prune', requireAuth, async (req: Request, res: Resp
 });
 
 apiRouter.get('/maintenance/disk-usage', async (req: Request, res: Response) => {
-  const usage = await dockerService.getDiskUsage();
-  res.json(usage);
+  const [breakdown, logs] = await Promise.allSettled([cleanerService.diskUsage(), cleanerService.containerLogs()]);
+  if (breakdown.status === 'rejected') return res.status(503).json({ error: `Docker 不可用: ${breakdown.reason?.message || breakdown.reason}` });
+  res.json({
+    breakdown: breakdown.value,
+    logs: logs.status === 'fulfilled' ? logs.value : [],
+    logsError: logs.status === 'rejected' ? String(logs.reason?.message || logs.reason) : null,
+  });
 });
 
 apiRouter.use(apiErrorHandler);
