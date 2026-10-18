@@ -1022,7 +1022,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
       navigator.vibrate([30, 50, 60]);
     }
     setIsFreshVolumesModalOpen(false);
-    setActiveTab(isDb ? 'logs' : 'deployments');
+    setActiveTab('deployments');
     try {
       if (onFreshVolumes) {
         await onFreshVolumes(app.id);
@@ -1071,9 +1071,12 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
             {/* Title & Subtitle / ID */}
             <div>
-              <h2 className="text-xl font-bold text-ink leading-tight tracking-tight">
-                {app?.name || name}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-ink leading-tight tracking-tight">
+                  {app?.name || name}
+                </h2>
+                {app && <Badge variant={app.status}>{app.status}</Badge>}
+              </div>
               <p className="text-xs font-mono text-ink-muted leading-tight mt-0.5">
                 {app?.id || '新建数据库'}
               </p>
@@ -1382,7 +1385,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             ? [
                 { key: 'general' as TabKey, label: '常规' },
                 { key: 'environment' as TabKey, label: '环境变量' },
-                { key: 'logs' as TabKey, label: '日志' },
+                { key: 'deployments' as TabKey, label: '部署记录' },
+                { key: 'logs' as TabKey, label: '运行日志' },
                 { key: 'monitoring' as TabKey, label: '监控' },
                 { key: 'backups' as TabKey, label: '备份' },
                 { key: 'advanced' as TabKey, label: '高级设置' },
