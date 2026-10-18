@@ -1,5 +1,5 @@
 // Vessel PWA Service Worker
-const CACHE_VERSION = 'vessel-v1';
+const CACHE_VERSION = 'vessel-v2';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const ASSETS_CACHE = `${CACHE_VERSION}-assets`;
 

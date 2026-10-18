@@ -18,7 +18,17 @@ function fixture() {
     pullAndRebuild: async () => ({ success: true }), freshVolumesRebuild: async () => ({ success: false, error: 'rebuild failed' }),
     getAppLogs: async () => ['private'], getEngineCounts: async () => ({ runningContainers: 0, totalImages: 0 }),
   };
+  const dataDir = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'vessel-api-'));
+  const sent = [];
+  const notifierModule = load('server/src/services/notifier.ts', { '../db/index.js': { db: store.db } });
+  notifierModule.notifier.notify = async payload => { sent.push(payload); };
+  const deployments = load('server/src/services/deployments.ts', {
+    '../db/index.js': { db: store.db, DATA_DIR: dataDir }, './docker.js': { dockerService: docker },
+    './registry.js': { registryService: { captureAppDigest: async () => {} } }, './notifier.js': notifierModule,
+    './appOperations.js': operations, '../ws/wsHub.js': { wsHub: { broadcastLog() {} } },
+  });
   const router = load('server/src/routes/api.ts', {
+    '../services/deployments.js': deployments, '../services/notifier.js': notifierModule,
     '../db/index.js': { db: store.db, DATA_DIR: '/isolated' }, '../services/docker.js': { dockerService: docker },
     '../services/caddy.js': { caddyService: { syncCaddyfile() {} } }, '../services/r2Backup.js': { r2BackupService: {} },
     '../services/registry.js': { registryService: { captureAppDigest: async () => {} } }, '../services/cleaner.js': { cleanerService: {} },
@@ -27,7 +37,7 @@ function fixture() {
     '../services/appOperations.js': operations, '../ws/wsHub.js': { wsHub: { broadcastLog() {} } },
   }).apiRouter;
   const app = requireServer('express')(); app.use(requireServer('express').json()); app.use('/api', router);
-  return { ...store, app, authService, middleware, validation, operations, docker };
+  return { ...store, app, authService, middleware, validation, operations, docker, deployments, sent, dataDir };
 }
 
 async function serve(app, action) {
@@ -179,4 +189,125 @@ test('WebSocket refuses anonymous upgrades and delivers authenticated task chang
     context.operations.appEvents.emit('changed', 'fixture');
     assert.equal(await closed, 1008);
   } finally { hub.destroy(); await new Promise(resolve => server.close(resolve)); }
+});
+
+const settle = async (context, appId = 'fixture') => {
+  for (let index = 0; index < 50; index++) {
+    await new Promise(resolve => setImmediate(resolve));
+    if (!context.state.deployments.some(item => item.appId === appId && item.status === 'running')) return;
+  }
+  throw new Error('deployment did not settle');
+};
+
+test('deployments are recorded with a config snapshot, log and one-click rollback', async () => {
+  const context = fixture();
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}`, 'Content-Type': 'application/json' };
+  context.docker.deployApp = async (_app, log) => { log('pulling layers\n'); return { success: true }; };
+  await serve(context.app, async base => {
+    const first = await fetch(base + '/api/apps/fixture/deploy', { method: 'POST', headers });
+    assert.equal(first.status, 202);
+    assert.equal((await first.json()).seq, 1);
+    await settle(context);
+    const original = context.state.apps[0].composeYaml;
+    context.state.apps[0].composeYaml = 'services:\n  database:\n    image: postgres:17\n';
+    await fetch(base + '/api/apps/fixture/deploy', { method: 'POST', headers });
+    await settle(context);
+
+    const list = await (await fetch(base + '/api/apps/fixture/deployments', { headers })).json();
+    assert.deepEqual(list.map(item => [item.seq, item.status, item.trigger]), [[2, 'success', 'manual'], [1, 'success', 'manual']]);
+    assert.equal(list[1].composeYaml, original);
+    const { log } = await (await fetch(base + `/api/apps/fixture/deployments/${list[1].id}/log`, { headers })).json();
+    assert.match(log, /pulling layers/);
+
+    assert.equal((await fetch(base + `/api/apps/fixture/deployments/${list[1].id}/rollback`, { method: 'POST', headers })).status, 202);
+    await settle(context);
+    assert.equal(context.state.apps[0].composeYaml, original);
+    const latest = context.deployments.deploymentService.list('fixture')[0];
+    assert.equal(latest.action, 'rollback'); assert.equal(latest.rollbackOf, list[1].id); assert.equal(latest.status, 'success');
+  });
+});
+
+test('failed deployment notifies and auto-rolls back to the last good config', async () => {
+  const context = fixture();
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}`, 'Content-Type': 'application/json' };
+  await serve(context.app, async base => {
+    await fetch(base + '/api/apps/fixture/deploy', { method: 'POST', headers });
+    await settle(context);
+    const good = context.state.apps[0].composeYaml;
+    assert.equal((await fetch(base + '/api/apps/fixture/settings', { method: 'PUT', headers, body: JSON.stringify({ autoRollback: true }) })).status, 200);
+    context.state.apps[0].composeYaml = 'services:\n  database:\n    image: broken\n';
+    let calls = 0;
+    context.docker.deployApp = async () => (++calls === 1 ? { success: false, error: 'image not found' } : { success: true });
+    await fetch(base + '/api/apps/fixture/deploy', { method: 'POST', headers });
+    await settle(context);
+    const [rollback, failed] = context.deployments.deploymentService.list('fixture');
+    assert.equal(failed.status, 'failed'); assert.equal(failed.error, 'image not found');
+    assert.equal(rollback.trigger, 'auto-rollback'); assert.equal(rollback.status, 'success');
+    assert.equal(context.state.apps[0].composeYaml, good);
+    assert.ok(context.sent.some(item => item.event === 'deploy.failure'));
+  });
+});
+
+test('deploy webhook needs to be enabled and requires the exact token', async () => {
+  const context = fixture();
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}`, 'Content-Type': 'application/json' };
+  await serve(context.app, async base => {
+    const settings = await (await fetch(base + '/api/apps/fixture/settings', { headers })).json();
+    assert.ok(settings.webhookToken.length >= 32);
+    const hook = token => fetch(base + `/api/hooks/deploy/fixture/${token}`, { method: 'POST' });
+    assert.equal((await hook(settings.webhookToken)).status, 404, 'disabled by default');
+    await fetch(base + '/api/apps/fixture/settings', { method: 'PUT', headers, body: JSON.stringify({ webhookEnabled: true, webhookToken: 'attacker-chosen' }) });
+    assert.equal((await hook('attacker-chosen')).status, 404, 'token cannot be set through settings');
+    assert.equal((await hook(settings.webhookToken + 'x')).status, 404);
+    const accepted = await hook(settings.webhookToken);
+    assert.equal(accepted.status, 202);
+    assert.equal((await accepted.json()).action, 'rebuild');
+    await settle(context);
+    assert.equal(context.deployments.deploymentService.list('fixture')[0].trigger, 'webhook');
+    const rotated = await (await fetch(base + '/api/apps/fixture/settings/webhook-token', { method: 'POST', headers })).json();
+    assert.equal((await hook(settings.webhookToken)).status, 404, 'old token revoked');
+    assert.notEqual(rotated.webhookToken, settings.webhookToken);
+  });
+});
+
+test('deploy settings are validated', async () => {
+  const context = fixture();
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}`, 'Content-Type': 'application/json' };
+  await serve(context.app, async base => {
+    const put = body => fetch(base + '/api/apps/fixture/settings', { method: 'PUT', headers, body: JSON.stringify(body) });
+    assert.equal((await put({ pullPolicy: 'sometimes' })).status, 400);
+    assert.equal((await put({ timeoutMinutes: 0 })).status, 400);
+    assert.equal((await put({ waitHealthy: 'yes' })).status, 400);
+    const saved = await (await put({ pullPolicy: 'always', waitHealthy: true, timeoutMinutes: 5 })).json();
+    assert.equal(saved.pullPolicy, 'always'); assert.equal(context.state.apps[0].deploySettings.timeoutMinutes, 5);
+  });
+});
+
+test('notification channel secrets are masked and preserved on edit', async () => {
+  const context = fixture();
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}`, 'Content-Type': 'application/json' };
+  const secretUrl = 'https://open.feishu.cn/open-apis/bot/v2/hook/synthetic-secret';
+  await serve(context.app, async base => {
+    assert.equal((await fetch(base + '/api/notifications', { method: 'POST', headers, body: JSON.stringify({ name: 'x', type: 'feishu', url: 'ftp://nope' }) })).status, 400);
+    const created = await (await fetch(base + '/api/notifications', { method: 'POST', headers, body: JSON.stringify({ name: '飞书', type: 'feishu', url: secretUrl }) })).json();
+    const listed = await (await fetch(base + '/api/notifications', { headers })).text();
+    assert.ok(!listed.includes('synthetic-secret'));
+    assert.match(listed, /open\.feishu\.cn/);
+    await fetch(base + '/api/notifications', { method: 'POST', headers, body: JSON.stringify({ id: created.id, name: '飞书群', url: JSON.parse(listed)[0].url }) });
+    assert.equal(context.state.notifications[0].url, secretUrl);
+    assert.equal(context.state.notifications[0].name, '飞书群');
+  });
+});
+
+test('logout revokes only the presented session token', async () => {
+  const context = fixture();
+  await serve(context.app, async base => {
+    const first = context.authService.login('admin', 'test-password-12345').token;
+    const second = context.authService.login('admin', 'test-password-12345').token;
+    const headers = token => ({ Authorization: `Bearer ${token}` });
+    assert.equal((await fetch(base + '/api/auth/logout', { method: 'POST', headers: headers(first) })).status, 200);
+    assert.equal((await fetch(base + '/api/apps', { headers: headers(first) })).status, 401);
+    assert.equal((await fetch(base + '/api/apps', { headers: headers(second) })).status, 200);
+    assert.equal(context.state.admin.revokedTokens.length, 1);
+  });
 });

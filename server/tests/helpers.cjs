@@ -19,7 +19,7 @@ function load(relative, mocks = {}, globals) {
 }
 
 function database(initial = {}) {
-  const state = { apps: [], domains: [], backups: [], registries: [], r2Config: { enabled: false, retentionCount: 7 }, maintenance: {}, ...initial };
+  const state = { apps: [], domains: [], backups: [], registries: [], deployments: [], notifications: [], r2Config: { enabled: false, retentionCount: 7 }, maintenance: {}, ...initial };
   return { state, db: {
     get: key => state[key], set: (key, value) => { state[key] = value; },
     updateApp: (id, update) => {

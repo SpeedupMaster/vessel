@@ -3,7 +3,54 @@ import path from 'path';
 import { runDocker } from './process.js';
 import YAML from 'yaml';
 import { APPS_DATA_DIR, db } from '../db/index.js';
-import { ContainerInfo, AppItem } from '../types/index.js';
+import { ContainerInfo, AppItem, AppDeploySettings, AppDiagnostics, ContainerDiagnostics } from '../types/index.js';
+
+const ZERO_TIME = '0001-01-01T00:00:00Z';
+const realTime = (value: unknown) => (typeof value === 'string' && value && value !== ZERO_TIME ? value : undefined);
+
+/** Map one `docker inspect` object to the fields the monitoring view needs */
+export function toDiagnostics(raw: any): ContainerDiagnostics {
+  const state = raw?.State || {};
+  const health = state.Health;
+  const lastProbe = Array.isArray(health?.Log) && health.Log.length ? health.Log[health.Log.length - 1] : undefined;
+  const portMap = raw?.NetworkSettings?.Ports || {};
+  const ports = Object.entries<any>(portMap).flatMap(([container, bindings]) =>
+    Array.isArray(bindings) && bindings.length
+      ? bindings.map((b: any) => ({ container, hostIp: b.HostIp || undefined, hostPort: b.HostPort || undefined }))
+      : [{ container }]);
+  return {
+    id: String(raw?.Id || '').slice(0, 12),
+    name: String(raw?.Name || '').replace(/^\//, ''),
+    service: raw?.Config?.Labels?.['com.docker.compose.service'] || '',
+    image: raw?.Config?.Image || '',
+    state: state.Status || 'unknown',
+    running: !!state.Running,
+    exitCode: Number(state.ExitCode) || 0,
+    oomKilled: !!state.OOMKilled,
+    error: state.Error || '',
+    startedAt: realTime(state.StartedAt),
+    finishedAt: realTime(state.FinishedAt),
+    restartCount: Number(raw?.RestartCount) || 0,
+    restartPolicy: raw?.HostConfig?.RestartPolicy?.Name || 'no',
+    health: health?.Status && health.Status !== 'none'
+      ? {
+          status: health.Status,
+          failingStreak: Number(health.FailingStreak) || 0,
+          lastOutput: lastProbe?.Output ? String(lastProbe.Output).trim().slice(-500) : undefined,
+          lastCheckAt: realTime(lastProbe?.End),
+        }
+      : undefined,
+    mounts: (raw?.Mounts || []).map((m: any) => ({
+      type: m.Type || '', source: m.Source || '', destination: m.Destination || '', name: m.Name || undefined, readOnly: m.RW === false,
+    })),
+    networks: Object.keys(raw?.NetworkSettings?.Networks || {}),
+    ports,
+  };
+}
+
+export type DeployOptions = Partial<Pick<AppDeploySettings, 'pullPolicy' | 'removeOrphans' | 'waitHealthy' | 'timeoutMinutes'>>;
+
+const DEFAULT_TIMEOUT_MINUTES = 15;
 
 
 
@@ -90,17 +137,30 @@ export class DockerService {
     return { args: ['compose', '-f', composePath, '--env-file', envPath, ...args], cwd: appDir };
   }
 
-  public async compose(app: AppItem, args: string[], onLog?: (chunk: string) => void) {
+  public async compose(app: AppItem, args: string[], onLog?: (chunk: string) => void, timeoutMs = DEFAULT_TIMEOUT_MINUTES * 60 * 1000) {
     const command = this.composeArgs(app, args);
-    return runDocker(command.args, { cwd: command.cwd, onLog, timeout: 15 * 60 * 1000 });
+    return runDocker(command.args, { cwd: command.cwd, onLog, timeout: timeoutMs });
   }
 
-  private async lifecycle(app: AppItem, commands: string[][], onLog?: (text: string) => void): Promise<{ success: boolean; error?: string }> {
+  /** Flags appended to `up -d` according to the app's deploy settings */
+  private upFlags(options: DeployOptions = {}): string[] {
+    const flags: string[] = [];
+    if (options.removeOrphans !== false) flags.push('--remove-orphans');
+    if (options.pullPolicy === 'always') flags.push('--pull', 'always');
+    if (options.waitHealthy) {
+      const minutes = options.timeoutMinutes || DEFAULT_TIMEOUT_MINUTES;
+      flags.push('--wait', '--wait-timeout', String(minutes * 60));
+    }
+    return flags;
+  }
+
+  private async lifecycle(app: AppItem, commands: string[][], onLog?: (text: string) => void, options: DeployOptions = {}): Promise<{ success: boolean; error?: string }> {
+    const timeoutMs = (options.timeoutMinutes || DEFAULT_TIMEOUT_MINUTES) * 60 * 1000;
     try {
       for (const command of commands) {
         onLog?.(`[vessel] docker compose ${command.join(' ')}
 `);
-        await this.compose(app, command, onLog);
+        await this.compose(app, command, onLog, timeoutMs);
       }
       await this.syncAppContainers(app.id);
       onLog?.('[vessel] Operation completed successfully.\n');
@@ -112,9 +172,9 @@ export class DockerService {
     }
   }
 
-  public async deployApp(app: AppItem, onLog?: (text: string) => void) {
+  public async deployApp(app: AppItem, onLog?: (text: string) => void, options?: DeployOptions) {
     await this.ensureNetwork();
-    return this.lifecycle(app, [['up', '-d', '--remove-orphans']], onLog);
+    return this.lifecycle(app, [['up', '-d', ...this.upFlags(options)]], onLog, options);
   }
 
   public stopApp(app: AppItem, onLog?: (text: string) => void) {
@@ -123,6 +183,20 @@ export class DockerService {
 
   public restartApp(app: AppItem, onLog?: (text: string) => void) {
     return this.lifecycle(app, [['restart']], onLog);
+  }
+
+  /** Live container state from docker inspect; never throws */
+  public async diagnoseApp(app: AppItem): Promise<AppDiagnostics> {
+    const checkedAt = new Date().toISOString();
+    try {
+      const { stdout } = await this.compose(app, ['ps', '--all', '-q'], undefined, 15000);
+      const ids = stdout.trim().split(/\s+/).filter(Boolean);
+      if (!ids.length) return { dockerAvailable: true, containers: [], checkedAt };
+      const inspected = JSON.parse((await runDocker(['inspect', ...ids], { timeout: 10000 })).stdout);
+      return { dockerAvailable: true, containers: (Array.isArray(inspected) ? inspected : []).map(toDiagnostics), checkedAt };
+    } catch (error: any) {
+      return { dockerAvailable: false, error: String(error?.message || error).slice(0, 500), containers: [], checkedAt };
+    }
   }
 
   public async syncAppContainers(appId: string): Promise<ContainerInfo[]> {
@@ -140,14 +214,16 @@ export class DockerService {
     return containers;
   }
 
-  public async pullAndRebuild(app: AppItem, onLog?: (text: string) => void) {
+  public async pullAndRebuild(app: AppItem, onLog?: (text: string) => void, options?: DeployOptions) {
     await this.ensureNetwork();
-    return this.lifecycle(app, [['pull'], ['up', '-d', '--force-recreate']], onLog);
+    const up = ['up', '-d', '--force-recreate', ...this.upFlags({ ...options, removeOrphans: false, pullPolicy: 'missing' })];
+    return this.lifecycle(app, [['pull'], up], onLog, options);
   }
 
-  public async freshVolumesRebuild(app: AppItem, onLog?: (text: string) => void) {
+  public async freshVolumesRebuild(app: AppItem, onLog?: (text: string) => void, options?: DeployOptions) {
     await this.ensureNetwork();
-    return this.lifecycle(app, [['down', '-v', '--remove-orphans'], ['up', '-d', '--build']], onLog);
+    const up = ['up', '-d', '--build', ...this.upFlags({ ...options, removeOrphans: false, pullPolicy: 'missing' })];
+    return this.lifecycle(app, [['down', '-v', '--remove-orphans'], up], onLog, options);
   }
 
   /**

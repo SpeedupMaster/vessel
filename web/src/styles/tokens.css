@@ -1,34 +1,40 @@
-/* Vessel Design Tokens · Vercel / Linear Minimalist Standard
- * Dual-theme: Light (#ffffff) & Dark (#050507)
- * Philosophy: Border-free subtle surface hierarchy + Monochrome precision
- * Semantic telemetry lights (Emerald, Amber, Crimson) preserved for system health
+/* Vessel Design Tokens
+ * Monochrome precision with a single cobalt "signal" accent.
+ * Depth comes from hairlines, inner highlights and layered shadows rather than heavy fills.
+ * Semantic telemetry lights (Emerald, Amber, Crimson) preserved for system health.
  */
 
 :root {
-  /* Surface hierarchy - Clean Light with crisp, modern contrast (Linear / Vercel Standard) */
-  --color-paper: #f8fafc;        /* App Canvas / Page Background (Soft Slate) */
-  --color-paper-2: #ffffff;      /* Cards, Panels, Modals, Navbars (Pure White) */
-  --color-paper-3: #f1f5f9;      /* Inner Wells, Filter Chips, Inset Containers */
-  --color-paper-4: #e2e8f0;      /* Hover wells, active borders */
+  /* Surface hierarchy */
+  --color-paper: #f6f6f7;        /* App canvas */
+  --color-paper-2: #ffffff;      /* Cards, panels, modals */
+  --color-paper-3: #f1f1f3;      /* Inner wells, chips */
+  --color-paper-4: #e6e6ea;      /* Hover wells */
 
-  /* Ink / Typography - high readability, passing WCAG AAA / AA */
-  --color-ink: #09090b;          /* Primary Text (Deep Charcoal/Black) */
-  --color-ink-muted: #475569;    /* Secondary Text / Subtitles (Slate-600, contrast > 6:1) */
-  --color-ink-faint: #64748b;    /* Microcopy / Timestamps / Notes (Slate-500, contrast > 4.5:1) */
+  /* Ink */
+  --color-ink: #0b0b0f;
+  --color-ink-muted: #52525b;
+  --color-ink-faint: #71717a;
 
-  /* Micro hairline & borders - visible, crisp demarcation */
-  --color-line: rgba(0, 0, 0, 0.09);          /* Standard element borders */
-  --color-line-subtle: rgba(0, 0, 0, 0.05);   /* Subtle inner dividers */
-  --color-focus: #09090b;
+  /* Hairlines */
+  --color-line: rgba(12, 12, 20, 0.085);
+  --color-line-subtle: rgba(12, 12, 20, 0.05);
+  --color-line-strong: rgba(12, 12, 20, 0.16);
+  --color-focus: #3d5afe;
 
-  /* Primary Accent: Vercel Monochrome (Black on Light) */
-  --color-accent: #09090b;
+  /* Primary: monochrome ink */
+  --color-accent: #0b0b0f;
   --color-accent-hover: #27272a;
   --color-accent-contrast: #ffffff;
   --color-accent-muted: rgba(0, 0, 0, 0.06);
   --color-accent-glow: rgba(0, 0, 0, 0.08);
 
-  /* Semantic Telemetry States (Light Mode) */
+  /* Signal: cobalt, used sparingly for focus / active / selection */
+  --color-signal: #3d5afe;
+  --color-signal-soft: rgba(61, 90, 254, 0.1);
+  --color-signal-ring: rgba(61, 90, 254, 0.28);
+
+  /* Semantic telemetry */
   --color-emerald: #047857;
   --color-emerald-bg: #ecfdf5;
   --color-emerald-border: #a7f3d0;
@@ -45,45 +51,68 @@
   --color-blue-bg: #f1f5f9;
   --color-blue-border: #e2e8f0;
 
-  /* Typography Stacks */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  /* Elevation: a hairline top highlight + soft layered shadow */
+  --highlight-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --shadow-xs: 0 1px 2px rgba(16, 16, 28, 0.06);
+  --shadow-card: 0 1px 2px rgba(16, 16, 28, 0.04), 0 2px 6px -2px rgba(16, 16, 28, 0.05);
+  --shadow-card-hover: 0 1px 2px rgba(16, 16, 28, 0.05), 0 12px 28px -12px rgba(16, 16, 28, 0.16);
+  --shadow-pop: 0 0 0 1px rgba(12, 12, 20, 0.06), 0 6px 16px -4px rgba(16, 16, 28, 0.12), 0 24px 48px -12px rgba(16, 16, 28, 0.18);
+  --shadow-button: 0 1px 1px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  /* Canvas ambience */
+  --canvas-glow: radial-gradient(1200px 520px at 70% -10%, rgba(61, 90, 254, 0.07), transparent 60%),
+                 radial-gradient(900px 480px at -10% 0%, rgba(16, 16, 28, 0.035), transparent 60%);
+  --grain-opacity: 0.035;
+  --spotlight: rgba(61, 90, 254, 0.06);
+
+  /* Typography */
+  --font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   --font-display: var(--font-sans);
   --font-body: var(--font-sans);
-  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', 'Cascadia Code', Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
 
-  /* Spacing & Radii */
+  /* Radii */
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-pill: 9999px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 520ms;
 }
 
 html.dark {
-  /* Surface hierarchy - Deep Obsidian Dark (#050507 -> #0f0f12 -> #18181d) */
-  --color-paper: #050507;
-  --color-paper-2: #0f0f12;
-  --color-paper-3: #18181d;
-  --color-paper-4: #222228;
+  --color-paper: #08080b;
+  --color-paper-2: #0f0f13;
+  --color-paper-3: #17171c;
+  --color-paper-4: #202027;
 
-  /* Ink / Typography */
   --color-ink: #f4f4f5;
   --color-ink-muted: #a1a1aa;
-  --color-ink-faint: #71717a;
+  --color-ink-faint: #75757f;
 
-  /* Micro hairline & borders - ultra-subtle, borderless feel */
-  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line: rgba(255, 255, 255, 0.075);
   --color-line-subtle: rgba(255, 255, 255, 0.04);
-  --color-focus: #ffffff;
+  --color-line-strong: rgba(255, 255, 255, 0.15);
+  --color-focus: #7b8fff;
 
-  /* Primary Accent: Vercel Monochrome (Crisp White on Dark) */
   --color-accent: #ffffff;
   --color-accent-hover: #e4e4e7;
   --color-accent-contrast: #000000;
   --color-accent-muted: rgba(255, 255, 255, 0.08);
   --color-accent-glow: rgba(255, 255, 255, 0.15);
 
-  /* Semantic Telemetry States (Dark Mode) */
+  --color-signal: #7b8fff;
+  --color-signal-soft: rgba(123, 143, 255, 0.12);
+  --color-signal-ring: rgba(123, 143, 255, 0.35);
+
   --color-emerald: #10b981;
   --color-emerald-bg: rgba(16, 185, 129, 0.12);
   --color-emerald-border: rgba(16, 185, 129, 0.25);
@@ -99,4 +128,16 @@ html.dark {
   --color-blue: #ffffff;
   --color-blue-bg: rgba(255, 255, 255, 0.08);
   --color-blue-border: rgba(255, 255, 255, 0.12);
+
+  --highlight-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -4px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px -6px rgba(0, 0, 0, 0.6), 0 28px 60px -16px rgba(0, 0, 0, 0.8);
+  --shadow-button: 0 1px 1px rgba(0, 0, 0, 0.3), 0 2px 8px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  --canvas-glow: radial-gradient(1200px 560px at 70% -12%, rgba(123, 143, 255, 0.1), transparent 60%),
+                 radial-gradient(900px 520px at -10% 0%, rgba(255, 255, 255, 0.035), transparent 60%);
+  --grain-opacity: 0.05;
+  --spotlight: rgba(123, 143, 255, 0.09);
 }

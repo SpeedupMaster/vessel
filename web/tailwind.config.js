@@ -1,3 +1,6 @@
+// CSS-variable colors routed through color-mix so opacity modifiers (bg-paper-3/40) work.
+const v = (name) => `color-mix(in srgb, var(${name}) calc(<alpha-value> * 100%), transparent)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -6,37 +9,44 @@ export default {
     extend: {
       colors: {
         paper: {
-          DEFAULT: 'var(--color-paper)',
-          2: 'var(--color-paper-2)',
-          3: 'var(--color-paper-3)',
-          4: 'var(--color-paper-4)',
+          DEFAULT: v('--color-paper'),
+          2: v('--color-paper-2'),
+          3: v('--color-paper-3'),
+          4: v('--color-paper-4'),
         },
         ink: {
-          DEFAULT: 'var(--color-ink)',
-          muted: 'var(--color-ink-muted)',
-          faint: 'var(--color-ink-faint)',
+          DEFAULT: v('--color-ink'),
+          muted: v('--color-ink-muted'),
+          faint: v('--color-ink-faint'),
         },
         line: {
-          DEFAULT: 'var(--color-line)',
-          subtle: 'var(--color-line-subtle)',
-          focus: 'var(--color-focus)',
+          DEFAULT: v('--color-line'),
+          subtle: v('--color-line-subtle'),
+          focus: v('--color-focus'),
+          strong: v('--color-line-strong'),
+        },
+        signal: {
+          DEFAULT: v('--color-signal'),
+          soft: v('--color-signal-soft'),
+          ring: v('--color-signal-ring'),
         },
         accent: {
-          DEFAULT: 'var(--color-accent)',
-          hover: 'var(--color-accent-hover)',
-          contrast: 'var(--color-accent-contrast)',
-          muted: 'var(--color-accent-muted)',
-          glow: 'var(--color-accent-glow)',
+          DEFAULT: v('--color-accent'),
+          hover: v('--color-accent-hover'),
+          contrast: v('--color-accent-contrast'),
+          muted: v('--color-accent-muted'),
+          glow: v('--color-accent-glow'),
         },
         status: {
-          emerald: 'var(--color-emerald)',
-          amber: 'var(--color-amber)',
-          crimson: 'var(--color-crimson)',
-          blue: 'var(--color-blue)',
+          emerald: v('--color-emerald'),
+          amber: v('--color-amber'),
+          crimson: v('--color-crimson'),
+          blue: v('--color-blue'),
         },
       },
       fontFamily: {
         sans: [
+          'Inter Variable',
           'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
@@ -49,6 +59,7 @@ export default {
           'sans-serif',
         ],
         mono: [
+          'JetBrains Mono Variable',
           'JetBrains Mono',
           'Cascadia Code',
           'Consolas',
@@ -58,10 +69,15 @@ export default {
         ],
       },
       boxShadow: {
-        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
-        'elevated': '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
-        'floating': '0 12px 32px -4px rgba(0, 0, 0, 0.12)',
+        'subtle': 'var(--shadow-xs)',
+        'card': 'var(--shadow-card), var(--highlight-top)',
+        'elevated': 'var(--shadow-card-hover), var(--highlight-top)',
+        'floating': 'var(--shadow-pop)',
+        'pop': 'var(--shadow-pop), var(--highlight-top)',
+      },
+      transitionTimingFunction: {
+        'out-expo': 'var(--ease-out)',
+        'spring': 'var(--ease-spring)',
       },
       keyframes: {
         pulseGlow: {

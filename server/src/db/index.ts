@@ -105,6 +105,8 @@ export class Database {
           backups: parsed.backups || [],
           registries: parsed.registries || DEFAULT_REGISTRIES,
           maintenance: parsed.maintenance || DEFAULT_MAINTENANCE_CONFIG,
+          deployments: parsed.deployments || [],
+          notifications: parsed.notifications || [],
         };
       } catch (e) {
         throw new Error(`Cannot read database ${DB_FILE}; original file was preserved: ${String(e)}`);
@@ -119,6 +121,8 @@ export class Database {
       backups: [],
       registries: DEFAULT_REGISTRIES,
       maintenance: DEFAULT_MAINTENANCE_CONFIG,
+      deployments: [],
+      notifications: [],
     };
     this.save(initial);
     return initial;

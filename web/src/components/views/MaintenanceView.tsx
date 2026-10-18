@@ -219,7 +219,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               <h2 className="font-bold text-base sm:text-lg text-ink tracking-tight font-sans">
                 自动镜像巡检更新与安全阶梯清理
               </h2>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-paper-3 border border-zinc-200 dark:border-white/10 text-ink-muted font-mono select-none font-medium">
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-paper-3 border border-line text-ink-muted font-mono select-none font-medium">
                 自动运维守护
               </span>
             </div>
@@ -244,7 +244,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
 
             {/* Collapsible Guidance Box */}
             {isTipsExpanded && (
-              <div className="mt-3 p-4 rounded-2xl bg-white dark:bg-paper-2 border border-zinc-200 dark:border-white/5 text-xs text-ink-muted space-y-2 shadow-sm animate-in fade-in duration-200">
+              <div className="mt-3 p-4 rounded-2xl bg-paper-2 border border-line text-xs text-ink-muted space-y-2 shadow-sm animate-in fade-in duration-200">
                 <div className="flex items-center gap-1.5 font-medium text-ink">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" weight="fill" />
                   <span>自动化运维与清理工作机制</span>
@@ -287,10 +287,10 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             </div>
 
             {/* Top Metric Highlight Box */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-paper-3/50 dark:bg-paper-2 border border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-4 sm:p-5 rounded-2xl bg-paper-3/50 dark:bg-paper-2 border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-ink-muted uppercase font-medium tracking-wider">
+                  <span className="eyebrow">
                     上次清理释放空间
                   </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -328,7 +328,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             {/* Strategy Setting Items */}
             <div className="space-y-3">
               {/* Toggle 1 */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 transition-colors">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line transition-colors">
                 <div className="pr-3">
                   <span className="text-xs font-semibold text-ink block">
                     自动清理悬空镜像
@@ -346,7 +346,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               </div>
 
               {/* Toggle 2 */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 transition-colors">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line transition-colors">
                 <div className="pr-3">
                   <span className="text-xs font-semibold text-ink block">
                     自动清理废弃构建缓存
@@ -364,7 +364,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               </div>
 
               {/* Retention Hours */}
-              <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 space-y-2">
+              <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <label className="text-xs font-semibold text-ink block">
@@ -386,7 +386,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               </div>
 
               {/* Cron Expression */}
-              <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 space-y-2.5">
+              <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <label className="text-xs font-semibold text-ink">
                     定时清理 Cron 表达式
@@ -403,7 +403,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   value={pruneSchedule}
                   onChange={(e) => setPruneSchedule(e.target.value)}
                   placeholder="0 4 * * 0"
-                  className="w-full bg-white dark:bg-paper border border-zinc-300 dark:border-white/10 rounded-xl px-3.5 py-2 min-h-[38px] text-xs text-ink font-mono placeholder:text-ink-muted focus:outline-none focus:border-zinc-500 dark:focus:border-white/30 transition-colors shadow-sm"
+                  className="w-full bg-paper-2 dark:bg-paper border border-line-strong rounded-xl px-3.5 py-2 min-h-[38px] text-xs text-ink font-mono placeholder:text-ink-muted focus:outline-none transition-colors shadow-sm"
                 />
                 {/* Horizontal Quick-pick Chips */}
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
@@ -427,7 +427,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                           'text-[11px] font-mono px-2.5 py-0.5 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
                           isSelected
                             ? 'bg-accent text-accent-contrast shadow-sm font-semibold'
-                            : 'bg-white hover:bg-paper-3 text-ink-muted hover:text-ink border border-zinc-200 dark:border-white/10'
+                            : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border border-line'
                         )}
                       >
                         {preset.label}
@@ -440,7 +440,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
           </div>
 
           {/* Card Footer Action */}
-          <div className="pt-4 border-t border-zinc-200 dark:border-white/5 flex items-center justify-between gap-3">
+          <div className="pt-4 border-t border-line flex items-center justify-between gap-3">
             <span className="text-[11px] text-ink-muted hidden sm:inline">
               修改配置后点击保存即刻生效
             </span>
@@ -481,17 +481,18 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             </div>
 
             {/* Top Metric Highlight Box */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-paper-3/50 dark:bg-paper-2 border border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-4 sm:p-5 rounded-2xl bg-paper-3/50 dark:bg-paper-2 border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-ink-muted uppercase font-medium tracking-wider">
+                  <span className="eyebrow">
                     镜像巡检状态
                   </span>
                   <span
                     className={clsx(
-                      'w-1.5 h-1.5 rounded-full shrink-0',
-                      appsWithUpdates.length > 0 ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'
+                      'status-dot shrink-0',
+                      appsWithUpdates.length > 0 ? 'text-amber-500' : 'text-emerald-500'
                     )}
+                    data-live={appsWithUpdates.length === 0}
                   />
                 </div>
                 <div
@@ -524,7 +525,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             {/* Strategy Setting Items */}
             <div className="space-y-3">
               {/* Toggle 1 */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 transition-colors">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line transition-colors">
                 <div className="pr-3">
                   <span className="text-xs font-semibold text-ink block">
                     启用定时镜像巡检与自动升级
@@ -542,7 +543,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
               </div>
 
               {/* Cron Expression */}
-              <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 space-y-2.5">
+              <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <label className="text-xs font-semibold text-ink">
                     巡检周期 Cron 表达式
@@ -559,7 +560,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   value={checkSchedule}
                   onChange={(e) => setCheckSchedule(e.target.value)}
                   placeholder="0 */6 * * *"
-                  className="w-full bg-white dark:bg-paper border border-zinc-300 dark:border-white/10 rounded-xl px-3.5 py-2 min-h-[38px] text-xs text-ink font-mono placeholder:text-ink-muted focus:outline-none focus:border-zinc-500 dark:focus:border-white/30 transition-colors shadow-sm"
+                  className="w-full bg-paper-2 dark:bg-paper border border-line-strong rounded-xl px-3.5 py-2 min-h-[38px] text-xs text-ink font-mono placeholder:text-ink-muted focus:outline-none transition-colors shadow-sm"
                 />
                 {/* Horizontal Quick-pick Chips */}
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
@@ -583,7 +584,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                           'text-[11px] font-mono px-2.5 py-0.5 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
                           isSelected
                             ? 'bg-accent text-accent-contrast shadow-sm font-semibold'
-                            : 'bg-white hover:bg-paper-3 text-ink-muted hover:text-ink border border-zinc-200 dark:border-white/10'
+                            : 'bg-paper-2 hover:bg-paper-3 text-ink-muted hover:text-ink border border-line'
                         )}
                       >
                         {preset.label}
@@ -610,7 +611,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                     {appsWithUpdates.map((a) => (
                       <div
                         key={a.id}
-                        className="p-3 rounded-lg bg-white dark:bg-paper-2 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs"
+                        className="p-3 rounded-lg bg-paper-2 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs"
                       >
                         <div className="min-w-0 space-y-1">
                           <div className="flex items-center gap-2">
@@ -630,7 +631,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                               type="button"
                               disabled={togglingAppId === a.id}
                               onClick={() => handleToggleAutoUpdate(a)}
-                              className="text-[11px] px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-paper-3 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                              className="text-[11px] px-2.5 py-1.5 rounded-lg border border-line hover:bg-paper-3 text-ink-muted hover:text-ink transition-colors cursor-pointer"
                               title={a.autoUpdate ? '点击切换为手动升级' : '点击开启此应用自动升级'}
                             >
                               {a.autoUpdate ? '设为手动升级' : '开启动态自动升级'}
@@ -653,7 +654,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 space-y-3">
+                <div className="p-3.5 rounded-xl bg-paper-3/40 dark:bg-paper-3/50 border border-line space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs font-semibold text-ink">
                       <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" weight="fill" />
@@ -681,13 +682,13 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                       <span>{autoUpdateCount} 个应用已开启自动升级</span>
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-ink-faint shrink-0" />
                       <span>{manualUpdateCount} 个保持手动确认</span>
                     </span>
                   </div>
 
                   {showPolicyList && apps.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-white/5 space-y-2">
+                    <div className="mt-3 pt-3 border-t border-line space-y-2">
                       <p className="text-[11px] font-medium text-ink">
                         各应用自动升级策略（可即时切换）：
                       </p>
@@ -695,7 +696,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                         {apps.map((app) => (
                           <div
                             key={app.id}
-                            className="p-2.5 rounded-lg bg-white dark:bg-paper flex items-center justify-between text-xs border border-zinc-200 dark:border-white/5 shadow-xs"
+                            className="p-2.5 rounded-lg bg-paper-2 dark:bg-paper flex items-center justify-between text-xs border border-line shadow-xs"
                           >
                             <div className="min-w-0 pr-2">
                               <span className="font-medium text-ink truncate block">{app.name}</span>
@@ -725,7 +726,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
           </div>
 
           {/* Card Footer Action */}
-          <div className="pt-4 border-t border-zinc-200 dark:border-white/5 flex items-center justify-between gap-3">
+          <div className="pt-4 border-t border-line flex items-center justify-between gap-3">
             <span className="text-[11px] text-ink-muted hidden sm:inline">
               巡检计划随配置保存即时生效
             </span>

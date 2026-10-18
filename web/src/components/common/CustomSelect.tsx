@@ -191,7 +191,7 @@ export function CustomSelect<T extends string | number = string>({
           ref={listboxRef}
           role="listbox"
           tabIndex={-1}
-          className={`absolute ${alignClass} ${widthClass} top-full mt-1.5 z-50 bg-paper-2 rounded-2xl shadow-2xl py-1.5 max-h-60 overflow-y-auto no-scrollbar animate-dropdown ${dropdownClassName}`}
+          className={`absolute ${alignClass} ${widthClass} top-full mt-1.5 z-50 surface-pop rounded-2xl py-1.5 max-h-60 overflow-y-auto no-scrollbar animate-dropdown ${dropdownClassName}`}
         >
           {options.length === 0 ? (
             <div className="px-3.5 py-2.5 text-xs text-ink-muted text-center">

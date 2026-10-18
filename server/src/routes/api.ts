@@ -17,9 +17,26 @@ import { schedulerService } from '../services/scheduler.js';
 import { authService } from '../services/auth.js';
 import { requireAuth, requirePasswordChanged, loginRateLimit, AuthenticatedRequest } from '../middleware/auth.js';
 import { wsHub } from '../ws/wsHub.js';
-import { AppItem, DomainItem, R2Config, RegistryItem, MaintenanceConfig } from '../types/index.js';
+import { deploymentService, newWebhookToken } from '../services/deployments.js';
+import { notifier, maskChannel, isMasked, CHANNEL_TYPES, NOTIFICATION_EVENTS } from '../services/notifier.js';
+import { timingSafeEqual } from 'node:crypto';
+import { AppItem, DomainItem, R2Config, RegistryItem, MaintenanceConfig, AppDeploySettings, DeploymentAction, DeploymentRecord, DeploymentTrigger, NotificationChannel } from '../types/index.js';
 
 export const apiRouter = checkedRouter();
+
+/** Start a recorded deployment in the background; returns the record created for it. */
+function startDeployment(appId: string, action: DeploymentAction, trigger: DeploymentTrigger, source?: DeploymentRecord) {
+  const task = withAppLock(appId, () => deploymentService.run(appId, action, trigger, { source }));
+  task.catch(error => { console.error('[Deployment]', error); wsHub.broadcastLog(appId, `[vessel] ${error.message}\n`); });
+  // run() registers the record synchronously, before its first await
+  return deploymentService.list(appId)[0];
+}
+
+function tokensMatch(given: string, expected: string) {
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 // ======================= AUTH =======================
 apiRouter.get('/auth/status', (_req: Request, res: Response) => {
@@ -82,8 +99,25 @@ apiRouter.post('/auth/change-password', requireAuth, (req: AuthenticatedRequest,
   });
 });
 
-apiRouter.post('/auth/logout', (_req: Request, res: Response) => {
+apiRouter.post('/auth/logout', (req: Request, res: Response) => {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) authService.logout(header.slice(7).trim());
   res.json({ success: true, message: '已安全登出' });
+});
+
+// ======================= DEPLOY WEBHOOK (token-authenticated) =======================
+// POST /api/hooks/deploy/:appId/:token[?action=deploy] — default action pulls images and recreates.
+apiRouter.post('/hooks/deploy/:id/:token', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const app = db.get('apps').find(item => item.id === id);
+  const settings = app?.deploySettings;
+  if (!app || !settings?.webhookEnabled || !settings.webhookToken || !tokensMatch(String(req.params.token), settings.webhookToken)) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  const action: DeploymentAction = req.query.action === 'deploy' ? 'deploy' : 'rebuild';
+  assertAppIdle(id);
+  const record = startDeployment(id, action, 'webhook');
+  res.status(202).json({ accepted: true, appId: id, action, deploymentId: record?.id, seq: record?.seq });
 });
 
 // All management endpoints are private by default.
@@ -231,18 +265,27 @@ apiRouter.delete('/apps/:id', async (req: Request, res: Response) => {
     if (!result.success) throw new Error(result.error || 'Failed to stop application');
     db.set('apps', db.get('apps').filter(item => item.id !== id));
     db.set('domains', db.get('domains').filter(domain => domain.appId !== id));
+    deploymentService.purge(id);
     caddyService.syncCaddyfile();
     schedulerService.reload();
     res.json({ success: true, message: 'App deleted' });
   });
 });
 
+// Deploy-type actions are recorded as deployments; stop/restart are plain lifecycle operations.
+for (const action of ['deploy', 'rebuild', 'fresh-volumes'] as const) {
+  apiRouter.post(`/apps/:id/${action}`, async (req: Request, res: Response) => {
+    const id = String(req.params.id);
+    assertAppIdle(id);
+    if (!db.get('apps').some(item => item.id === id)) return res.status(404).json({ error: 'App not found' });
+    const record = startDeployment(id, action, 'manual');
+    res.status(202).json({ message: 'Operation started', appId: id, deploymentId: record?.id, seq: record?.seq });
+  });
+}
+
 const lifecycleActions = {
-  deploy: (app: AppItem, log: (text: string) => void) => dockerService.deployApp(app, log),
   stop: (app: AppItem, log: (text: string) => void) => dockerService.stopApp(app, log),
   restart: (app: AppItem, log: (text: string) => void) => dockerService.restartApp(app, log),
-  rebuild: (app: AppItem, log: (text: string) => void) => dockerService.pullAndRebuild(app, log),
-  'fresh-volumes': (app: AppItem, log: (text: string) => void) => dockerService.freshVolumesRebuild(app, log),
 };
 for (const action of Object.keys(lifecycleActions) as (keyof typeof lifecycleActions)[]) {
   apiRouter.post(`/apps/:id/${action}`, async (req: Request, res: Response) => {
@@ -250,33 +293,86 @@ for (const action of Object.keys(lifecycleActions) as (keyof typeof lifecycleAct
     assertAppIdle(id);
     const app = db.get('apps').find(item => item.id === id);
     if (!app) return res.status(404).json({ error: 'App not found' });
-    const asynchronous = ['deploy', 'rebuild', 'fresh-volumes'].includes(action);
-    const task = withAppLock(id, async () => {
-      db.updateApp(id, { status: action === 'deploy' ? 'deploying' : 'rebuilding' });
+    await withAppLock(id, async () => {
+      db.updateApp(id, { status: 'rebuilding' });
       appEvents.emit('changed', id);
       try {
         const result = await lifecycleActions[action](app, text => wsHub.broadcastLog(id, text));
         if (!result.success) throw new Error(result.error || 'Docker operation failed');
         if (action !== 'stop') await registryService.captureAppDigest(app);
-        db.updateApp(id, {
-          ...(action === 'stop' ? { status: 'stopped' as const } : {}),
-          ...(['deploy', 'rebuild', 'fresh-volumes'].includes(action) ? { lastDeployedAt: new Date().toISOString(), updateAvailable: false } : {}),
-        });
+        if (action === 'stop') db.updateApp(id, { status: 'stopped' });
         return result;
       } catch (error) {
         db.updateApp(id, { status: 'error' });
         throw error;
       }
     });
-    if (asynchronous) {
-      task.catch(error => { console.error('[App operation]', error); wsHub.broadcastLog(id, `[vessel] ${error.message}`); });
-      res.status(202).json({ message: 'Operation started', appId: id });
-    } else {
-      await task;
-      res.json({ success: true, app: db.get('apps').find(item => item.id === id) });
-    }
+    res.json({ success: true, app: db.get('apps').find(item => item.id === id) });
   });
 }
+
+// ======================= DEPLOYMENT HISTORY & SETTINGS =======================
+apiRouter.get('/apps/:id/deployments', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  if (!db.get('apps').some(item => item.id === id)) return res.status(404).json({ error: 'App not found' });
+  res.json(deploymentService.list(id));
+});
+
+apiRouter.get('/apps/:id/deployments/:deploymentId/log', (req: Request, res: Response) => {
+  const record = deploymentService.get(String(req.params.id), String(req.params.deploymentId));
+  if (!record) return res.status(404).json({ error: 'Deployment not found' });
+  res.json({ log: deploymentService.readLog(record) });
+});
+
+apiRouter.post('/apps/:id/deployments/:deploymentId/rollback', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  assertAppIdle(id);
+  const source = deploymentService.get(id, String(req.params.deploymentId));
+  if (!source) return res.status(404).json({ error: 'Deployment not found' });
+  if (source.status === 'running') throw new BadRequest('该部署仍在进行中，无法回滚');
+  const record = startDeployment(id, 'rollback', 'manual', source);
+  res.status(202).json({ message: 'Rollback started', appId: id, deploymentId: record?.id, seq: record?.seq });
+});
+
+apiRouter.get('/apps/:id/settings', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  if (!db.get('apps').some(item => item.id === id)) return res.status(404).json({ error: 'App not found' });
+  res.json(deploymentService.settings(id));
+});
+
+apiRouter.put('/apps/:id/settings', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  if (!db.get('apps').some(item => item.id === id)) return res.status(404).json({ error: 'App not found' });
+  const body = req.body || {};
+  const current = deploymentService.settings(id);
+  const next: AppDeploySettings = { ...current };
+  for (const field of ['webhookEnabled', 'removeOrphans', 'waitHealthy', 'autoRollback', 'notifyOnSuccess', 'notifyOnFailure', 'notifyOnUpdate'] as const) {
+    if (body[field] === undefined) continue;
+    if (typeof body[field] !== 'boolean') throw new BadRequest(`${field} must be a boolean`);
+    next[field] = body[field];
+  }
+  if (body.pullPolicy !== undefined) {
+    if (!['missing', 'always'].includes(body.pullPolicy)) throw new BadRequest('Invalid pullPolicy');
+    next.pullPolicy = body.pullPolicy;
+  }
+  for (const [field, min, max] of [['timeoutMinutes', 1, 120], ['historyLimit', 1, 100]] as const) {
+    if (body[field] === undefined) continue;
+    const value = Number(body[field]);
+    if (!Number.isInteger(value) || value < min || value > max) throw new BadRequest(`${field} must be between ${min} and ${max}`);
+    next[field] = value;
+  }
+  db.updateApp(id, { deploySettings: next });
+  appEvents.emit('changed', id);
+  res.json(next);
+});
+
+apiRouter.post('/apps/:id/settings/webhook-token', (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  if (!db.get('apps').some(item => item.id === id)) return res.status(404).json({ error: 'App not found' });
+  const next = { ...deploymentService.settings(id), webhookToken: newWebhookToken() };
+  db.updateApp(id, { deploySettings: next });
+  res.json(next);
+});
 
 apiRouter.get('/apps/:id/logs', async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
@@ -349,6 +445,12 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
   } else {
     res.status(500).json({ error: result.error });
   }
+});
+
+apiRouter.get('/apps/:id/diagnostics', async (req: Request, res: Response) => {
+  const app = db.get('apps').find(item => item.id === req.params.id);
+  if (!app) return res.status(404).json({ error: 'App not found' });
+  res.json(await dockerService.diagnoseApp(app));
 });
 
 apiRouter.get('/apps/:id/databases', async (req: Request, res: Response) => {
@@ -651,6 +753,64 @@ apiRouter.post('/registries/:id/test', requireAuth, async (req: Request, res: Re
   res.json(result);
 });
 
+// ======================= NOTIFICATION CHANNELS =======================
+apiRouter.get('/notifications', (_req: Request, res: Response) => {
+  res.json((db.get('notifications') || []).map(maskChannel));
+});
+
+apiRouter.post('/notifications', (req: Request, res: Response) => {
+  const body = req.body || {};
+  const list = db.get('notifications') || [];
+  const existing = typeof body.id === 'string' ? list.find(item => item.id === body.id) : undefined;
+  if (body.id !== undefined && !existing) return res.status(404).json({ error: 'Channel not found' });
+  const type = body.type ?? existing?.type;
+  if (!CHANNEL_TYPES.includes(type)) throw new BadRequest('不支持的通知渠道类型');
+  const name = String(body.name ?? existing?.name ?? '').trim();
+  if (!name || name.length > 60) throw new BadRequest('请填写 1-60 个字符的渠道名称');
+  const events = body.events ?? existing?.events ?? NOTIFICATION_EVENTS.filter(event => event !== 'deploy.success');
+  if (!Array.isArray(events) || events.some((event: unknown) => !NOTIFICATION_EVENTS.includes(event as any))) throw new BadRequest('Invalid events');
+  for (const field of ['url', 'botToken', 'chatId'] as const) {
+    if (body[field] !== undefined && typeof body[field] !== 'string') throw new BadRequest(`${field} must be a string`);
+  }
+  const keep = (value: unknown, previous = '') => value === undefined || isMasked(value) ? previous : String(value).trim();
+  const channel: NotificationChannel = {
+    id: existing?.id || uuidv4(),
+    name,
+    type,
+    enabled: body.enabled !== undefined ? !!body.enabled : existing?.enabled ?? true,
+    url: type === 'telegram' ? '' : keep(body.url, existing?.url),
+    botToken: type === 'telegram' ? keep(body.botToken, existing?.botToken) : undefined,
+    chatId: type === 'telegram' ? keep(body.chatId, existing?.chatId) : undefined,
+    events: [...new Set(events as NotificationChannel['events'])],
+    lastSentAt: existing?.lastSentAt,
+    lastStatus: existing?.lastStatus,
+    lastError: existing?.lastError,
+  };
+  if (type === 'telegram' ? !channel.botToken || !channel.chatId : !/^https?:\/\/\S+$/i.test(channel.url)) {
+    throw new BadRequest(type === 'telegram' ? '请填写 Bot Token 和 Chat ID' : '请填写以 http(s):// 开头的通知地址');
+  }
+  db.set('notifications', existing ? list.map(item => item.id === channel.id ? channel : item) : [...list, channel]);
+  res.status(existing ? 200 : 201).json(maskChannel(channel));
+});
+
+apiRouter.delete('/notifications/:id', (req: Request, res: Response) => {
+  const list = db.get('notifications') || [];
+  if (!list.some(item => item.id === req.params.id)) return res.status(404).json({ error: 'Channel not found' });
+  db.set('notifications', list.filter(item => item.id !== req.params.id));
+  res.json({ success: true });
+});
+
+apiRouter.post('/notifications/:id/test', async (req: Request, res: Response) => {
+  const channel = (db.get('notifications') || []).find(item => item.id === req.params.id);
+  if (!channel) return res.status(404).json({ error: 'Channel not found' });
+  const result = await notifier.send(channel, {
+    event: 'deploy.success',
+    title: '测试通知',
+    message: `这是一条来自 Vessel 的测试消息，渠道「${channel.name}」已连通。`,
+  });
+  res.json({ ...result, channel: maskChannel(db.get('notifications').find(item => item.id === channel.id) || channel) });
+});
+
 // ======================= MAINTENANCE & CLEANER =======================
 apiRouter.get('/maintenance/config', (req: Request, res: Response) => {
   const cfg = db.get('maintenance');
@@ -659,10 +819,11 @@ apiRouter.get('/maintenance/config', (req: Request, res: Response) => {
 
 apiRouter.post('/maintenance/config', requireAuth, (req: Request, res: Response) => {
   const current = db.get('maintenance');
-  const updated: MaintenanceConfig = {
-    ...current,
-    ...req.body,
-  };
+  const updated: MaintenanceConfig = { ...current };
+  // Only user-editable fields; lastPruneAt / lastCheckedAt etc. are owned by the server
+  for (const field of ['autoPrune', 'pruneSchedule', 'pruneDangling', 'pruneBuilderCache', 'unusedRetentionHours', 'autoCheckUpdates', 'checkSchedule'] as const) {
+    if (req.body?.[field] !== undefined) (updated as any)[field] = field === 'unusedRetentionHours' ? Number(req.body[field]) : req.body[field];
+  }
   db.set('maintenance', updated);
   schedulerService.reload();
   res.json(updated);

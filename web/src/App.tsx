@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
-import gsap from 'gsap';
 import { AuthContext, useAuthProvider, useAuth } from './hooks/useAuth.js';
 import { useData } from './hooks/useData.js';
 import { Sidebar, NavTab } from './components/layout/Sidebar.js';
@@ -10,11 +9,14 @@ const DomainsView = lazy(() => import('./components/views/DomainsView.js').then(
 const BackupsView = lazy(() => import('./components/views/BackupsView.js').then(module => ({ default: module.BackupsView })));
 const RegistriesView = lazy(() => import('./components/views/RegistriesView.js').then(module => ({ default: module.RegistriesView })));
 const MaintenanceView = lazy(() => import('./components/views/MaintenanceView.js').then(module => ({ default: module.MaintenanceView })));
+const NotificationsView = lazy(() => import('./components/views/NotificationsView.js').then(module => ({ default: module.NotificationsView })));
 import { LoginView } from './components/views/LoginView.js';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal.js';
 import { GlobalTooltip } from './components/common/Tooltip.js';
 import { ArrowClockwise } from '@phosphor-icons/react';
 import { usePWA } from './hooks/usePWA.js';
+import { BootScreen, ViewReveal, ViewSkeleton } from './components/common/ViewReveal.js';
+import { installSpotlight } from './lib/motion.js';
 
 interface RouteState {
   tab: NavTab;
@@ -33,7 +35,7 @@ function parsePath(pathname: string, search: string = ''): RouteState {
   if (clean === '/login') {
     return { tab: 'overview', isLogin: true, appSubRoute: null };
   }
-  if (tabParam && ['overview', 'apps', 'domains', 'backups', 'registries', 'maintenance'].includes(tabParam)) {
+  if (tabParam && ['overview', 'apps', 'domains', 'backups', 'registries', 'maintenance', 'notifications'].includes(tabParam)) {
     return { tab: tabParam, isLogin: false, appSubRoute: tabParam === 'apps' ? { mode: 'list' } : null };
   }
   if (clean === '/apps/new' || clean === '/apps/create') {
@@ -58,6 +60,9 @@ function parsePath(pathname: string, search: string = ''): RouteState {
   if (clean === '/maintenance') {
     return { tab: 'maintenance', isLogin: false, appSubRoute: null };
   }
+  if (clean === '/notifications') {
+    return { tab: 'notifications', isLogin: false, appSubRoute: null };
+  }
   return { tab: 'overview', isLogin: false, appSubRoute: null };
 }
 
@@ -67,7 +72,7 @@ function MainConsole() {
   const [route, setRoute] = useState<RouteState>(() => parsePath(window.location.pathname, window.location.search));
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const mainContentRef = useRef<HTMLDivElement>(null);
+  const mainScrollRef = useRef<HTMLElement>(null);
 
   const {
     metrics,
@@ -148,16 +153,14 @@ function MainConsole() {
     }
   }, [authLoading, isAuthenticated, route.isLogin, navigate]);
 
-  // Tab change animation
+  // Cursor-tracking spotlight on interactive cards
+  useEffect(() => installSpotlight(), []);
+
+  // Each distinct view replays its entrance and starts scrolled to the top
+  const viewKey = `${route.tab}:${route.appSubRoute?.mode ?? ''}:${route.appSubRoute?.appId ?? ''}`;
   useEffect(() => {
-    if (mainContentRef.current) {
-      gsap.fromTo(
-        mainContentRef.current,
-        { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' }
-      );
-    }
-  }, [route.tab, route.appSubRoute?.mode]);
+    mainScrollRef.current?.scrollTo({ top: 0 });
+  }, [viewKey]);
 
   const handleSelectTab = (tab: NavTab) => {
     navigate(`/${tab}`);
@@ -170,6 +173,17 @@ function MainConsole() {
       navigate(`/apps/${encodeURIComponent(appId)}`);
     } else {
       navigate('/apps');
+    }
+  };
+
+  const getTabSection = () => {
+    switch (route.tab) {
+      case 'overview':
+      case 'apps':
+      case 'domains':
+        return '工作区';
+      default:
+        return '运维';
     }
   };
 
@@ -189,19 +203,14 @@ function MainConsole() {
         return '私有镜像凭证管理';
       case 'maintenance':
         return '镜像更新巡检与安全瘦身';
+      case 'notifications':
+        return '通知渠道';
     }
   };
 
   // Auth loading state
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-paper flex items-center justify-center font-sans text-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
-          <span className="tracking-wider text-ink-muted">验证管理员会话中...</span>
-        </div>
-      </div>
-    );
+    return <BootScreen label="验证管理员会话中…" />;
   }
 
   // If not logged in, render sleek Login View
@@ -216,23 +225,16 @@ function MainConsole() {
   }
 
   if (user?.isDefaultPassword) {
-    return <div className="min-h-screen bg-paper"><ChangePasswordModal isOpen required onClose={() => {}} /></div>;
+    return <div className="vessel-canvas min-h-screen bg-paper"><ChangePasswordModal isOpen required onClose={() => {}} /></div>;
   }
 
   // Data initializing state
   if (dataLoading) {
-    return (
-      <div className="min-h-screen bg-paper flex items-center justify-center font-sans text-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
-          <span className="tracking-wider text-ink-muted">VESSEL 控制中心正在初始化...</span>
-        </div>
-      </div>
-    );
+    return <BootScreen label="Vessel 控制中心正在初始化…" />;
   }
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex overflow-hidden font-sans">
+    <div className="vessel-canvas min-h-screen bg-paper text-ink flex overflow-hidden font-sans">
       {/* Side-Rail Navigation & Mobile Drawer */}
       <Sidebar
         currentTab={route.tab}
@@ -247,6 +249,7 @@ function MainConsole() {
         {/* Real-time Telemetry Header & Mobile Nav Bar */}
         <Header
           title={getTabTitle()}
+          section={getTabSection()}
           metrics={metrics}
           user={user}
           onRefresh={refreshAll}
@@ -259,13 +262,13 @@ function MainConsole() {
         />
 
         {/* Dynamic View Container (Mobile px-4, Desktop md:p-8 lg:p-10) */}
-        <main className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 sm:px-6 sm:py-6 md:p-8 lg:p-10">
-          <div ref={mainContentRef} className="max-w-7xl mx-auto pb-16">
+        <main ref={mainScrollRef} className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 sm:px-6 sm:py-6 md:p-8 lg:p-10">
+          <div className="max-w-7xl mx-auto pb-16">
             {/* PWA Update Banner */}
             {updateAvailable && (
-              <div className="mb-6 rounded-2xl bg-paper-2 border border-line shadow-sm p-4 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-sans animate-fade-in">
+              <div className="mb-6 rounded-2xl bg-paper-2 border border-line shadow-card p-4 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-sans animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="flex items-center gap-2.5 text-ink min-w-0">
-                  <ArrowClockwise className="w-4 h-4 shrink-0 text-accent animate-spin" />
+                  <ArrowClockwise className="w-4 h-4 shrink-0 text-signal animate-spin" />
                   <span>
                     <strong>版本更新：</strong> Vessel 控制中心已加载新版本，点击以完成离线缓存与应用更新。
                   </span>
@@ -282,6 +285,8 @@ function MainConsole() {
               </div>
             )}
 
+            <Suspense fallback={<ViewSkeleton />}>
+            <ViewReveal key={route.tab} replayKey={viewKey}>
             {route.tab === 'overview' && (
               <OverviewView
                 metrics={metrics}
@@ -368,6 +373,10 @@ function MainConsole() {
                 onUpdateApp={updateAppData}
               />
             )}
+
+            {route.tab === 'notifications' && <NotificationsView />}
+            </ViewReveal>
+            </Suspense>
           </div>
         </main>
       </div>
@@ -389,7 +398,7 @@ export function App() {
 
   return (
     <AuthContext.Provider value={auth}>
-      <Suspense fallback={<div className="min-h-screen bg-paper p-8 text-ink" role="status">加载页面中…</div>}><MainConsole /></Suspense>
+      <MainConsole />
     </AuthContext.Provider>
   );
 }

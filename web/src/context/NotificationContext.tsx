@@ -99,8 +99,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       {/* TOAST NOTIFICATION CONTAINER */}
       <div className="fixed top-5 right-5 z-[99999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
         {toasts.map((t) => {
-          let icon = <Info className="w-4 h-4 text-accent flex-shrink-0" weight="fill" />;
-          let bgIcon = 'bg-accent/10 text-accent';
+          let icon = <Info className="w-4 h-4 text-signal flex-shrink-0" weight="fill" />;
+          let bgIcon = 'bg-signal-soft text-signal';
           let borderAccent = 'border-line';
           let label = '系统提示';
 
@@ -124,13 +124,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto bg-paper/95 backdrop-blur-md border ${borderAccent} rounded-xl shadow-floating p-3.5 flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-3 duration-200`}
+              className={`pointer-events-auto surface-pop !border ${borderAccent} rounded-2xl p-3.5 flex items-start gap-3 animate-toast-in`}
             >
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${bgIcon}`}>
                 {icon}
               </div>
               <div className="flex-1 min-w-0 pr-1">
-                <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">
+                <div className="eyebrow mb-1">
                   {label}
                 </div>
                 <div className="text-xs text-ink leading-relaxed font-sans select-text">
@@ -177,7 +177,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             ) : (
               <div className="p-4 rounded-xl bg-paper-2 text-ink border border-line text-xs space-y-2.5 shadow-subtle">
                 <div className="flex items-center gap-2 font-semibold text-sm text-ink">
-                  <Info className="w-5 h-5 text-accent flex-shrink-0" weight="fill" />
+                  <Info className="w-5 h-5 text-signal flex-shrink-0" weight="fill" />
                   <span>提示说明</span>
                 </div>
                 <p className="leading-relaxed text-ink-muted font-sans">

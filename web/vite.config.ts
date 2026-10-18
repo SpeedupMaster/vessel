@@ -1,17 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const apiPort = process.env.VESSEL_API_PORT || '3900';
+
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5174,
+    port: Number(process.env.PORT) || 5174,
     proxy: {
       '/api': {
-        target: 'http://localhost:3900',
+        target: `http://localhost:${apiPort}`,
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:3900',
+        target: `ws://localhost:${apiPort}`,
         ws: true,
       },
     },

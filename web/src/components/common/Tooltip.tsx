@@ -119,11 +119,11 @@ export const Tooltip: React.FC<TooltipProps> = ({
             }}
             className="fixed z-[99999] pointer-events-none select-none animate-tooltip-in"
           >
-            <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-neutral-900/95 dark:bg-neutral-800/95 dark:text-neutral-100 rounded-lg shadow-xl whitespace-nowrap tracking-tight backdrop-blur-sm">
+            <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-zinc-900/95 dark:bg-zinc-800/95 dark:text-zinc-100 rounded-lg shadow-floating ring-1 ring-white/10 whitespace-nowrap tracking-tight backdrop-blur-sm">
               {content}
               {/* Arrow Indicator */}
               <div
-                className={`absolute w-1.5 h-1.5 bg-neutral-900/95 dark:bg-neutral-800/95 transform rotate-45 ${
+                className={`absolute w-1.5 h-1.5 bg-zinc-900/95 dark:bg-zinc-800/95 transform rotate-45 ${
                   coords.side === 'top'
                     ? 'bottom-[-3px] left-1/2 -translate-x-1/2'
                     : coords.side === 'bottom'
@@ -304,11 +304,11 @@ export const GlobalTooltip: React.FC = () => {
       }}
       className="fixed z-[99999] pointer-events-none select-none transition-all duration-150 ease-out animate-tooltip-in"
     >
-      <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-neutral-900/95 dark:bg-neutral-800/95 dark:text-neutral-100 rounded-lg shadow-xl whitespace-nowrap tracking-tight backdrop-blur-sm">
+      <div className="relative px-2.5 py-1 text-[11px] font-sans font-medium text-white bg-zinc-900/95 dark:bg-zinc-800/95 dark:text-zinc-100 rounded-lg shadow-floating ring-1 ring-white/10 whitespace-nowrap tracking-tight backdrop-blur-sm">
         {tooltipState.text}
         {/* Arrow Indicator */}
         <div
-          className={`absolute w-1.5 h-1.5 bg-neutral-900/95 dark:bg-neutral-800/95 transform rotate-45 ${
+          className={`absolute w-1.5 h-1.5 bg-zinc-900/95 dark:bg-zinc-800/95 transform rotate-45 ${
             tooltipState.side === 'top'
               ? 'bottom-[-3px] left-1/2 -translate-x-1/2'
               : tooltipState.side === 'bottom'

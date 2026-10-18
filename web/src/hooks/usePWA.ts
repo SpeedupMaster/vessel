@@ -42,8 +42,13 @@ export function usePWA() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
+    // In dev the worker would intercept Vite's module requests and can blank the page; drop any stale one
+    if (!import.meta.env.PROD && 'serviceWorker' in navigator) {
+      void navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((reg) => void reg.unregister()));
+    }
+
     // Register Service Worker
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {

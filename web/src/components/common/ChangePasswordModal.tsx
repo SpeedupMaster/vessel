@@ -128,7 +128,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center md:items-center p-0 md:p-4 bg-black/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in font-sans"
+      className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center md:items-center p-0 md:p-4 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in font-sans"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleAttemptClose();
@@ -138,12 +138,12 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       {/* Modal / Bottom Sheet Container */}
       <div
         className={clsx(
-          'w-full max-h-[92vh] flex flex-col bg-paper-2 shadow-2xl transition-all overflow-hidden',
-          'rounded-t-3xl md:rounded-3xl md:max-w-md md:w-full md:max-h-[85vh]'
+          'w-full max-h-[92vh] flex flex-col surface-pop transition-all overflow-hidden',
+          'rounded-t-[24px] md:rounded-[22px] md:max-w-md md:w-full md:max-h-[85vh]'
         )}
       >
         {/* Mobile Drag Indicator */}
-        <div className="md:hidden w-10 h-1 bg-ink-muted/20 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+        <div className="md:hidden w-9 h-1 bg-ink-faint/30 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
 
         {/* Header */}
         <div className="bg-paper-2 px-6 py-4 flex items-center justify-between shrink-0">
@@ -212,10 +212,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isCurrentEmpty}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 focus:outline-none font-mono transition-colors',
                     isCurrentEmpty
                       ? 'bg-rose-500/10 border border-rose-500/50 focus:border-rose-500/80 dark:focus:border-rose-500/70'
-                      : 'bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm focus:border-zinc-400 dark:focus:border-white/30'
+                      : 'bg-paper-2 dark:bg-paper-3 border border-line shadow-sm'
                   )}
                 />
                 <button
@@ -263,10 +263,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isNewEmpty || isNewTooShort}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 focus:outline-none font-mono transition-colors',
                     isNewEmpty || isNewTooShort
                       ? 'bg-rose-500/10 border border-rose-500/50 focus:border-rose-500/80 dark:focus:border-rose-500/70'
-                      : 'bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm focus:border-zinc-400 dark:focus:border-white/30'
+                      : 'bg-paper-2 dark:bg-paper-3 border border-line shadow-sm'
                   )}
                 />
                 <button
@@ -317,10 +317,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   spellCheck={false}
                   aria-invalid={isConfirmEmpty || isConfirmMismatch}
                   className={clsx(
-                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 dark:placeholder:text-zinc-600 focus:outline-none font-mono transition-colors',
+                    'w-full pl-10 pr-11 py-2.5 rounded-xl text-xs text-ink placeholder:text-ink-faint/80 focus:outline-none font-mono transition-colors',
                     isConfirmEmpty || isConfirmMismatch
                       ? 'bg-rose-500/10 border border-rose-500/50 focus:border-rose-500/80 dark:focus:border-rose-500/70'
-                      : 'bg-white dark:bg-paper-3 border border-zinc-200 dark:border-white/10 shadow-sm focus:border-zinc-400 dark:focus:border-white/30'
+                      : 'bg-paper-2 dark:bg-paper-3 border border-line shadow-sm'
                   )}
                 />
                 <button
@@ -376,8 +376,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
       {/* Discard Confirmation Action Modal (Prevents accidental loss of input) */}
       {showDiscardConfirm && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in font-sans">
-          <div className="w-full max-w-xs bg-paper-2 rounded-2xl shadow-2xl p-5 space-y-3.5 overflow-hidden">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in font-sans">
+          <div className="w-full max-w-xs surface-pop rounded-[18px] p-5 space-y-3.5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
                 <Warning className="w-4 h-4" weight="bold" />

@@ -26,6 +26,7 @@ export interface AppItem {
   lastDeployedAt?: string;
   containers: ContainerInfo[];
   backupSchedule?: DatabaseBackupSchedule;
+  deploySettings?: AppDeploySettings;
 }
 
 export interface DatabaseBackupSchedule {
@@ -120,6 +121,8 @@ export interface AdminUser {
   passwordHash: string;
   jwtSecret: string;
   mustChangePassword?: boolean;
+  /** Logged-out tokens, kept until they would have expired anyway */
+  revokedTokens?: { jti: string; exp: number }[];
 }
 
 export interface DatabaseSchema {
@@ -130,4 +133,96 @@ export interface DatabaseSchema {
   backups: BackupRecord[];
   registries: RegistryItem[];
   maintenance: MaintenanceConfig;
+  deployments: DeploymentRecord[];
+  notifications: NotificationChannel[];
+}
+
+export type DeploymentAction = 'deploy' | 'rebuild' | 'fresh-volumes' | 'rollback';
+export type DeploymentTrigger = 'manual' | 'webhook' | 'auto-update' | 'auto-rollback';
+
+export interface DeploymentRecord {
+  id: string;
+  appId: string;
+  /** Monotonic per-app sequence shown as #N in the UI */
+  seq: number;
+  action: DeploymentAction;
+  trigger: DeploymentTrigger;
+  status: 'running' | 'success' | 'failed';
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  /** Configuration snapshot the deployment ran with; rollback re-applies it */
+  composeYaml: string;
+  envContent: string;
+  imageDigest?: string;
+  error?: string;
+  rollbackOf?: string;
+}
+
+export type PullPolicy = 'missing' | 'always';
+
+export interface AppDeploySettings {
+  webhookEnabled: boolean;
+  webhookToken: string;
+  pullPolicy: PullPolicy;
+  removeOrphans: boolean;
+  waitHealthy: boolean;
+  timeoutMinutes: number;
+  autoRollback: boolean;
+  historyLimit: number;
+  notifyOnSuccess: boolean;
+  notifyOnFailure: boolean;
+  notifyOnUpdate: boolean;
+}
+
+export type NotificationEvent = 'deploy.success' | 'deploy.failure' | 'update.available' | 'backup.failure';
+export type NotificationChannelType = 'webhook' | 'telegram' | 'feishu' | 'dingtalk' | 'wecom';
+
+export interface NotificationChannel {
+  id: string;
+  name: string;
+  type: NotificationChannelType;
+  enabled: boolean;
+  /** Webhook / bot URL; masked in API responses */
+  url: string;
+  /** Telegram bot token; masked in API responses */
+  botToken?: string;
+  chatId?: string;
+  events: NotificationEvent[];
+  lastSentAt?: string;
+  lastStatus?: 'success' | 'failed';
+  lastError?: string;
+}
+
+export interface ContainerDiagnostics {
+  id: string;
+  name: string;
+  service: string;
+  image: string;
+  /** docker State.Status: created | running | paused | restarting | removing | exited | dead */
+  state: string;
+  running: boolean;
+  exitCode: number;
+  oomKilled: boolean;
+  error: string;
+  startedAt?: string;
+  finishedAt?: string;
+  restartCount: number;
+  restartPolicy: string;
+  health?: {
+    status: 'starting' | 'healthy' | 'unhealthy';
+    failingStreak: number;
+    lastOutput?: string;
+    lastCheckAt?: string;
+  };
+  mounts: { type: string; source: string; destination: string; name?: string; readOnly: boolean }[];
+  networks: string[];
+  ports: { container: string; hostIp?: string; hostPort?: string }[];
+}
+
+export interface AppDiagnostics {
+  dockerAvailable: boolean;
+  error?: string;
+  containers: ContainerDiagnostics[];
+  checkedAt: string;
 }
