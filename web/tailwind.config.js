@@ -46,6 +46,7 @@ export default {
       },
       fontFamily: {
         sans: [
+          'Inter Variable',
           'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
@@ -58,6 +59,7 @@ export default {
           'sans-serif',
         ],
         mono: [
+          'JetBrains Mono Variable',
           'JetBrains Mono',
           'Cascadia Code',
           'Consolas',

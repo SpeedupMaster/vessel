@@ -121,6 +121,8 @@ export interface AdminUser {
   passwordHash: string;
   jwtSecret: string;
   mustChangePassword?: boolean;
+  /** Logged-out tokens, kept until they would have expired anyway */
+  revokedTokens?: { jti: string; exp: number }[];
 }
 
 export interface DatabaseSchema {

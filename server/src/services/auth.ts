@@ -24,7 +24,7 @@ function base64UrlDecode(str: string): string {
 export function createJwt(payload: { sub: string; username: string }, secret: string, expiresInSec = 7 * 24 * 3600): string {
   const header = { alg: 'HS256', typ: 'JWT' };
   const exp = Math.floor(Date.now() / 1000) + expiresInSec;
-  const body = { ...payload, exp };
+  const body = { ...payload, jti: crypto.randomBytes(12).toString('base64url'), exp };
 
   const h = base64UrlEncode(JSON.stringify(header));
   const p = base64UrlEncode(JSON.stringify(body));
@@ -111,7 +111,19 @@ export class AuthService {
     const admin = this.getAdmin();
     const res = verifyJwt(token, admin.jwtSecret);
     if (!res.valid || res.payload?.sub !== admin.username) return { valid: false, error: res.error || 'Invalid subject' };
+    if (res.payload.jti && admin.revokedTokens?.some(item => item.jti === res.payload.jti)) return { valid: false, error: 'Token has been revoked' };
     return { valid: true, username: res.payload.username || admin.username };
+  }
+
+  /** Revoke one session; other devices stay signed in */
+  public logout(token: string): void {
+    const admin = this.getAdmin();
+    const res = verifyJwt(token, admin.jwtSecret);
+    if (!res.valid || res.payload?.sub !== admin.username || typeof res.payload.jti !== 'string') return;
+    const now = Math.floor(Date.now() / 1000);
+    const revoked = (admin.revokedTokens || []).filter(item => item.exp > now && item.jti !== res.payload.jti);
+    revoked.push({ jti: res.payload.jti, exp: res.payload.exp });
+    db.set('admin', { ...admin, revokedTokens: revoked.slice(-1000) });
   }
 
   public changePassword(
@@ -141,6 +153,7 @@ export class AuthService {
       passwordHash: newHash,
       jwtSecret: newSecret,
       mustChangePassword: false,
+      revokedTokens: [],
     };
 
     db.set('admin', updatedAdmin);

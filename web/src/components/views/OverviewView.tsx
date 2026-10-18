@@ -50,8 +50,9 @@ const KpiCard: React.FC<{
     onClick={onClick}
     className="card-vessel group text-left p-4 sm:p-5 lg:p-6 flex flex-col justify-between min-h-[132px]"
   >
-    <div className="flex items-center justify-between w-full">
-      <span className="eyebrow truncate pr-1">{label}</span>
+    <div className="flex items-start justify-between gap-2 w-full">
+      {/* Wrap rather than truncate: the 4-up grid leaves little room around 800px */}
+      <span className="eyebrow min-w-0 pt-2 leading-snug line-clamp-2 break-words" title={label}>{label}</span>
       <div
         className={clsx(
           'w-8 h-8 rounded-[10px] bg-paper-3 border border-line-subtle flex items-center justify-center shrink-0 transition-transform duration-300 ease-spring group-hover:scale-110 group-hover:-rotate-6',
@@ -167,7 +168,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           <span className="text-emerald-600 dark:text-emerald-400 font-medium">Caddy 自动证书</span>
         </KpiCard>
 
-        <KpiCard label="Cloudflare 备份" icon={CloudArrowUp} tone="signal" onClick={() => onNavigate('backups')} value={<RollingCounter value={backups.length} />}>
+        <KpiCard label="R2 备份" icon={CloudArrowUp} tone="signal" onClick={() => onNavigate('backups')} value={<RollingCounter value={backups.length} />}>
           <span>已存快照</span>
           <span className="text-ink-faint">·</span>
           <span className={r2Config?.enabled ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-ink-faint'}>

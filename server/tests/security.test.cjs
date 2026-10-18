@@ -298,3 +298,16 @@ test('notification channel secrets are masked and preserved on edit', async () =
     assert.equal(context.state.notifications[0].name, '飞书群');
   });
 });
+
+test('logout revokes only the presented session token', async () => {
+  const context = fixture();
+  await serve(context.app, async base => {
+    const first = context.authService.login('admin', 'test-password-12345').token;
+    const second = context.authService.login('admin', 'test-password-12345').token;
+    const headers = token => ({ Authorization: `Bearer ${token}` });
+    assert.equal((await fetch(base + '/api/auth/logout', { method: 'POST', headers: headers(first) })).status, 200);
+    assert.equal((await fetch(base + '/api/apps', { headers: headers(first) })).status, 401);
+    assert.equal((await fetch(base + '/api/apps', { headers: headers(second) })).status, 200);
+    assert.equal(context.state.admin.revokedTokens.length, 1);
+  });
+});

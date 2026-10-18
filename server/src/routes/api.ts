@@ -99,7 +99,9 @@ apiRouter.post('/auth/change-password', requireAuth, (req: AuthenticatedRequest,
   });
 });
 
-apiRouter.post('/auth/logout', (_req: Request, res: Response) => {
+apiRouter.post('/auth/logout', (req: Request, res: Response) => {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) authService.logout(header.slice(7).trim());
   res.json({ success: true, message: '已安全登出' });
 });
 

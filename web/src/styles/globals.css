@@ -104,6 +104,14 @@ input, select, textarea {
   font-family: inherit;
 }
 
+/* iOS zooms the page when focusing a field under 16px; pinch-zoom stays enabled for accessibility */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select {
+    font-size: 16px !important;
+  }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-sans);
   font-style: normal !important;
