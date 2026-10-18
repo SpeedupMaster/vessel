@@ -23,6 +23,9 @@ const DEFAULT_REPO = 'SpeedupMaster/vessel';
 const STATE_FILE = path.join(DATA_DIR, 'update-state.json');
 const CHECK_TTL = 60 * 60 * 1000;
 const IMAGE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_./:@-]*$/;
+// Same rule the installer applies to VESSEL_INSTALL_DIR
+const HOST_PATH_PATTERN = /^\/[a-zA-Z0-9_./-]+$/;
+const isHostPath = (value: string) => HOST_PATH_PATTERN.test(value) && !value.split('/').includes('..');
 const VERSION_PATTERN = /^v?(\d+)\.(\d+)\.(\d+)$/;
 
 export interface ReleaseInfo {
@@ -196,16 +199,16 @@ class SelfUpdateService {
     const installDir = labels['com.docker.compose.project.working_dir'];
     // config_files is not checked: the installer runs Compose against a staged copy in a temporary
     // directory. The updater verifies the managed header of <installDir>/docker-compose.yml instead.
-    if (labels['com.docker.compose.project'] !== 'vessel' || !installDir) {
+    if (labels['com.docker.compose.project'] !== 'vessel' || !installDir || !isHostPath(installDir)) {
       throw new Error('当前容器不是由安装脚本创建的，请通过安装脚本升级');
     }
     const mounts: any[] = info.Mounts || [];
     const dataMount = mounts.find(mount => mount.Destination === '/app/data');
     if (dataMount?.Source !== path.posix.join(installDir, 'data')) throw new Error('数据目录与安装目录不一致，无法在线更新，请在服务器上重新运行安装脚本升级');
     const socket = mounts.find(mount => mount.Destination === '/var/run/docker.sock')?.Source;
-    if (!socket) throw new Error('未挂载 Docker socket，请在服务器上重新运行安装脚本升级');
+    if (!socket || !isHostPath(socket)) throw new Error('未挂载 Docker socket，请在服务器上重新运行安装脚本升级');
     const image = String(info.Config?.Image || '');
-    if (!IMAGE_PATTERN.test(image) || !IMAGE_PATTERN.test(installDir)) throw new Error('无法识别当前镜像，请在服务器上重新运行安装脚本升级');
+    if (!IMAGE_PATTERN.test(image)) throw new Error('无法识别当前镜像，请在服务器上重新运行安装脚本升级');
     return { installDir, socket, repository: imageRepository(image), image };
   }
 
