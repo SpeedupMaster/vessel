@@ -22,6 +22,149 @@ const STEPS = [
   { key: 'restarting', label: '重建容器并等待健康检查' },
 ] as const;
 
+const INLINE_TOKEN_RE = /(`[^`\n]+`|\*\*[^*\n]+?\*\*|__[^_\n]+?__|\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<)]+)/g;
+
+function renderInline(text: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = new RegExp(INLINE_TOKEN_RE.source, 'g');
+
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    const token = match[0];
+    const key = `${match.index}-${token.length}`;
+
+    if (token.startsWith('`') && token.endsWith('`')) {
+      nodes.push(
+        <code key={key} className="px-1.5 py-0.5 rounded-md bg-paper-2 border border-line-subtle font-mono text-[11px] text-ink">
+          {token.slice(1, -1)}
+        </code>
+      );
+    } else if ((token.startsWith('**') && token.endsWith('**')) || (token.startsWith('__') && token.endsWith('__'))) {
+      nodes.push(
+        <strong key={key} className="font-semibold text-ink">
+          {renderInline(token.slice(2, -2))}
+        </strong>
+      );
+    } else if (token.startsWith('[')) {
+      const linkMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+      if (linkMatch) {
+        nodes.push(
+          <a
+            key={key}
+            href={linkMatch[2]}
+            target="_blank"
+            rel="noreferrer"
+            className="text-signal hover:underline break-all"
+          >
+            {renderInline(linkMatch[1])}
+          </a>
+        );
+      } else {
+        nodes.push(token);
+      }
+    } else if (token.startsWith('http://') || token.startsWith('https://')) {
+      nodes.push(
+        <a
+          key={key}
+          href={token}
+          target="_blank"
+          rel="noreferrer"
+          className="text-signal hover:underline break-all"
+        >
+          {token}
+        </a>
+      );
+    } else {
+      nodes.push(token);
+    }
+
+    lastIndex = re.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function renderReleaseNotes(raw: string): React.ReactNode {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return <span className="text-ink-muted">此版本没有填写更新说明。</span>;
+  }
+
+  const lines = trimmed.replace(/\r\n/g, '\n').split('\n');
+  const blocks: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    if (line.trimStart().startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      blocks.push(
+        <pre key={`code-${i}`} className="p-2.5 rounded-xl bg-paper-2 border border-line-subtle font-mono text-[11px] text-ink overflow-x-auto">
+          {codeLines.join('\n')}
+        </pre>
+      );
+      continue;
+    }
+
+    // Blank line
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    // Heading (#, ##, ### ...)
+    const headingMatch = line.match(/^#{1,6}\s+(.*)$/);
+    if (headingMatch) {
+      blocks.push(
+        <div key={`h-${i}`} className="font-semibold text-ink pt-1.5 first:pt-0">
+          {renderInline(headingMatch[1])}
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Unordered list item (-, *, +)
+    const listMatch = line.match(/^\s*[-*+]\s+(.*)$/);
+    if (listMatch) {
+      blocks.push(
+        <div key={`li-${i}`} className="flex items-start gap-2 pl-1">
+          <span className="text-ink-faint select-none">•</span>
+          <span className="min-w-0 flex-1">{renderInline(listMatch[1])}</span>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Regular paragraph line
+    blocks.push(
+      <div key={`p-${i}`}>
+        {renderInline(line)}
+      </div>
+    );
+    i++;
+  }
+
+  return blocks;
+}
+
 export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, status, checking, apply, onCheck, onStart, onReset }) => {
   const { toast } = useNotification();
   const [starting, setStarting] = useState(false);
@@ -92,9 +235,9 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, statu
                 在 GitHub 查看 <ArrowSquareOut className="w-3.5 h-3.5" />
               </a>
             </div>
-            <pre className="max-h-56 overflow-y-auto p-3.5 rounded-2xl bg-paper-3 text-ink whitespace-pre-wrap break-words font-sans leading-relaxed">
-              {latest.notes.trim() || '此版本没有填写更新说明。'}
-            </pre>
+            <div className="max-h-56 overflow-y-auto p-3.5 rounded-2xl bg-paper-3 text-ink break-words font-sans leading-relaxed space-y-1.5">
+              {renderReleaseNotes(latest.notes)}
+            </div>
           </div>
         )}
 
