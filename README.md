@@ -8,7 +8,7 @@
 
 以原生 `docker-compose.yml` 为一等公民，内置 **Caddy v2 自动 HTTPS 反代**、**六大受管数据库一键交付**、**版本快照回滚与 Webhook**、**Cloudflare R2 三层加密灾备** 以及 **72h 冷却保护的 Docker 安全瘦身引擎**。
 
-[![Release](https://img.shields.io/badge/Version-v1.0.12-111827?style=flat-square)](https://github.com/SpeedupMaster/vessel/releases)
+[![Release](https://img.shields.io/badge/Version-v1.0.13-111827?style=flat-square)](https://github.com/SpeedupMaster/vessel/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Engine%2024%2B-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-22%20LTS-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)

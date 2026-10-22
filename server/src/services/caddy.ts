@@ -24,25 +24,30 @@ export class CaddyService {
    */
   public syncCaddyfile(): string {
     const domains = db.get('domains') || [];
-    let content = `# Vessel Auto-Generated Caddyfile
-# Automatic HTTPS & Let's Encrypt / ZeroSSL TLS provisioning
+    // Emit the canonical `caddy fmt` layout (tab indentation, one trailing newline) so the adapter stays quiet
+    const site = (address: string, upstream: string) => [
+      `${address} {`,
+      `\treverse_proxy ${upstream} {`,
+      '\t\theader_up Host {host}',
+      '\t\theader_up X-Real-IP {remote_host}',
+      '\t\theader_up X-Forwarded-For {remote_host}',
+      '\t\theader_up X-Forwarded-Proto {scheme}',
+      '\t}',
+      '}',
+    ].join('\n');
 
-{
-  admin 127.0.0.1:2019
-  auto_https disable_redirects
-}
-
-# 默认基础反代：直接通过服务器 IP 访问 80 端口时，自动反向代理至 Vessel 控制台
-:80 {
-  reverse_proxy 127.0.0.1:3900 {
-    header_up Host {host}
-    header_up X-Real-IP {remote_host}
-    header_up X-Forwarded-For {remote_host}
-    header_up X-Forwarded-Proto {scheme}
-  }
-}
-
-`;
+    const blocks = [
+      [
+        '# Vessel Auto-Generated Caddyfile',
+        "# Automatic HTTPS & Let's Encrypt / ZeroSSL TLS provisioning",
+        '',
+        '{',
+        '\tadmin 127.0.0.1:2019',
+        '\tauto_https disable_redirects',
+        '}',
+      ].join('\n'),
+      `# 默认基础反代：直接通过服务器 IP 访问 80 端口时，自动反向代理至 Vessel 控制台\n${site(':80', '127.0.0.1:3900')}`,
+    ];
 
     for (const d of domains) {
       // If appId is 'vessel-system', it proxies directly to Vessel console at 127.0.0.1:3900
@@ -51,18 +56,10 @@ export class CaddyService {
         : (d.targetType === 'internal'
             ? `${d.serviceName}:${d.targetPort}`
             : `${process.env.DOCKER_HOST_GATEWAY || "host.docker.internal"}:${d.targetPort}`);
-
-      content += `${d.domain} {
-  reverse_proxy ${upstream} {
-    header_up Host {host}
-    header_up X-Real-IP {remote_host}
-    header_up X-Forwarded-For {remote_host}
-    header_up X-Forwarded-Proto {scheme}
-  }
-}
-
-`;
+      blocks.push(site(d.domain, upstream));
     }
+
+    const content = `${blocks.join('\n\n')}\n`;
 
     fs.writeFileSync(this.caddyfilePath, content, 'utf-8');
     void this.reloadCaddyApi(content).then(ok => { if (!ok) console.warn('[Caddy] Configuration reload failed; domains may not be active'); });
