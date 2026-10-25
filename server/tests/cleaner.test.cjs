@@ -9,7 +9,7 @@ const HOUR = 3600 * 1000;
 const ago = hours => new Date(Date.now() - hours * HOUR).toISOString();
 
 // Minimal Docker model: images, containers, and the commands the cleaner issues
-function fixture({ images, containers = [], usage = {}, maintenance = {}, onBuilderPrune, failRm = [] }) {
+function fixture({ images, containers = [], usage = {}, maintenance = {}, onBuilderPrune, onImagePrune, failRm = [] }) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-cleaner-'));
   fs.writeFileSync(path.join(dataDir, 'image-usage.json'), JSON.stringify(usage));
   const calls = [];
@@ -32,6 +32,9 @@ function fixture({ images, containers = [], usage = {}, maintenance = {}, onBuil
     if (args[1] === 'rm') {
       if (args.some(arg => failRm.includes(arg))) throw new Error('conflict: image is in use\nmore detail');
       return { stdout: '' };
+    }
+    if (args[0] === 'image' && args[1] === 'prune') {
+      return { stdout: onImagePrune ? onImagePrune(args) : 'Total reclaimed space:\t0B' };
     }
     if (args[0] === 'builder') {
       onBuilderPrune?.(store);
@@ -135,4 +138,17 @@ test('the summary explains images still cooling down and deletions that failed',
   assert.deepEqual(removed(), [['app:stuck']]);
   assert.match(result.summary, /1 个未使用镜像仍在 72 小时冷却期内/);
   assert.match(result.summary, /1 个镜像删除失败（stuck: conflict: image is in use）/);
+});
+
+test('dangling images and intermediate layers are pruned when enabled', async () => {
+  const { cleaner, calls } = fixture({
+    images: [],
+    maintenance: { pruneDangling: true, pruneBuilderCache: false, unusedRetentionHours: 4 },
+    onImagePrune: () => 'Total reclaimed space:\t12.66GB',
+  });
+  const result = await cleaner.runSafePrune();
+  assert.equal(result.success, true);
+  assert.deepEqual(calls.find(a => a[0] === 'image' && a[1] === 'prune'), ['image', 'prune', '-f', '--filter', 'until=4h']);
+  assert.equal(result.freedBytes, 12.66 * 1000 ** 3);
+  assert.match(result.summary, /悬空与中间层镜像/);
 });

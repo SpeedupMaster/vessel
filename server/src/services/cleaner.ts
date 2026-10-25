@@ -184,12 +184,33 @@ export class CleanerService {
         if (result.errors.length) notes.push(`${result.errors.length} 个镜像删除失败（${firstError(result.errors)}）`);
       } catch (error: any) { failures.push(error.message); }
 
-      // 3. Build cache not used within the cooldown, including cache still reachable from tags
+      // 3. Dangling images and orphaned intermediate layers unreferenced for the cooldown
+      if (config.pruneDangling) {
+        try {
+          const { stdout } = await runDocker(['image', 'prune', '-f', '--filter', `until=${hours}h`], { timeout: PRUNE_TIMEOUT });
+          const match = stdout.match(RECLAIMED);
+          if (match) {
+            const freed = parseSize(parseFloat(match[1]), match[2]);
+            if (freed > 0) {
+              totalFreedBytes += freed;
+              done.push('悬空与中间层镜像');
+            }
+          }
+        } catch (error: any) { failures.push(error.message); }
+      }
+
+      // 4. Build cache not used within the cooldown, including cache still reachable from tags
       if (config.pruneBuilderCache) {
         try {
           const { stdout } = await runDocker(['builder', 'prune', '-a', '-f', '--filter', `until=${hours}h`], { timeout: PRUNE_TIMEOUT });
           const match = stdout.match(RECLAIMED);
-          if (match) totalFreedBytes += parseSize(parseFloat(match[1]), match[2]);
+          if (match) {
+            const freed = parseSize(parseFloat(match[1]), match[2]);
+            if (freed > 0) {
+              totalFreedBytes += freed;
+              done.push('构建缓存');
+            }
+          }
         } catch (error: any) { failures.push(error.message); }
       }
 
