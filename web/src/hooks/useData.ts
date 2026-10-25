@@ -449,6 +449,7 @@ export function useData(token: string | null = null, enabled = true) {
     const res = await apiFetch('/api/maintenance/check-updates', { method: 'POST' });
     const data = await res.json();
     if (data.apps) setApps(data.apps);
+    if (data.maintenance) setMaintenance(data.maintenance);
     return data;
   };
 

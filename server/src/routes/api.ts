@@ -885,6 +885,7 @@ apiRouter.post('/maintenance/check-updates', requireAuth, async (req: Request, r
     success: true,
     message: `Inspection completed. ${updatesCount} applications have newer image versions.`,
     apps,
+    maintenance: db.get('maintenance'),
   });
 });
 
