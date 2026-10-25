@@ -95,10 +95,14 @@ export class CleanerService {
     const protectedProjects = new Set(['vessel', ...db.get('apps').map(app => app.id)]);
     let freed = 0;
     let removed = 0;
+    let kept = 0;
+    const errors: string[] = [];
     for (const container of await this.inspectContainers(ids, true)) {
       const project = container.Config?.Labels?.['com.docker.compose.project'];
-      if (project && protectedProjects.has(project)) continue;
-      if (container.Name === '/vessel-updater') continue;
+      if ((project && protectedProjects.has(project)) || container.Name === '/vessel-updater') {
+        kept += 1;
+        continue;
+      }
       const finished = container.State?.FinishedAt && container.State.FinishedAt !== NEVER ? container.State.FinishedAt : container.Created;
       if (now.getTime() - new Date(finished).getTime() < days * DAY) continue;
       try {
@@ -106,9 +110,12 @@ export class CleanerService {
         await runDocker(['container', 'rm', container.Id], { timeout: 60000 });
         freed += Number(container.SizeRw) || 0;
         removed += 1;
-      } catch { /* started again or removed meanwhile */ }
+      } catch (error: any) {
+        // Usually started again or removed meanwhile; reported so a persistent failure is visible
+        errors.push(`${container.Name.replace(/^\//, '')}: ${error.message}`);
+      }
     }
-    return { freed, removed };
+    return { freed, removed, kept, errors };
   }
 
   /** Remove images that have been unreferenced for at least the cooldown. */
@@ -117,8 +124,14 @@ export class CleanerService {
       : new Set(lines((await runDocker(['image', 'ls', '-q', '--no-trunc', '--filter', 'dangling=true'], { timeout: 60000 })).stdout));
     let freed = 0;
     let removed = 0;
+    let cooling = 0;
+    const errors: string[] = [];
     for (const [id, since] of Object.entries(usage)) {
-      if (dangling.has(id) || now.getTime() - new Date(since).getTime() < hours * HOUR) continue;
+      if (dangling.has(id)) continue;
+      if (now.getTime() - new Date(since).getTime() < hours * HOUR) {
+        cooling += 1;
+        continue;
+      }
       try {
         const { stdout } = await runDocker(['image', 'inspect', '--format', '{{json .}}', id], { timeout: 30000 });
         const image = JSON.parse(stdout);
@@ -128,9 +141,12 @@ export class CleanerService {
         await runDocker(['image', 'rm', ...refs], { timeout: PRUNE_TIMEOUT });
         freed += Number(image.Size) || 0;
         removed += 1;
-      } catch { /* in use, shared with a child image, or already gone */ }
+      } catch (error: any) {
+        // Usually in use, shared with a child image, or already gone; reported so a persistent failure is visible
+        errors.push(`${id.replace(/^sha256:/, '').slice(0, 12)}: ${error.message}`);
+      }
     }
-    return { freed, removed };
+    return { freed, removed, cooling, errors };
   }
 
   /**
@@ -142,7 +158,9 @@ export class CleanerService {
     const now = new Date();
     let totalFreedBytes = 0;
     const done: string[] = [];
+    const notes: string[] = [];
     const failures: string[] = [];
+    const firstError = (errors: string[]) => errors[0].split('\n')[0].slice(0, 200);
 
     try {
       // 1. Stopped containers first, so the images they held start their cooldown
@@ -151,6 +169,8 @@ export class CleanerService {
           const result = await this.pruneStoppedContainers(config.stoppedContainerDays || 7, now);
           totalFreedBytes += result.freed;
           if (result.removed) done.push(`${result.removed} 个停止的容器`);
+          if (result.kept) notes.push(`${result.kept} 个 Vessel 应用的停止容器按设计保留`);
+          if (result.errors.length) notes.push(`${result.errors.length} 个容器删除失败（${firstError(result.errors)}）`);
         } catch (error: any) { failures.push(error.message); }
       }
 
@@ -160,6 +180,8 @@ export class CleanerService {
         const result = await this.pruneUnusedImages(usage, hours, !!config.pruneDangling, now);
         totalFreedBytes += result.freed;
         if (result.removed) done.push(`${result.removed} 个镜像`);
+        if (result.cooling) notes.push(`${result.cooling} 个未使用镜像仍在 ${hours} 小时冷却期内`);
+        if (result.errors.length) notes.push(`${result.errors.length} 个镜像删除失败（${firstError(result.errors)}）`);
       } catch (error: any) { failures.push(error.message); }
 
       // 3. Build cache not used within the cooldown, including cache still reachable from tags
@@ -176,9 +198,10 @@ export class CleanerService {
         lastPruneAt: new Date().toISOString(), lastFreedBytes: totalFreedBytes });
 
       const freedMb = (totalFreedBytes / 1024 / 1024).toFixed(1);
-      const summary = totalFreedBytes > 0 || done.length
+      const summary = (totalFreedBytes > 0 || done.length
         ? `成功安全释放约 ${freedMb} MB 磁盘空间${done.length ? `（清理了 ${done.join('、')}）` : ''}。`
-        : '磁盘已处于最佳状态，未发现超过冷却期的无用镜像、构建缓存或停止的容器。';
+        : notes.length ? '本次没有可清理的内容。' : '磁盘已处于最佳状态，未发现超过冷却期的无用镜像、构建缓存或停止的容器。')
+        + (notes.length ? `${notes.join('；')}。` : '');
 
       return { success: true, freedBytes: totalFreedBytes, summary };
     } catch (e: any) {

@@ -9,7 +9,7 @@ const HOUR = 3600 * 1000;
 const ago = hours => new Date(Date.now() - hours * HOUR).toISOString();
 
 // Minimal Docker model: images, containers, and the commands the cleaner issues
-function fixture({ images, containers = [], usage = {}, maintenance = {}, onBuilderPrune }) {
+function fixture({ images, containers = [], usage = {}, maintenance = {}, onBuilderPrune, failRm = [] }) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-cleaner-'));
   fs.writeFileSync(path.join(dataDir, 'image-usage.json'), JSON.stringify(usage));
   const calls = [];
@@ -29,7 +29,10 @@ function fixture({ images, containers = [], usage = {}, maintenance = {}, onBuil
       const image = images.find(i => i.id === args[4]);
       return { stdout: JSON.stringify({ Size: image.size, RepoTags: image.tags }) };
     }
-    if (args[1] === 'rm') return { stdout: '' };
+    if (args[1] === 'rm') {
+      if (args.some(arg => failRm.includes(arg))) throw new Error('conflict: image is in use\nmore detail');
+      return { stdout: '' };
+    }
     if (args[0] === 'builder') {
       onBuilderPrune?.(store);
       return { stdout: 'Total:\t1.5MB' };
@@ -116,4 +119,20 @@ test('prune completion preserves configuration changed while Docker was running'
   assert.equal(store.state.maintenance.unusedRetentionHours, 120);
   assert.equal(store.state.maintenance.autoPrune, false);
   assert.ok(store.state.maintenance.lastPruneAt);
+});
+
+test('the summary explains images still cooling down and deletions that failed', async () => {
+  const { cleaner, removed } = fixture({
+    images: [
+      { id: 'sha256:cooling', tags: ['app:old'], size: 1 },
+      { id: 'sha256:stuck', tags: ['app:stuck'], size: 1 },
+    ],
+    usage: { 'sha256:cooling': ago(1), 'sha256:stuck': ago(100) },
+    failRm: ['app:stuck'],
+  });
+  const result = await cleaner.runSafePrune();
+  assert.equal(result.success, true);
+  assert.deepEqual(removed(), [['app:stuck']]);
+  assert.match(result.summary, /1 个未使用镜像仍在 72 小时冷却期内/);
+  assert.match(result.summary, /1 个镜像删除失败（stuck: conflict: image is in use）/);
 });
