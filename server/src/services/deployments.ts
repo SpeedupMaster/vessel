@@ -130,7 +130,7 @@ export class DeploymentService {
     appId: string,
     action: DeploymentAction,
     trigger: DeploymentTrigger,
-    options: { source?: DeploymentRecord } = {},
+    options: { source?: DeploymentRecord; updateServices?: string[] } = {},
   ): Promise<DeploymentRecord> {
     let app = db.get('apps').find(item => item.id === appId);
     if (!app) throw new Error('App not found');
@@ -163,6 +163,7 @@ export class DeploymentService {
     const started = Date.now();
     const sourceNote = options.source ? ` → 恢复部署 #${options.source.seq} 的配置` : '';
     log(`[vessel] 部署 #${seq} · ${ACTION_LABELS[action]} · 触发方式: ${TRIGGER_LABELS[trigger]}${sourceNote}\n`);
+    if (options.updateServices) log(`[vessel] 仅升级已确认镜像更新的服务: ${options.updateServices.join(', ')}\n`);
 
     db.updateApp(appId, { status: action === 'deploy' || action === 'rollback' ? 'deploying' : 'rebuilding' });
     appEvents.emit('changed', appId);
@@ -176,7 +177,9 @@ export class DeploymentService {
     let result: { success: boolean; error?: string };
     try {
       result = action === 'rebuild'
-        ? await dockerService.pullAndRebuild(app, log, deployOptions)
+        ? options.updateServices
+          ? await dockerService.updateAppImages(app, options.updateServices, log, deployOptions)
+          : await dockerService.pullAndRebuild(app, log, deployOptions)
         : action === 'fresh-volumes'
           ? await dockerService.freshVolumesRebuild(app, log, deployOptions)
           : await dockerService.deployApp(app, log, deployOptions);

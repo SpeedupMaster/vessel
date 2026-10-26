@@ -29,7 +29,7 @@ interface MaintenanceViewProps {
   onSaveMaintenance: (cfg: Partial<MaintenanceConfig>) => Promise<any>;
   onTriggerPrune: () => Promise<any>;
   onTriggerCheckUpdates: () => Promise<any>;
-  onRebuildApp?: (id: string) => Promise<any>;
+  onUpgradeApp?: (id: string) => Promise<{ updated: boolean; message: string }>;
   onUpdateApp?: (id: string, partial: Partial<AppItem>) => Promise<any>;
 }
 
@@ -60,7 +60,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   onSaveMaintenance,
   onTriggerPrune,
   onTriggerCheckUpdates,
-  onRebuildApp,
+  onUpgradeApp,
   onUpdateApp,
 }) => {
   const { toast } = useNotification();
@@ -119,7 +119,8 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
     setIsCheckingUpdates(true);
     try {
       const res = await onTriggerCheckUpdates();
-      toast.success(res?.message || '镜像巡检完成！');
+      if (res?.success === false) toast.warning(res.message || '部分镜像巡检失败，未执行升级');
+      else toast.success(res?.message || '镜像巡检完成！');
     } catch (e: any) {
       toast.error(`巡检失败: ${e.message}`);
     } finally {
@@ -128,14 +129,15 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
   };
 
   const handleUpgradeApp = async (appId: string) => {
-    if (!onRebuildApp) return;
+    if (!onUpgradeApp) return;
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(20);
     }
     setRebuildingAppId(appId);
     try {
-      await onRebuildApp(appId);
-      toast.success('已触发应用升级与镜像重拉取');
+      const result = await onUpgradeApp(appId);
+      if (result.updated) toast.success(result.message);
+      else toast.info(result.message);
     } catch (err: any) {
       toast.error(`升级触发失败: ${err.message}`);
     } finally {
@@ -680,7 +682,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
                               {a.autoUpdate ? '设为手动升级' : '开启动态自动升级'}
                             </button>
                           )}
-                          {onRebuildApp && (
+                          {onUpgradeApp && (
                             <Button8State
                               variant="primary"
                               size="sm"

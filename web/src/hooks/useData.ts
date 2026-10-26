@@ -232,6 +232,14 @@ export function useData(token: string | null = null, enabled = true) {
     await fetchAll();
   };
 
+  const upgradeApp = async (id: string): Promise<{ updated: boolean; message: string }> => {
+    subscribeLogs(id);
+    const res = await apiFetch(`/api/apps/${id}/upgrade`, { method: 'POST' });
+    const data: { updated: boolean; message: string } = await res.json();
+    await fetchAll();
+    return data;
+  };
+
   const freshVolumesApp = async (id: string) => {
     subscribeLogs(id);
     const res = await apiFetch(`/api/apps/${id}/fresh-volumes`, { method: 'POST' });
@@ -471,6 +479,7 @@ export function useData(token: string | null = null, enabled = true) {
     stopApp,
     restartApp,
     rebuildApp,
+    upgradeApp,
     freshVolumesApp,
     backupApp,
     createDomain,

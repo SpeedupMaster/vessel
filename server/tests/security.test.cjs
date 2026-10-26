@@ -18,26 +18,30 @@ function fixture() {
     pullAndRebuild: async () => ({ success: true }), freshVolumesRebuild: async () => ({ success: false, error: 'rebuild failed' }),
     getAppLogs: async () => ['private'], getEngineCounts: async () => ({ runningContainers: 0, totalImages: 0 }),
   };
+  const registry = {
+    captureAppDigest: async () => {},
+    checkAppUpdate: async () => ({ hasUpdate: false, updatedServices: [], currentDigest: 'same', newDigest: 'same', errors: [] }),
+  };
   const dataDir = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'vessel-api-'));
   const sent = [];
   const notifierModule = load('server/src/services/notifier.ts', { '../db/index.js': { db: store.db } });
   notifierModule.notifier.notify = async payload => { sent.push(payload); };
   const deployments = load('server/src/services/deployments.ts', {
     '../db/index.js': { db: store.db, DATA_DIR: dataDir }, './docker.js': { dockerService: docker },
-    './registry.js': { registryService: { captureAppDigest: async () => {} } }, './notifier.js': notifierModule,
+    './registry.js': { registryService: registry }, './notifier.js': notifierModule,
     './appOperations.js': operations, '../ws/wsHub.js': { wsHub: { broadcastLog() {} } },
   });
   const router = load('server/src/routes/api.ts', {
     '../services/deployments.js': deployments, '../services/notifier.js': notifierModule,
     '../db/index.js': { db: store.db, DATA_DIR: '/isolated' }, '../services/docker.js': { dockerService: docker },
     '../services/caddy.js': { caddyService: { syncCaddyfile() {} } }, '../services/r2Backup.js': { r2BackupService: {} },
-    '../services/registry.js': { registryService: { captureAppDigest: async () => {} } }, '../services/cleaner.js': { cleanerService: {} },
+    '../services/registry.js': { registryService: registry }, '../services/cleaner.js': { cleanerService: {} },
     '../services/scheduler.js': { schedulerService: { reload() {} } }, '../services/auth.js': { authService },
     '../middleware/auth.js': middleware, '../middleware/validation.js': validation,
     '../services/appOperations.js': operations, '../ws/wsHub.js': { wsHub: { broadcastLog() {} } },
   }).apiRouter;
   const app = requireServer('express')(); app.use(requireServer('express').json()); app.use('/api', router);
-  return { ...store, app, authService, middleware, validation, operations, docker, deployments, sent, dataDir };
+  return { ...store, app, authService, middleware, validation, operations, docker, registry, deployments, sent, dataDir };
 }
 
 async function serve(app, action) {
@@ -97,6 +101,68 @@ test('deploy blocks competing mutations and cannot resurrect a deleted record', 
     context.db.set('apps', []);
     complete({ success: true }); await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(context.state.apps, []);
+  });
+});
+
+test('maintenance upgrade rechecks stale badges and skips all deployment work when unchanged', async t => {
+  const context = fixture();
+  t.after(() => require('node:fs').rmSync(context.dataDir, { recursive: true, force: true }));
+  context.state.apps[0].updateAvailable = true;
+  context.docker.pullAndRebuild = async () => assert.fail('Must not force a rebuild');
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}` };
+  await serve(context.app, async base => {
+    const response = await fetch(base + '/api/apps/fixture/upgrade', { method: 'POST', headers });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).updated, false);
+    assert.equal(context.state.apps[0].updateAvailable, false);
+    assert.equal(context.state.deployments.length, 0);
+  });
+});
+
+test('maintenance upgrade reports registry errors without clearing the previous update state', async t => {
+  const context = fixture();
+  t.after(() => require('node:fs').rmSync(context.dataDir, { recursive: true, force: true }));
+  context.state.apps[0].updateAvailable = true;
+  context.registry.checkAppUpdate = async () => ({ hasUpdate: false, updatedServices: [], errors: ['Registry timeout'] });
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}` };
+  await serve(context.app, async base => {
+    const response = await fetch(base + '/api/apps/fixture/upgrade', { method: 'POST', headers });
+    assert.equal(response.status, 502);
+    assert.match((await response.json()).error, /Registry timeout/);
+    assert.equal(context.state.apps[0].updateAvailable, true);
+    assert.equal(context.state.deployments.length, 0);
+  });
+});
+
+test('confirmed maintenance upgrades target changed services and retain the lock after HTTP acceptance', async t => {
+  const context = fixture();
+  t.after(() => require('node:fs').rmSync(context.dataDir, { recursive: true, force: true }));
+  context.registry.checkAppUpdate = async () => ({ hasUpdate: true, updatedServices: ['database'],
+    currentDigest: 'old', newDigest: 'new', errors: [] });
+  let complete;
+  const calls = [];
+  context.docker.updateAppImages = (app, services) => {
+    calls.push({ appId: app.id, services });
+    return new Promise(resolve => { complete = resolve; });
+  };
+  context.docker.pullAndRebuild = async () => assert.fail('Must not force a rebuild');
+  const headers = { Authorization: `Bearer ${context.authService.login('admin', 'test-password-12345').token}` };
+  await serve(context.app, async base => {
+    try {
+      const response = await fetch(base + '/api/apps/fixture/upgrade', { method: 'POST', headers });
+      assert.equal(response.status, 202);
+      assert.equal((await response.json()).updated, true);
+      assert.deepEqual(calls, [{ appId: 'fixture', services: ['database'] }]);
+      assert.equal(context.state.deployments[0].status, 'running');
+      assert.equal((await fetch(base + '/api/apps/fixture/upgrade', { method: 'POST', headers })).status, 409);
+      assert.equal((await fetch(base + '/api/apps/fixture', { method: 'DELETE', headers })).status, 409);
+    } finally {
+      complete?.({ success: true });
+      await new Promise(resolve => setImmediate(resolve));
+    }
+    assert.equal(context.state.deployments[0].status, 'success');
+    assert.equal(context.operations.hasActiveOperations(), false);
+    assert.match(context.deployments.deploymentService.readLog(context.state.deployments[0]), /仅升级已确认镜像更新的服务: database/);
   });
 });
 

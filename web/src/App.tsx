@@ -92,6 +92,7 @@ function MainConsole() {
     stopApp,
     restartApp,
     rebuildApp,
+    upgradeApp,
     freshVolumesApp,
     backupApp,
     createDomain,
@@ -370,7 +371,7 @@ function MainConsole() {
                 onSaveMaintenance={saveMaintenance}
                 onTriggerPrune={triggerPrune}
                 onTriggerCheckUpdates={triggerCheckUpdates}
-                onRebuildApp={rebuildApp}
+                onUpgradeApp={upgradeApp}
                 onUpdateApp={updateAppData}
               />
             )}

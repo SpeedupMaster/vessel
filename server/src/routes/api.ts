@@ -312,6 +312,33 @@ for (const action of ['deploy', 'rebuild', 'fresh-volumes'] as const) {
   });
 }
 
+apiRouter.post('/apps/:id/upgrade', async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  await withAppLock(id, async () => {
+    const app = db.get('apps').find(item => item.id === id);
+    if (!app) return res.status(404).json({ error: 'App not found' });
+    const result = await registryService.checkAppUpdate(app);
+    if (result.errors.length) {
+      return res.status(502).json({ error: `镜像摘要检查失败，未执行升级: ${result.errors.join('; ')}` });
+    }
+    if (result.currentDigest && result.newDigest) {
+      db.updateApp(id, { currentDigest: result.currentDigest, latestDigest: result.newDigest, updateAvailable: result.hasUpdate });
+    }
+    if (!result.hasUpdate || !result.updatedServices.length) {
+      return res.json({ updated: false, message: '未发现镜像更新，未拉取或重建容器' });
+    }
+    const task = deploymentService.run(id, 'rebuild', 'manual', { updateServices: result.updatedServices });
+    const record = deploymentService.list(id)[0];
+    res.status(202).json({ updated: true, message: '已确认镜像更新，仅升级有变化的服务', appId: id, deploymentId: record?.id, seq: record?.seq });
+    // Keep the app locked until the background deployment finishes, not just
+    // until the HTTP response is sent.
+    await task.catch(error => {
+      console.error('[Deployment]', error);
+      wsHub.broadcastLog(id, `[vessel] ${String(error)}\n`);
+    });
+  });
+});
+
 const lifecycleActions = {
   stop: (app: AppItem, log: (text: string) => void) => dockerService.stopApp(app, log),
   restart: (app: AppItem, log: (text: string) => void) => dockerService.restartApp(app, log),
@@ -878,12 +905,13 @@ apiRouter.post('/maintenance/config', requireAuth, (req: Request, res: Response)
 });
 
 apiRouter.post('/maintenance/check-updates', requireAuth, async (req: Request, res: Response) => {
-  await schedulerService.runUpdateCheck();
+  const errors = await schedulerService.runUpdateCheck();
   const apps = db.get('apps') || [];
   const updatesCount = apps.filter((a) => a.updateAvailable).length;
   res.json({
-    success: true,
-    message: `Inspection completed. ${updatesCount} applications have newer image versions.`,
+    success: errors.length === 0,
+    message: errors.length ? `巡检存在异常，未确认的应用未执行升级: ${errors.join('; ')}` : `巡检完成，${updatesCount} 个应用待升级。无更新的服务未拉取或重建。`,
+    errors,
     apps,
     maintenance: db.get('maintenance'),
   });

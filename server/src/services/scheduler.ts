@@ -92,9 +92,10 @@ export class SchedulerService {
     }
   }
 
-  public async runUpdateCheck(): Promise<void> {
-    if (this.checkingUpdates) return;
+  public async runUpdateCheck(): Promise<string[]> {
+    if (this.checkingUpdates) return ['镜像巡检正在进行，请稍后重试'];
     this.checkingUpdates = true;
+    const errors: string[] = [];
     try {
       db.set('maintenance', { ...db.get('maintenance'), lastCheckedAt: new Date().toISOString() });
       for (const { id } of db.get('apps')) {
@@ -103,17 +104,26 @@ export class SchedulerService {
             const app = db.get('apps').find(item => item.id === id);
             if (!app) return;
             const result = await registryService.checkAppUpdate(app);
+            if (result.errors.length) {
+              errors.push(`${app.name}: ${result.errors.join('; ')}`);
+              return;
+            }
             if (!result.currentDigest || !result.newDigest) return;
             db.updateApp(id, { currentDigest: result.currentDigest, latestDigest: result.newDigest, updateAvailable: result.hasUpdate });
-            if (result.hasUpdate && app.autoUpdate && app.status === 'running') {
-              await deploymentService.run(id, 'rebuild', 'auto-update');
+            if (result.hasUpdate && result.updatedServices.length && app.autoUpdate && app.status === 'running') {
+              const record = await deploymentService.run(id, 'rebuild', 'auto-update', { updateServices: result.updatedServices });
+              if (record.status === 'failed') errors.push(`${app.name}: ${record.error || '自动升级失败'}`);
             } else if (result.hasUpdate && result.newDigest !== app.latestDigest && deploymentService.settings(id).notifyOnUpdate) {
               // Only announce a given remote version once
               void notifier.notify({ event: 'update.available', title: `${app.name} 有新版本镜像`, message: '远端镜像摘要已变化，可在应用页拉取并重建。', appId: id, appName: app.name });
             }
           });
-        } catch (error) { console.warn(`[Scheduler] Skipped ${id}: ${String(error)}`); }
+        } catch (error) {
+          console.warn(`[Scheduler] Skipped ${id}: ${String(error)}`);
+          errors.push(`${id}: ${String(error)}`);
+        }
       }
+      return errors;
     } finally { this.checkingUpdates = false; }
   }
 

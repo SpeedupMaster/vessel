@@ -51,6 +51,25 @@ test('backup download and upload use the actual stored authentication token', as
   assert.deepEqual(progress.map(p => p.done), [false, true]);
 });
 
+test('maintenance upgrades use the digest-checked endpoint without optimistic forced-rebuild state', async () => {
+  const context = frontend();
+  context.globals.fetch = async (url, options) => {
+    context.calls.push({ url, options });
+    return { ok: true, json: async () => {
+      if (url.endsWith('/upgrade')) return { updated: false, message: 'No image update' };
+      return url === '/api/apps' ? [{ id: 'fixture', status: 'running', updateAvailable: false }] : [];
+    } };
+  };
+  const data = context.module.useData('valid-test-token', true);
+  const result = await data.upgradeApp('fixture');
+  assert.equal(result.updated, false);
+  assert.equal(context.calls[0].url, '/api/apps/fixture/upgrade');
+  assert.equal(context.calls[0].options.method, 'POST');
+  assert.equal(context.state[1][0].status, 'running');
+  assert.equal(context.state[1][0].updateAvailable, false);
+  assert.ok(!context.calls.some(call => call.url.endsWith('/rebuild')));
+});
+
 test('WebSocket cleanup cancels pending reconnect and cannot open another socket', async () => {
   const context = frontend(); context.module.useData('valid-test-token', true);
   const cleanup = context.effects[0]();

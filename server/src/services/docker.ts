@@ -224,6 +224,21 @@ export class DockerService {
     return this.lifecycle(app, [['pull'], up], onLog, options);
   }
 
+  public async updateAppImages(app: AppItem, services: string[], onLog?: (text: string) => void, options?: DeployOptions) {
+    const targets = [...new Set(services)];
+    if (!targets.length) return { success: true };
+    const configured = YAML.parse(app.composeYaml)?.services || {};
+    if (targets.some(service => !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(service) || !Object.hasOwn(configured, service))) {
+      throw new Error('Unknown Compose service');
+    }
+    await this.ensureNetwork();
+    // Only confirmed services are pulled. Compose reconciles changed images
+    // without forcing recreation or touching unchanged dependencies.
+    const up = ['up', '-d', '--no-deps', '--no-build', '--pull', 'never',
+      ...this.upFlags({ ...options, removeOrphans: false, pullPolicy: 'missing' }), ...targets];
+    return this.lifecycle(app, [['pull', '--policy', 'always', ...targets], up], onLog, options);
+  }
+
   public async freshVolumesRebuild(app: AppItem, onLog?: (text: string) => void, options?: DeployOptions) {
     await this.ensureNetwork();
     const up = ['up', '-d', '--build', ...this.upFlags({ ...options, removeOrphans: false, pullPolicy: 'missing' })];
