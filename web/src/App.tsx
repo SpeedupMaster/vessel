@@ -95,6 +95,7 @@ function MainConsole() {
     upgradeApp,
     freshVolumesApp,
     backupApp,
+    deleteBackupSchedule,
     createDomain,
     updateDomain,
     deleteDomain,
@@ -320,6 +321,7 @@ function MainConsole() {
                 onRebuild={rebuildApp}
                 onFreshVolumes={freshVolumesApp}
                 onBackup={backupApp}
+                onDeleteBackupSchedule={deleteBackupSchedule}
                 onDownloadBackup={downloadBackup}
                 onRestoreBackup={restoreBackup}
                 onRestoreDatabaseFromFile={restoreDatabaseFromFile}

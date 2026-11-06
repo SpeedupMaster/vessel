@@ -453,17 +453,23 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
 
   assertAppIdle(app.id);
   const { databaseName, schedule, runNow = true } = req.body || {};
+  let scheduleId: string | undefined;
 
-  // If a schedule was provided, save it to the app and reload scheduler
+  // Create (no id / unknown id) or update (known id) one of the app's backup schedules
   if (schedule !== undefined) {
-    app.backupSchedule = {
+    const schedules = app.backupSchedules || [];
+    const existing = schedule.id ? schedules.find(item => item.id === schedule.id) : undefined;
+    const saved = {
+      id: existing?.id || uuidv4(),
       enabled: !!schedule.enabled,
       cronSchedule: schedule.cronSchedule || '0 2 * * *',
       targetDatabase: schedule.targetDatabase || databaseName || 'all',
       retentionCount: schedule.retentionCount ? Number(schedule.retentionCount) : 7,
-      lastBackupAt: app.backupSchedule?.lastBackupAt,
-      lastBackupStatus: app.backupSchedule?.lastBackupStatus,
+      lastBackupAt: existing?.lastBackupAt,
+      lastBackupStatus: existing?.lastBackupStatus,
     };
+    app.backupSchedules = existing ? schedules.map(item => item.id === saved.id ? saved : item) : [...schedules, saved];
+    scheduleId = saved.id;
     db.set('apps', [...apps]);
     schedulerService.reload();
   }
@@ -473,7 +479,7 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
     return res.json({
       success: true,
       message: '定时自动备份配置已保存',
-      schedule: app.backupSchedule,
+      schedules: app.backupSchedules || [],
     });
   }
 
@@ -493,14 +499,26 @@ apiRouter.post('/apps/:id/backup', requireAuth, async (req: Request, res: Respon
     name.startsWith('libsql');
 
   const result = await withAppLock(app.id, () => isDb
-    ? r2BackupService.runDatabaseBackup(app, { databaseName })
+    ? r2BackupService.runDatabaseBackup(app, { databaseName, scheduleId })
     : r2BackupService.runAppBackup(app));
 
   if (result.success) {
-    res.json({ success: true, record: result.record, schedule: app.backupSchedule });
+    res.json({ success: true, record: result.record, schedules: app.backupSchedules || [] });
   } else {
     res.status(500).json({ error: result.error });
   }
+});
+
+apiRouter.delete('/apps/:id/backup-schedules/:scheduleId', requireAuth, (req: Request, res: Response) => {
+  const app = db.get('apps').find(item => item.id === req.params.id);
+  if (!app) return res.status(404).json({ error: 'App not found' });
+  const schedules = app.backupSchedules || [];
+  if (!schedules.some(item => item.id === req.params.scheduleId)) return res.status(404).json({ error: '定时备份计划不存在' });
+  const updated = db.updateApp(app.id, current => ({
+    ...current, backupSchedules: (current.backupSchedules || []).filter(item => item.id !== req.params.scheduleId),
+  }));
+  schedulerService.reload();
+  res.json({ success: true, schedules: updated?.backupSchedules || [] });
 });
 
 apiRouter.get('/apps/:id/diagnostics', async (req: Request, res: Response) => {

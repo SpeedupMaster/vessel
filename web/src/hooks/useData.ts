@@ -262,12 +262,21 @@ export function useData(token: string | null = null, enabled = true) {
     if (data.record) {
       setBackups((prev) => [data.record, ...prev]);
     }
-    if (data.schedule !== undefined) {
+    if (Array.isArray(data.schedules)) {
       setApps((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, backupSchedule: data.schedule } : a))
+        prev.map((a) => (a.id === id ? { ...a, backupSchedules: data.schedules } : a))
       );
     }
     return data;
+  };
+
+  const deleteBackupSchedule = async (appId: string, scheduleId: string) => {
+    const res = await apiFetch(`/api/apps/${appId}/backup-schedules/${encodeURIComponent(scheduleId)}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Failed to delete backup schedule');
+    setApps((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, backupSchedules: data.schedules || [] } : a))
+    );
   };
 
   // DOMAINS ACTIONS
@@ -482,6 +491,7 @@ export function useData(token: string | null = null, enabled = true) {
     upgradeApp,
     freshVolumesApp,
     backupApp,
+    deleteBackupSchedule,
     createDomain,
     updateDomain,
     deleteDomain,

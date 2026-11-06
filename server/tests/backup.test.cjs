@@ -257,3 +257,34 @@ test('failed system publication rolls back configuration files and database', as
   assert.equal(context.state.apps[0].name, 'Fixture');
   assert.equal(attempts, 2);
 });
+
+test('retention rotates each backup schedule independently of manual backups', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-retention-schedules-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const context = fixture(directory);
+  context.state.r2Config.retentionCount = 5;
+  context.state.apps[0].backupSchedules = [
+    { id: 'hourly', enabled: true, cronSchedule: '0 * * * *', targetDatabase: 'main', retentionCount: 2 },
+    { id: 'daily', enabled: true, cronSchedule: '0 2 * * *', targetDatabase: 'main', retentionCount: 1 },
+  ];
+  const record = (id, createdAt, scheduleId) => ({ id, type: 'app_db', databaseName: 'main', createdAt, targetId: 'fixture', scheduleId });
+  const latestHourly = record('h3', '2026-10-13T03', 'hourly');
+  context.state.backups = [record('h1', '2026-10-13T01', 'hourly'), record('h2', '2026-10-13T02', 'hourly'), latestHourly,
+    record('d1', '2026-10-12', 'daily'), record('manual', '2026-10-11')];
+  const deleted = [];
+  context.service.deleteBackup = async id => { deleted.push(id); return { success: true }; };
+  await context.service.enforceRetention(latestHourly);
+  assert.deepEqual(deleted, ['h1']);
+});
+
+test('database backups record the schedule that produced them', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-backup-schedule-id-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const context = fixture(directory, async (_args, options) => {
+    await pipeline(Readable.from(['SELECT 1;']), options.output);
+    return { stdout: '', stderr: '' };
+  });
+  const result = await context.service.runDatabaseBackup(context.state.apps[0], { databaseName: 'main', scheduleId: 'nightly' });
+  assert.equal(result.success, true);
+  assert.equal(result.record.scheduleId, 'nightly');
+});

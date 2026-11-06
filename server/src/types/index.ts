@@ -25,11 +25,14 @@ export interface AppItem {
   updatedAt: string;
   lastDeployedAt?: string;
   containers: ContainerInfo[];
+  backupSchedules?: DatabaseBackupSchedule[];
+  /** @deprecated single-schedule field from older versions; migrated into backupSchedules on load */
   backupSchedule?: DatabaseBackupSchedule;
   deploySettings?: AppDeploySettings;
 }
 
 export interface DatabaseBackupSchedule {
+  id: string;
   enabled: boolean;
   cronSchedule: string;
   targetDatabase?: string;
@@ -77,6 +80,8 @@ export interface BackupRecord {
   status: 'completed' | 'uploading' | 'failed';
   downloadUrl?: string;
   databaseName?: string;
+  /** Schedule that produced this backup; retention is applied per schedule */
+  scheduleId?: string;
 }
 
 export interface RegistryItem {

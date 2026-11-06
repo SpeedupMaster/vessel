@@ -60,35 +60,39 @@ export class SchedulerService {
       });
     }
 
-    // 4. Per-Database App Scheduled Backups
+    // 4. Per-Database App Scheduled Backups (an app may carry several schedules)
     const apps = db.get('apps') || [];
     for (const app of apps) {
-      if (app.backupSchedule?.enabled && cron.validate(app.backupSchedule.cronSchedule)) {
-        const job = cron.schedule(app.backupSchedule.cronSchedule, async () => {
-          console.log(`[Scheduler] Executing scheduled database backup for ${app.name} (${app.id})...`);
-          try {
-            const current = db.get('apps').find(item => item.id === app.id);
-            if (!current?.backupSchedule?.enabled) return;
-            const res = await withAppLock(current.id, () => r2BackupService.runDatabaseBackup(current, {
-              databaseName: current.backupSchedule?.targetDatabase || 'all',
-            }));
-            const freshApps = db.get('apps') || [];
-            const freshApp = freshApps.find((a) => a.id === app.id);
-            if (freshApp && freshApp.backupSchedule) {
-              freshApp.backupSchedule.lastBackupAt = new Date().toISOString();
-              freshApp.backupSchedule.lastBackupStatus = res.success ? 'success' : 'failed';
-              db.set('apps', [...freshApps]);
-            }
-            if (!res.success) {
-              void notifier.notify({ event: 'backup.failure', title: `${app.name} 数据库备份失败`, message: String(res.error || '未知错误'), appId: app.id, appName: app.name });
-            }
-          } catch (err: any) {
-            console.error(`[Scheduler] Scheduled database backup failed for ${app.name}:`, err.message);
-            void notifier.notify({ event: 'backup.failure', title: `${app.name} 数据库备份失败`, message: String(err?.message || err), appId: app.id, appName: app.name });
-          }
-        });
-        this.appBackupJobs.set(app.id, job);
+      for (const schedule of app.backupSchedules || []) {
+        if (!schedule.enabled || !cron.validate(schedule.cronSchedule)) continue;
+        const job = cron.schedule(schedule.cronSchedule, () => this.runScheduledDatabaseBackup(app.id, schedule.id));
+        this.appBackupJobs.set(`${app.id}:${schedule.id}`, job);
       }
+    }
+  }
+
+  private async runScheduledDatabaseBackup(appId: string, scheduleId: string): Promise<void> {
+    const app = db.get('apps').find(item => item.id === appId);
+    const schedule = app?.backupSchedules?.find(item => item.id === scheduleId);
+    if (!app || !schedule?.enabled) return;
+    const target = schedule.targetDatabase || 'all';
+    console.log(`[Scheduler] Executing scheduled database backup for ${app.name} (${app.id}) → ${target}...`);
+    let error: string | undefined;
+    try {
+      const res = await withAppLock(app.id, () => r2BackupService.runDatabaseBackup(app, { databaseName: target, scheduleId }));
+      if (!res.success) error = String(res.error || '未知错误');
+    } catch (err: any) {
+      console.error(`[Scheduler] Scheduled database backup failed for ${app.name}:`, err.message);
+      error = String(err?.message || err);
+    }
+    db.updateApp(appId, current => ({
+      ...current,
+      backupSchedules: (current.backupSchedules || []).map(item => item.id === scheduleId
+        ? { ...item, lastBackupAt: new Date().toISOString(), lastBackupStatus: error ? 'failed' : 'success' }
+        : item),
+    }));
+    if (error) {
+      void notifier.notify({ event: 'backup.failure', title: `${app.name} 数据库备份失败 (${target})`, message: error, appId: app.id, appName: app.name });
     }
   }
 

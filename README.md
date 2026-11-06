@@ -8,7 +8,7 @@
 
 以原生 `docker-compose.yml` 为一等公民，内置 **Caddy v2 自动 HTTPS 反代**、**六大受管数据库一键交付**、**版本快照回滚与 Webhook**、**Cloudflare R2 三层加密灾备** 以及 **72h 冷却保护的 Docker 安全瘦身引擎**。
 
-[![Release](https://img.shields.io/badge/Version-v1.0.17-111827?style=flat-square)](https://github.com/SpeedupMaster/vessel/releases)
+[![Release](https://img.shields.io/badge/Version-v1.0.18-111827?style=flat-square)](https://github.com/SpeedupMaster/vessel/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Engine%2024%2B-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-22%20LTS-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
@@ -393,7 +393,7 @@ Vessel 提供从平台元数据、Docker 数据卷到结构化数据库的完整
 | :--- | :--- | :--- | :--- |
 | **1. 系统级快照**<br/>(`System Snapshot`) | `vessel_db.json` 平台数据库、应用编排 YAML、`.env` 与附属构建文件 | `.tar.gz` 或 **AES-256-GCM** (`.tar.gz.enc`) | 全局写锁互斥；恢复时保留当前管理员凭据与备份记录，异常自动回滚 |
 | **2. 应用卷归档**<br/>(`Application Volume`) | 应用关联的所有 Docker Named Volume 与可写目录 Bind Mount | `.tar.gz` 真实卷归档 | 优雅暂停容器保证一致性；恢复采用**两阶段临时卷解压校验 + 原子替换 + 失败回滚** |
-| **3. 数据库逻辑备份**<br/>(`Database Dump`) | PostgreSQL (`pg_dump`)、MySQL/MariaDB (`mysqldump`)、MongoDB (`mongodump`) | `.sql.gz` / `.archive.gz` | 支持按实例或指定单库定时备份；支持从 R2 快照或本地上传备份文件恢复至指定目标库 |
+| **3. 数据库逻辑备份**<br/>(`Database Dump`) | PostgreSQL (`pg_dump`)、MySQL/MariaDB (`mysqldump`)、MongoDB (`mongodump`) | `.sql.gz` / `.archive.gz` | 支持按实例或指定单库定时备份，同一数据库应用可配置多个独立计划（不同库 / 频率 / 保留份数）；支持从 R2 快照或本地上传备份文件恢复至指定目标库 |
 
 ### 数据卷两阶段安全恢复流程
 

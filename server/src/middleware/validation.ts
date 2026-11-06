@@ -70,6 +70,7 @@ export function validateRequest(req: Request, _res: Response, next: NextFunction
       const schedule = body.schedule;
       if (!schedule || typeof schedule !== 'object' || typeof schedule.enabled !== 'boolean' ||
         typeof schedule.cronSchedule !== 'string' || !cron.validate(schedule.cronSchedule) ||
+        (schedule.id !== undefined && typeof schedule.id !== 'string') ||
         (schedule.targetDatabase !== undefined && typeof schedule.targetDatabase !== 'string') ||
         (schedule.retentionCount !== undefined && (!Number.isInteger(Number(schedule.retentionCount)) || Number(schedule.retentionCount) < 1 || Number(schedule.retentionCount) > 10000))) throw new BadRequest('Invalid backup schedule');
     }

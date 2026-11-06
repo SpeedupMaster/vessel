@@ -305,7 +305,7 @@ export class R2BackupService {
    */
   public async runDatabaseBackup(
     app: AppItem,
-    options?: { databaseName?: string }
+    options?: { databaseName?: string; scheduleId?: string }
   ): Promise<{ success: boolean; record?: BackupRecord; error?: string }> {
     const targetDb = options?.databaseName?.trim() || 'all';
     const databaseService = this.databaseService(app);
@@ -387,6 +387,7 @@ export class R2BackupService {
         id: `db-${randomUUID()}`, type: 'app_db', targetId: app.id,
         targetName: `${app.name} (${targetDb})`, fileName, fileSizeBytes: sizeBytes,
         createdAt: new Date().toISOString(), status: 'completed', databaseName: targetDb,
+        ...(options?.scheduleId ? { scheduleId: options.scheduleId } : {}),
       };
       if (client && r2Config.bucketName) {
         await client.send(new PutObjectCommand({ Bucket: r2Config.bucketName, Key: backupObjectKey(record),
@@ -654,9 +655,16 @@ export class R2BackupService {
    */
   private async enforceRetention(record: BackupRecord): Promise<void> {
     const app = db.get('apps').find(item => item.id === record.targetId);
-    const maxKeep = app?.backupSchedule?.retentionCount || db.get('r2Config').retentionCount || 7;
+    const schedules = app?.backupSchedules || [];
+    const owner = record.scheduleId ? schedules.find(item => item.id === record.scheduleId) : undefined;
+    const dbName = (item: BackupRecord) => item.databaseName || 'all';
+    // Scheduled backups rotate within their own schedule; manual ones use the matching database's schedule (or the global default)
+    const maxKeep = owner?.retentionCount
+      || (record.type === 'app_db' ? schedules.find(item => (item.targetDatabase || 'all') === dbName(record))?.retentionCount : undefined)
+      || db.get('r2Config').retentionCount || 7;
     const expired = db.get('backups').filter(item => item.targetId === record.targetId && item.type === record.type &&
-      (record.type !== 'app_db' || (item.databaseName || 'all') === (record.databaseName || 'all')))
+      (record.type !== 'app_db' || dbName(item) === dbName(record)) &&
+      (owner ? item.scheduleId === owner.id : !item.scheduleId || !schedules.some(schedule => schedule.id === item.scheduleId)))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(maxKeep);
     for (const item of expired) {
       const result = await this.deleteBackup(item.id);

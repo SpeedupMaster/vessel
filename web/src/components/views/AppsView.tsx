@@ -44,6 +44,7 @@ interface AppsViewProps {
   onRebuild: (id: string) => Promise<any>;
   onFreshVolumes?: (id: string) => Promise<any>;
   onBackup: (id: string, options?: { databaseName?: string; schedule?: any; runNow?: boolean }) => Promise<any>;
+  onDeleteBackupSchedule?: (appId: string, scheduleId: string) => Promise<void>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string, options?: { databaseName?: string }) => Promise<any>;
   onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string, onProgress?: (progress: UploadProgress) => void) => Promise<any>;
@@ -71,6 +72,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
   onRebuild,
   onFreshVolumes,
   onBackup,
+  onDeleteBackupSchedule,
   onDownloadBackup,
   onRestoreBackup,
   onRestoreDatabaseFromFile,
@@ -180,6 +182,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onRestart={onRestart}
         onRebuild={onRebuild}
         onBackup={onBackup}
+        onDeleteBackupSchedule={onDeleteBackupSchedule}
         onDownloadBackup={onDownloadBackup}
         onRestoreBackup={onRestoreBackup}
         onDeleteBackup={onDeleteBackup}
@@ -212,6 +215,7 @@ export const AppsView: React.FC<AppsViewProps> = ({
         onRebuild={onRebuild}
         onFreshVolumes={onFreshVolumes}
         onBackup={onBackup}
+        onDeleteBackupSchedule={onDeleteBackupSchedule}
         onDownloadBackup={onDownloadBackup}
         onRestoreBackup={onRestoreBackup}
         onRestoreDatabaseFromFile={onRestoreDatabaseFromFile}

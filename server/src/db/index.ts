@@ -36,6 +36,14 @@ const DEFAULT_MAINTENANCE_CONFIG: MaintenanceConfig = {
   checkSchedule: '0 */6 * * *', // Every 6 hours
 };
 
+/** Older versions stored a single `backupSchedule` per app; fold it into the `backupSchedules` list */
+function migrateBackupSchedules(app: AppItem): AppItem {
+  if (!app.backupSchedule) return app;
+  const { backupSchedule, ...rest } = app;
+  const existing = rest.backupSchedules || [];
+  return existing.length ? rest : { ...rest, backupSchedules: [{ ...backupSchedule, id: backupSchedule.id || 'legacy' }] };
+}
+
 function createAdmin(): AdminUser {
   const supplied = process.env.VESSEL_ADMIN_PASSWORD;
   if (supplied && (supplied.length < 8 || supplied.length > 1024 || supplied === 'vessel2026')) {
@@ -101,7 +109,7 @@ export class Database {
         }
         return {
           admin: parsed.admin,
-          apps: parsed.apps || [],
+          apps: (parsed.apps || []).map(migrateBackupSchedules),
           domains: parsed.domains || [],
           r2Config: parsed.r2Config || DEFAULT_R2_CONFIG,
           backups: parsed.backups || [],

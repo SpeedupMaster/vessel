@@ -20,6 +20,8 @@ interface CreateDatabaseBackupModalProps {
   onClose: () => void;
   app: AppItem;
   engineName: string;
+  /** Existing schedule to edit; when absent the modal creates a new backup / schedule */
+  editingSchedule?: DatabaseBackupSchedule | null;
   onConfirm: (
     databaseName: string,
     schedule?: DatabaseBackupSchedule,
@@ -47,6 +49,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
   onClose,
   app,
   engineName,
+  editingSchedule,
   onConfirm,
 }) => {
   const [scope, setScope] = useState<'all' | 'specific'>('specific');
@@ -101,19 +104,20 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
       setSelectedDb(initial);
       setCustomDb(initial);
 
-      // Load existing schedule config
-      if (app.backupSchedule) {
-        setEnableSchedule(!!app.backupSchedule.enabled);
-        setCronExpr(app.backupSchedule.cronSchedule || '0 2 * * *');
-        setRetentionCount(app.backupSchedule.retentionCount || 7);
-        if (app.backupSchedule.targetDatabase && app.backupSchedule.targetDatabase !== 'all') {
+      // Load the schedule being edited; a new backup starts from defaults
+      if (editingSchedule) {
+        setEnableSchedule(!!editingSchedule.enabled);
+        setCronExpr(editingSchedule.cronSchedule || '0 2 * * *');
+        setRetentionCount(editingSchedule.retentionCount || 7);
+        if (editingSchedule.targetDatabase && editingSchedule.targetDatabase !== 'all') {
           setScope('specific');
-          setCustomDb(app.backupSchedule.targetDatabase);
-          setSelectedDb(app.backupSchedule.targetDatabase);
-        } else if (app.backupSchedule.targetDatabase === 'all') {
+          setCustomDb(editingSchedule.targetDatabase);
+          setSelectedDb(editingSchedule.targetDatabase);
+        } else {
           setScope('all');
         }
       } else {
+        setScope('specific');
         setEnableSchedule(false);
         setCronExpr('0 2 * * *');
         setRetentionCount(7);
@@ -124,7 +128,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
     // Initialise once per opening: re-running on app refreshes or a new fetchDatabases would
     // overwrite the database the user just picked
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, app.id]);
+  }, [isOpen, app.id, editingSchedule?.id]);
 
   const handleSubmit = async (runNow: boolean = true) => {
     if (isSubmitting) return;
@@ -134,14 +138,18 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
     }
 
     const target = scope === 'all' ? 'all' : (customDb.trim() || selectedDb.trim() || 'all');
-    const scheduleData: DatabaseBackupSchedule = {
-      enabled: enableSchedule,
-      cronSchedule: cronExpr.trim() || '0 2 * * *',
-      targetDatabase: target,
-      retentionCount: Number(retentionCount) || 7,
-      lastBackupAt: app.backupSchedule?.lastBackupAt,
-      lastBackupStatus: app.backupSchedule?.lastBackupStatus,
-    };
+    // Without a schedule toggle a new backup is a one-off and must not create a schedule;
+    // an edited schedule is always saved (switching it off pauses it)
+    const scheduleData: DatabaseBackupSchedule | undefined = enableSchedule || editingSchedule
+      ? {
+          id: editingSchedule?.id || '',
+          enabled: editingSchedule ? enableSchedule : true,
+          cronSchedule: cronExpr.trim() || '0 2 * * *',
+          targetDatabase: target,
+          retentionCount: Number(retentionCount) || 7,
+        }
+      : undefined;
+    if (scheduleData && !scheduleData.id) delete (scheduleData as Partial<DatabaseBackupSchedule>).id;
 
     setIsSubmitting(true);
     try {
@@ -158,7 +166,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
     <Modal
       isOpen={isOpen}
       onClose={() => !isSubmitting && onClose()}
-      title="新建数据库备份"
+      title={editingSchedule ? '编辑定时备份计划' : '新建数据库备份'}
       subtitle={`目标应用: ${app.name} (${engineName})`}
       maxWidth="max-w-lg"
     >
@@ -299,7 +307,9 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
                   </span>
                 </div>
                 <p className="text-[11px] text-ink-muted mt-0.5">
-                  按照 Cron 计划定时自动生成数据库快照并维护历史版本
+                  {editingSchedule
+                    ? '关闭后该计划暂停执行，可随时在备份页重新启用'
+                    : '新增一个定时计划；可为不同数据库分别创建多个计划'}
                 </p>
               </div>
             </div>
@@ -312,7 +322,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
             />
           </div>
 
-          {enableSchedule && (
+          {(enableSchedule || editingSchedule) && (
             <div className="pt-2 space-y-3 animate-fade-in">
               {/* Presets */}
               <div className="space-y-1.5">
@@ -406,7 +416,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
               : '立即生成备份'}
           </Button8State>
 
-          {enableSchedule && (
+          {(enableSchedule || editingSchedule) && (
             <Button8State
               size="sm"
               variant="secondary"
@@ -416,7 +426,7 @@ export const CreateDatabaseBackupModal: React.FC<CreateDatabaseBackupModalProps>
               onClick={() => handleSubmit(false)}
               className="order-2 sm:order-2 w-full sm:w-auto min-h-[40px] sm:min-h-0 rounded-xl"
             >
-              仅保存定时配置
+              {editingSchedule ? '保存修改' : '仅保存定时配置'}
             </Button8State>
           )}
 

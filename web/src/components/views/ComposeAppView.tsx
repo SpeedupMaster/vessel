@@ -46,7 +46,7 @@ import {
   Archive,
 } from '@phosphor-icons/react';
 import clsx from 'clsx';
-import { AppItem, DomainItem, BackupRecord } from '../../types/index.js';
+import { AppItem, DomainItem, BackupRecord, DatabaseBackupSchedule } from '../../types/index.js';
 import type { UploadProgress } from '../../hooks/useData.js';
 import { DATABASE_OPTIONS } from '../common/CreateDatabaseModal.js';
 import { Badge } from '../common/Badge.js';
@@ -85,6 +85,7 @@ interface ComposeAppViewProps {
   onRebuild: (id: string) => Promise<void>;
   onFreshVolumes?: (id: string) => Promise<any>;
   onBackup: (id: string, options?: { databaseName?: string; schedule?: any; runNow?: boolean }) => Promise<any>;
+  onDeleteBackupSchedule?: (appId: string, scheduleId: string) => Promise<void>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string, options?: { databaseName?: string }) => Promise<any>;
   onRestoreDatabaseFromFile?: (appId: string, file: File, databaseName?: string, onProgress?: (progress: UploadProgress) => void) => Promise<any>;
@@ -112,6 +113,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   onRebuild,
   onFreshVolumes,
   onBackup,
+  onDeleteBackupSchedule,
   onDownloadBackup,
   onRestoreBackup,
   onRestoreDatabaseFromFile,
@@ -207,6 +209,8 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const [copiedDbField, setCopiedDbField] = useState<string | null>(null);
   const [showTerminalModal, setShowTerminalModal] = useState(false);
   const [showDbBackupModal, setShowDbBackupModal] = useState(false);
+  /** Schedule being edited in the backup modal; null opens it for a new backup/schedule */
+  const [editingSchedule, setEditingSchedule] = useState<DatabaseBackupSchedule | null>(null);
   const [showRestoreDbModal, setShowRestoreDbModal] = useState(false);
   const [showRestoreAppFileModal, setShowRestoreAppFileModal] = useState(false);
 
@@ -463,6 +467,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   const handleAppBackup = async () => {
     if (!app || isBackingUp) return;
     if (isDb) {
+      setEditingSchedule(null);
       setShowDbBackupModal(true);
       return;
     }
@@ -495,6 +500,36 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
     } catch (err: any) {
       toast.error(`处理备份失败: ${err.message || '未知错误'}`);
       throw err;
+    }
+  };
+
+  const handleToggleSchedule = async (schedule: DatabaseBackupSchedule) => {
+    if (!app) return;
+    try {
+      await onBackup(app.id, { schedule: { ...schedule, enabled: !schedule.enabled }, runNow: false });
+      toast.success(schedule.enabled ? '定时备份已暂停' : '定时备份已启用');
+    } catch (err: any) {
+      toast.error(`更新定时备份失败: ${err.message || '未知错误'}`);
+    }
+  };
+
+  const handleDeleteSchedule = async (schedule: DatabaseBackupSchedule) => {
+    if (!app || !onDeleteBackupSchedule) return;
+    const target = !schedule.targetDatabase || schedule.targetDatabase === 'all' ? '全部数据库' : schedule.targetDatabase;
+    const ok = await confirm({
+      title: '删除定时备份计划',
+      subtitle: `${app.name} · ${target} · ${schedule.cronSchedule}`,
+      message: '删除后不再自动执行该计划，已生成的备份文件会保留。',
+      confirmText: '删除计划',
+      cancelText: '取消',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await onDeleteBackupSchedule(app.id, schedule.id);
+      toast.success('定时备份计划已删除');
+    } catch (err: any) {
+      toast.error(`删除定时备份失败: ${err.message || '未知错误'}`);
     }
   };
 
@@ -3146,38 +3181,77 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
             </div>
           </div>
 
-          {/* Active Schedule Status Banner */}
-          {isDb && app?.backupSchedule?.enabled && (
-            <div className="p-4 rounded-2xl bg-paper-2 border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-card">
-              <div className="flex items-center gap-2.5">
-                <span className="status-dot text-emerald-500 shrink-0" data-live="true" />
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-ink">定时自动备份已开启</span>
-                    <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
-                      自动调度中
-                    </span>
+          {/* Backup schedules (several per app: per target database and/or cadence) */}
+          {isDb && app && (app.backupSchedules?.length || 0) > 0 && (
+            <div className="rounded-2xl bg-paper-2 border border-line shadow-card divide-y divide-line text-xs">
+              {(app.backupSchedules || []).map((schedule) => (
+                <div key={schedule.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`status-dot shrink-0 ${schedule.enabled ? 'text-emerald-500' : 'text-ink-faint'}`}
+                      data-live={schedule.enabled ? 'true' : undefined}
+                    />
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-ink font-mono">
+                          {!schedule.targetDatabase || schedule.targetDatabase === 'all' ? '全部数据库' : schedule.targetDatabase}
+                        </span>
+                        {schedule.enabled ? (
+                          <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                            自动调度中
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-paper-3 text-ink-muted font-medium">
+                            已暂停
+                          </span>
+                        )}
+                        {schedule.lastBackupStatus === 'failed' && (
+                          <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-red-500/10 text-red-600 dark:text-red-400 font-medium">
+                            上次失败
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-ink-muted">
+                        执行周期: <code className="font-mono text-ink bg-paper-3 px-1.5 py-0.5 rounded">{schedule.cronSchedule}</code> ·
+                        保留最新 <span className="font-mono text-ink font-medium">{schedule.retentionCount || 7}</span> 份
+                        {schedule.lastBackupAt && (
+                          <span className="text-ink-faint ml-2">
+                            (上次执行: {new Date(schedule.lastBackupAt).toLocaleString()})
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-ink-muted">
-                    执行周期: <code className="font-mono text-ink bg-paper-3 px-1.5 py-0.5 rounded">{app.backupSchedule.cronSchedule}</code> · 
-                    目标: <span className="font-mono text-ink font-medium">{app.backupSchedule.targetDatabase === 'all' ? '全部数据库' : app.backupSchedule.targetDatabase}</span> · 
-                    保留最新 <span className="font-mono text-ink font-medium">{app.backupSchedule.retentionCount || 7}</span> 份
-                    {app.backupSchedule.lastBackupAt && (
-                      <span className="text-ink-faint ml-2">
-                        (上次执行: {new Date(app.backupSchedule.lastBackupAt).toLocaleString()})
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => setShowDbBackupModal(true)}
-                className="btn-vessel-secondary self-end sm:self-center px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer shrink-0"
-              >
-                修改定时计划
-              </button>
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <Switch
+                      checked={schedule.enabled}
+                      onChange={() => handleToggleSchedule(schedule)}
+                      size="sm"
+                      aria-label={schedule.enabled ? '暂停该定时备份' : '启用该定时备份'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSchedule(schedule);
+                        setShowDbBackupModal(true);
+                      }}
+                      className="btn-vessel-secondary px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer"
+                    >
+                      编辑
+                    </button>
+                    {onDeleteBackupSchedule && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSchedule(schedule)}
+                        className="btn-vessel-secondary px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer text-red-600 dark:text-red-400"
+                      >
+                        删除
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -4219,6 +4293,7 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           onClose={() => setShowDbBackupModal(false)}
           app={app}
           engineName={dbInfo?.engine || 'Database'}
+          editingSchedule={editingSchedule}
           onConfirm={handleConfirmDbBackup}
         />
       )}
