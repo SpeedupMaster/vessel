@@ -30,14 +30,38 @@ export function backupObjectKey(record: Pick<BackupRecord, 'type' | 'targetId' |
   return `${prefix}/${record.fileName}`;
 }
 
+/** Images that run stock PostgreSQL (pg_dump/psql inside) without "postgres" in the image name */
+const POSTGRES_COMPATIBLE = /(?:^|\/)(?:paradedb|pgvector|timescaledb(?:-ha)?|postgis|pgvecto-rs|vectorchord|postgresql)(?::|@|$)/i;
+
 export class R2BackupService {
+  /**
+   * Engine keyword for the database service ('postgres', 'mariadb', 'mysql', 'mongo', 'redis', 'libsql').
+   * Postgres-compatible distributions (ParadeDB, pgvector, TimescaleDB, PostGIS…) don't carry
+   * "postgres" in their image name, so known images and the service's env vars are checked too.
+   */
   private databaseImage(app: AppItem, service: string): string {
-    return String(YAML.parse(app.composeYaml)?.services?.[service]?.image || '').split('/').pop()!.toLowerCase();
+    const svc = YAML.parse(app.composeYaml)?.services?.[service] || {};
+    const image = String(svc.image || '').toLowerCase();
+    const name = image.split('/').pop() || '';
+    if (POSTGRES_COMPATIBLE.test(image)) return `postgres ${name}`;
+    const env = svc.environment;
+    const envKeys = Array.isArray(env)
+      ? env.map((e: unknown) => String(e).split('=')[0])
+      : Object.keys(env && typeof env === 'object' ? env : {});
+    const keys = [...envKeys, ...Object.keys(parseEnv(app.envContent || ''))].join(' ').toUpperCase();
+    if (!/postgres|mysql|mariadb|mongo|redis|libsql|sqld/.test(name)) {
+      if (/\bPOSTGRES_/.test(keys) || /\bPGDATA\b/.test(keys)) return `postgres ${name}`;
+      if (/\bMARIADB_/.test(keys)) return `mariadb ${name}`;
+      if (/\bMYSQL_/.test(keys)) return `mysql ${name}`;
+      if (/\bMONGO_INITDB_/.test(keys)) return `mongo ${name}`;
+    }
+    return name;
   }
 
   private databaseService(app: AppItem): string {
     const services = YAML.parse(app.composeYaml)?.services || {};
-    const candidates = Object.entries(services).filter(([, value]: [string, any]) => /(?:^|\/)(postgres|mysql|mariadb|mongo|redis)(?::|@|$)/i.test(value?.image || ''));
+    const candidates = Object.entries(services).filter(([, value]: [string, any]) =>
+      /(?:^|\/)(postgres|mysql|mariadb|mongo|redis)(?::|@|$)/i.test(value?.image || '') || POSTGRES_COMPATIBLE.test(String(value?.image || '')));
     if (candidates.length === 1) return candidates[0][0];
     if (services.database) return 'database';
     throw new Error('无法唯一确定数据库服务，请使用独立数据库应用');
