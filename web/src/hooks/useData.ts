@@ -382,7 +382,41 @@ export function useData(token: string | null = null, enabled = true) {
       body: JSON.stringify(options || {}),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to restore backup');
+    // Keep `code` so the UI can prompt for the passphrase of an encrypted snapshot
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Failed to restore backup'), { code: data.code });
+    await fetchAll();
+    return data;
+  };
+
+  const syncRemoteBackups = async () => {
+    const res = await apiFetch('/api/r2/backups/sync', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to sync backups from R2');
+    await fetchAll();
+    return data as { success: boolean; imported: number };
+  };
+
+  const restoreSystemFromFile = async (file: File, passphrase?: string, onProgress?: (progress: UploadProgress) => void) => {
+    const data = await new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/api/r2/system/restore-file?filename=${encodeURIComponent(file.name)}`);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      if (passphrase) xhr.setRequestHeader('X-Backup-Passphrase', encodeURIComponent(passphrase));
+      for (const [key, value] of Object.entries(getAuthHeaders())) xhr.setRequestHeader(key, value);
+      xhr.upload.onprogress = (event) => {
+        onProgress?.({ loaded: event.loaded, total: event.lengthComputable ? event.total : file.size, done: false });
+      };
+      xhr.upload.onload = () => onProgress?.({ loaded: file.size, total: file.size, done: true });
+      xhr.onload = () => {
+        let body: any = {};
+        try { body = JSON.parse(xhr.responseText); } catch { /* non-JSON error page */ }
+        if (xhr.status >= 200 && xhr.status < 300) return resolve(body);
+        if (xhr.status === 401) window.dispatchEvent(new Event('vessel-session-expired'));
+        reject(Object.assign(new Error(body.error || `请求失败 (${xhr.status})`), { code: body.code, status: xhr.status }));
+      };
+      xhr.onerror = () => reject(new Error('网络错误，上传中断'));
+      xhr.send(file);
+    });
     await fetchAll();
     return data;
   };
@@ -503,6 +537,8 @@ export function useData(token: string | null = null, enabled = true) {
     downloadBackup,
     restoreBackup,
     restoreDatabaseFromFile,
+    syncRemoteBackups,
+    restoreSystemFromFile,
     saveRegistry,
     testRegistry,
     saveMaintenance,

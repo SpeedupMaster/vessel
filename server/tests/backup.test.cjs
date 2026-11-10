@@ -241,6 +241,28 @@ test('system snapshots restore application build contexts and preserve current c
   assert.equal(context.state.backups[0].id, 'system');
 });
 
+test('uploaded system snapshot files restore without a backup record', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-system-upload-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const context = systemFixture(directory);
+  const uploaded = path.join(directory, 'uploaded.zip');
+  fs.renameSync(path.join(directory, 'backups', context.state.backups[0].fileName), uploaded);
+  context.state.backups = [];
+  const result = await context.service.restoreSystemFromFile(uploaded, 'vessel_system_upload.zip');
+  assert.equal(result.success, true, result.error);
+  assert.equal(context.state.apps[0].name, 'Restored');
+  assert.equal(context.state.admin.username, 'current-admin');
+
+  const notSnapshot = path.join(directory, 'other.zip');
+  const AdmZip = requireServer('adm-zip');
+  const zip = new AdmZip();
+  zip.addFile('readme.txt', Buffer.from('not vessel'));
+  zip.writeZip(notSnapshot);
+  const rejected = await context.service.restoreSystemFromFile(notSnapshot, 'other.zip');
+  assert.equal(rejected.success, false);
+  assert.match(rejected.error, /vessel_db\.json/);
+});
+
 test('failed system publication rolls back configuration files and database', async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-system-rollback-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));

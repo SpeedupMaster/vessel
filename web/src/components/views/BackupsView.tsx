@@ -20,6 +20,8 @@ import {
   CaretDown,
   CaretUp,
   LockKey,
+  UploadSimple,
+  CloudArrowDown,
 } from '@phosphor-icons/react';
 import { R2Config, BackupRecord } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
@@ -28,6 +30,8 @@ import { Modal } from '../common/Modal.js';
 import { EmptyState } from '../common/EmptyState.js';
 import { Switch } from '../common/Switch.js';
 import { NumberInput } from '../common/NumberInput.js';
+import { RestoreSystemSnapshotModal } from '../common/RestoreSystemSnapshotModal.js';
+import type { UploadProgress } from '../../hooks/useData.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { formatBytes, formatRelative } from '../../utils/format.js';
 
@@ -40,6 +44,8 @@ interface BackupsViewProps {
   onDeleteBackup?: (id: string) => Promise<any>;
   onDownloadBackup?: (id: string, fileName: string) => void;
   onRestoreBackup?: (id: string, options?: { passphrase?: string }) => Promise<any>;
+  onSyncRemoteBackups?: () => Promise<{ imported: number }>;
+  onRestoreSystemFromFile?: (file: File, passphrase?: string, onProgress?: (progress: UploadProgress) => void) => Promise<any>;
 }
 
 const BACKUP_CRON_PRESETS = [
@@ -59,6 +65,8 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   onDeleteBackup,
   onDownloadBackup,
   onRestoreBackup,
+  onSyncRemoteBackups,
+  onRestoreSystemFromFile,
 }) => {
   const { toast } = useNotification();
   const [typeFilter, setTypeFilter] = useState<'all' | BackupRecord['type']>('all');
@@ -79,6 +87,9 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showUploadRestore, setShowUploadRestore] = useState(false);
+  const r2Ready = Boolean(r2Config?.enabled && r2Config.endpoint && r2Config.bucketName);
 
   // Deletion modal state
   const [deletingBackup, setDeletingBackup] = useState<BackupRecord | null>(null);
@@ -224,6 +235,24 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
     }
   };
 
+  const handleSyncRemote = async () => {
+    if (!onSyncRemoteBackups || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const res = await onSyncRemoteBackups();
+      if (res.imported > 0) {
+        toast.success(`已从 R2 导入 ${res.imported} 个系统快照，可在列表中选择恢复`);
+        setTypeFilter('system');
+      } else {
+        toast.info('R2 中没有新的系统快照');
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleDownload = (record: BackupRecord) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(10);
@@ -255,15 +284,39 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
         <p className="text-sm text-ink-muted max-w-2xl">
           三类备份：系统快照（平台数据与全部编排）、应用数据卷、数据库逻辑转储。系统快照可加密后同步到 Cloudflare R2。
         </p>
-        <button
-          type="button"
-          onClick={handleManualBackup}
-          disabled={isBackingUp}
-          className="btn-vessel-primary shrink-0 min-h-[40px] px-3.5 text-[13px] inline-flex items-center gap-1.5 rounded-xl cursor-pointer disabled:opacity-60"
-        >
-          {isBackingUp ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CloudArrowUp className="w-4 h-4" />}
-          立即创建系统快照
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {onSyncRemoteBackups && r2Ready && (
+            <button
+              type="button"
+              onClick={handleSyncRemote}
+              disabled={isSyncing}
+              title="把 R2 存储桶中已有、但不在本机列表里的系统快照加入列表"
+              className="btn-vessel-secondary min-h-[40px] px-3.5 text-[13px] inline-flex items-center gap-1.5 rounded-xl cursor-pointer disabled:opacity-60"
+            >
+              {isSyncing ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CloudArrowDown className="w-4 h-4" />}
+              从 R2 导入
+            </button>
+          )}
+          {onRestoreSystemFromFile && (
+            <button
+              type="button"
+              onClick={() => setShowUploadRestore(true)}
+              className="btn-vessel-secondary min-h-[40px] px-3.5 text-[13px] inline-flex items-center gap-1.5 rounded-xl cursor-pointer"
+            >
+              <UploadSimple className="w-4 h-4" />
+              从文件恢复
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleManualBackup}
+            disabled={isBackingUp}
+            className="btn-vessel-primary min-h-[40px] px-3.5 text-[13px] inline-flex items-center gap-1.5 rounded-xl cursor-pointer disabled:opacity-60"
+          >
+            {isBackingUp ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CloudArrowUp className="w-4 h-4" />}
+            立即创建系统快照
+          </button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -359,7 +412,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                 title={backups.length === 0 ? '还没有备份' : '这一类还没有备份'}
                 description={
                   backups.length === 0
-                    ? '点「立即创建系统快照」，或在应用详情的「备份」页签为数据卷和数据库设置计划。'
+                    ? '点「立即创建系统快照」，或在应用详情的「备份」页签为数据卷和数据库设置计划。要恢复已有快照，用右上角「从文件恢复」' + (r2Ready ? '或「从 R2 导入」。' : '。')
                     : '切换到其他类型查看，或在应用详情中创建。'
                 }
               />
@@ -914,6 +967,14 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
           </div>
         )}
       </Modal>
+
+      {onRestoreSystemFromFile && (
+        <RestoreSystemSnapshotModal
+          isOpen={showUploadRestore}
+          onClose={() => setShowUploadRestore(false)}
+          onRestoreFile={onRestoreSystemFromFile}
+        />
+      )}
     </div>
   );
 };

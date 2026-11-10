@@ -109,6 +109,8 @@ function MainConsole() {
     downloadBackup,
     restoreBackup,
     restoreDatabaseFromFile,
+    syncRemoteBackups,
+    restoreSystemFromFile,
     saveRegistry,
     testRegistry,
     saveMaintenance,
@@ -365,6 +367,8 @@ function MainConsole() {
                 onDeleteBackup={deleteBackup}
                 onDownloadBackup={downloadBackup}
                 onRestoreBackup={restoreBackup}
+                onSyncRemoteBackups={syncRemoteBackups}
+                onRestoreSystemFromFile={restoreSystemFromFile}
               />
             )}
 

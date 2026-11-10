@@ -555,6 +555,18 @@ export class R2BackupService {
       };
       return this.restoreAppFromFile(app, localPath);
     }
+    return this.restoreSystemFromFile(localPath, record.fileName, options);
+  }
+
+  /**
+   * Restore a system snapshot (vessel_db.json + app directories) from a local archive.
+   * `fileName` decides whether the archive is encrypted (.enc suffix).
+   */
+  public async restoreSystemFromFile(
+    localPath: string,
+    fileName: string,
+    options?: { passphrase?: string }
+  ): Promise<{ success: boolean; message?: string; error?: string; code?: string }> {
     const stage = fs.mkdtempSync(path.join(DATA_DIR, 'restore-system-'));
     const databasePath = path.join(DATA_DIR, 'vessel_db.json');
     const previousDatabase = fs.readFileSync(databasePath);
@@ -563,7 +575,7 @@ export class R2BackupService {
     let preserveRecovery = false;
     try {
       let archivePath = localPath;
-      if (isEncryptedBackup(record.fileName)) {
+      if (isEncryptedBackup(fileName)) {
         // Explicit passphrase first: the configured one may have changed since this snapshot
         const passphrase = options?.passphrase || db.get('r2Config').backupPassphrase;
         if (!passphrase) throw new PassphraseError('该系统快照已加密，请输入备份口令');
@@ -571,7 +583,9 @@ export class R2BackupService {
         await decryptFile(localPath, archivePath, passphrase);
       }
       this.extractValidatedZip(archivePath, stage);
-      const restored = JSON.parse(fs.readFileSync(path.join(stage, 'vessel_db.json'), 'utf8'));
+      const snapshotDb = path.join(stage, 'vessel_db.json');
+      if (!fs.existsSync(snapshotDb)) throw new Error('不是有效的 Vessel 系统快照（缺少 vessel_db.json）');
+      const restored = JSON.parse(fs.readFileSync(snapshotDb, 'utf8'));
       if (!Array.isArray(restored.apps) || !Array.isArray(restored.domains)) throw new Error('Invalid system snapshot');
       const restoredIds = new Set<string>();
       for (const app of restored.apps) {
@@ -636,6 +650,39 @@ export class R2BackupService {
       if (error instanceof PassphraseError) return { success: false, error: error.message, code: PASSPHRASE_REQUIRED };
       return { success: false, error: `恢复失败: ${error.message}${preserveRecovery ? `；回滚失败，原文件保留在 ${stage} 与 ${databasePath}.before-restore: ${failures.join('; ')}` : ''}` };
     } finally { if (!preserveRecovery) fs.rmSync(stage, { recursive: true, force: true }); }
+  }
+
+  /**
+   * Register system snapshots that exist in the R2 bucket but not in the local backup list,
+   * e.g. after reinstalling Vessel or moving to a new server with the same bucket.
+   */
+  public async importRemoteSystemBackups(): Promise<{ success: boolean; imported?: number; error?: string }> {
+    const r2Config = db.get('r2Config');
+    const client = this.getS3Client(r2Config);
+    if (!client || !r2Config.bucketName) return { success: false, error: '请先启用并填写 Cloudflare R2 凭据' };
+    try {
+      const known = new Set(db.get('backups').filter(item => item.type === 'system').map(item => item.fileName));
+      const found: BackupRecord[] = [];
+      let token: string | undefined;
+      do {
+        const page = await client.send(new ListObjectsV2Command({ Bucket: r2Config.bucketName, Prefix: 'system/', ContinuationToken: token }));
+        for (const object of page.Contents || []) {
+          const fileName = (object.Key || '').slice('system/'.length);
+          if (!/^vessel_system_[\w.-]+\.zip(?:\.enc)?$/.test(fileName) || known.has(fileName)) continue;
+          known.add(fileName);
+          const stamp = fileName.match(/^vessel_system_(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/);
+          const createdAt = stamp ? `${stamp[1]}T${stamp[2]}:${stamp[3]}:${stamp[4]}.${stamp[5]}Z`
+            : (object.LastModified || new Date()).toISOString();
+          found.push({ id: `sys-${randomUUID()}`, type: 'system', targetId: 'vessel_system', targetName: 'Vessel System Snapshot',
+            fileName, fileSizeBytes: object.Size || 0, createdAt, status: 'completed' });
+        }
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      if (found.length) db.set('backups', [...found, ...db.get('backups')]);
+      return { success: true, imported: found.length };
+    } catch (error: any) {
+      return { success: false, error: `读取 R2 存储桶失败: ${error.message}` };
+    }
   }
 
   private extractValidatedZip(file: string, directory: string): void {

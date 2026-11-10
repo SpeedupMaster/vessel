@@ -751,6 +751,46 @@ apiRouter.post('/r2/backups/:id/restore', requireAuth, async (req: Request, res:
   res.json({ success: true, message: result.message });
 });
 
+// Import system snapshots already present in the R2 bucket (fresh install / new server)
+apiRouter.post('/r2/backups/sync', requireAuth, async (req: Request, res: Response) => {
+  const result = await r2BackupService.importRemoteSystemBackups();
+  if (!result.success) return res.status(400).json({ error: result.error });
+  res.json({ success: true, imported: result.imported });
+});
+
+// Restore a system snapshot from an uploaded .zip / .zip.enc file
+apiRouter.post('/r2/system/restore-file', requireAuth, async (req: Request, res: Response) => {
+  if (req.query.filename !== undefined && typeof req.query.filename !== 'string') throw new BadRequest('Invalid filename');
+  const fileName = path.basename((req.query.filename as string) || 'snapshot.zip').toLowerCase();
+  if (!/\.zip(?:\.enc)?$/.test(fileName)) throw new BadRequest('系统快照必须是 .zip 或 .zip.enc 文件');
+  // Passphrase travels in a header so it never lands in URLs or access logs
+  const rawPassphrase = req.headers['x-backup-passphrase'];
+  if (Array.isArray(rawPassphrase)) throw new BadRequest('Invalid passphrase');
+  const passphrase = rawPassphrase ? decodeURIComponent(rawPassphrase) : undefined;
+  const tempDir = path.join(DATA_DIR, 'temp');
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+  const tempFilePath = path.join(tempDir, `${uuidv4()}_${fileName}`);
+
+  await withAppLock('*', async () => {
+    let bytes = 0;
+    const limit = new Transform({ transform(chunk, _encoding, callback) {
+      bytes += chunk.length;
+      callback(bytes > 2 * 1024 ** 3 ? new BadRequest('上传文件不能超过 2 GiB') : null, chunk);
+    } });
+    try {
+      await pipeline(req, limit, fs.createWriteStream(tempFilePath, { flags: 'wx' }));
+      if (!bytes) throw new BadRequest('备份文件为空');
+      const result = await r2BackupService.restoreSystemFromFile(tempFilePath, fileName, { passphrase });
+      if (!result.success) {
+        if (result.code) return res.status(400).json({ error: result.error, code: result.code });
+        return res.status(500).json({ error: result.error });
+      }
+      schedulerService.reload();
+      res.json({ success: true, message: result.message });
+    } finally { fs.rmSync(tempFilePath, { force: true }); }
+  });
+});
+
 apiRouter.post('/apps/:id/restore-file', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
