@@ -30,6 +30,45 @@ export function backupObjectKey(record: Pick<BackupRecord, 'type' | 'targetId' |
   return `${prefix}/${record.fileName}`;
 }
 
+/**
+ * Database name first so dumps are recognisable in the R2 console; the app id keeps names
+ * unique in the flat local backups directory. e.g. ads_paradedb-0rxj_20261108-132644_258e4bad.sql.gz
+ */
+export function databaseBackupFileName(appId: string, databaseName: string, ext: string, now = new Date()): string {
+  const dbTag = databaseName === 'all' ? 'all' : databaseName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const stamp = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
+  return `${dbTag}_${appId}_${stamp}_${randomUUID().slice(0, 8)}.${ext}`;
+}
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Database name and creation time encoded in a dump's file name (current and legacy formats). */
+export function parseDatabaseBackupFileName(appId: string, fileName: string): { databaseName?: string; createdAt?: string } {
+  const id = escapeRegExp(appId);
+  const current = fileName.match(new RegExp(`^(.+)_${id}_(\\d{4})(\\d{2})(\\d{2})-(\\d{2})(\\d{2})(\\d{2})_[0-9a-f]{8}\\.`));
+  if (current) {
+    const [, databaseName, y, mo, d, h, mi, s] = current;
+    return { databaseName, createdAt: `${y}-${mo}-${d}T${h}:${mi}:${s}.000Z` };
+  }
+  const legacy = fileName.match(new RegExp(`^vessel_db_${id}_(.+)_(\\d{4}-\\d{2}-\\d{2})T(\\d{2})-(\\d{2})-(\\d{2})-(\\d{3})Z_`));
+  if (legacy) {
+    const [, databaseName, day, h, mi, s, ms] = legacy;
+    return { databaseName, createdAt: `${day}T${h}:${mi}:${s}.${ms}Z` };
+  }
+  return {};
+}
+
+export interface RemoteDatabaseBackup {
+  key: string;
+  appId: string;
+  fileName: string;
+  databaseName?: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+const REMOTE_DATABASE_KEY = /^databases\/(?!\.\.?\/)([^/]+)\/([^/]+\.(?:sql|archive|rdb|dump)(?:\.gz)?)$/;
+
 /** Images that run stock PostgreSQL (pg_dump/psql inside) without "postgres" in the image name */
 const POSTGRES_COMPATIBLE = /(?:^|\/)(?:paradedb|pgvector|timescaledb(?:-ha)?|postgis|pgvecto-rs|vectorchord|postgresql)(?::|@|$)/i;
 
@@ -319,10 +358,8 @@ export class R2BackupService {
     const isMongo = yamlLower.includes('mongo');
     const isRedis = yamlLower.includes('redis');
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const ext = isMongo ? 'archive.gz' : isRedis ? 'rdb.gz' : 'sql.gz';
-    const dbTag = targetDb === 'all' ? 'all' : targetDb.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `vessel_db_${app.id}_${dbTag}_${timestamp}_${randomUUID()}.${ext}`;
+    const fileName = databaseBackupFileName(app.id, targetDb, ext);
     const backupsDir = path.join(DATA_DIR, 'backups');
     if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
     const localGzPath = path.join(backupsDir, fileName);
@@ -682,6 +719,73 @@ export class R2BackupService {
       return { success: true, imported: found.length };
     } catch (error: any) {
       return { success: false, error: `读取 R2 存储桶失败: ${error.message}` };
+    }
+  }
+
+  /**
+   * Database dumps stored in the R2 bucket, newest first — including those of apps that were
+   * re-created or that came from another server, which have no local backup record.
+   */
+  public async listRemoteDatabaseBackups(): Promise<{ success: boolean; backups?: RemoteDatabaseBackup[]; error?: string }> {
+    const r2Config = db.get('r2Config');
+    const client = this.getS3Client(r2Config);
+    if (!client || !r2Config.bucketName) return { success: false, error: '请先启用并填写 Cloudflare R2 凭据' };
+    try {
+      const backups: RemoteDatabaseBackup[] = [];
+      let token: string | undefined;
+      do {
+        const page = await client.send(new ListObjectsV2Command({ Bucket: r2Config.bucketName, Prefix: 'databases/', ContinuationToken: token }));
+        for (const object of page.Contents || []) {
+          const match = (object.Key || '').match(REMOTE_DATABASE_KEY);
+          if (!match) continue;
+          const [key, appId, fileName] = match;
+          const parsed = parseDatabaseBackupFileName(appId, fileName);
+          backups.push({ key, appId, fileName, databaseName: parsed.databaseName, sizeBytes: object.Size || 0,
+            createdAt: parsed.createdAt || (object.LastModified || new Date()).toISOString() });
+        }
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      backups.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return { success: true, backups };
+    } catch (error: any) {
+      return { success: false, error: `读取 R2 存储桶失败: ${error.message}` };
+    }
+  }
+
+  /** Download a database dump from R2 by object key and restore it into the app's database. */
+  public async restoreRemoteDatabaseBackup(
+    app: AppItem,
+    key: string,
+    options?: { databaseName?: string }
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const match = key.match(REMOTE_DATABASE_KEY);
+    if (!match) return { success: false, error: '无效的 R2 备份路径' };
+    const [, sourceAppId, fileName] = match;
+    const r2Config = db.get('r2Config');
+    const client = this.getS3Client(r2Config);
+    if (!client || !r2Config.bucketName) return { success: false, error: '请先启用并填写 Cloudflare R2 凭据' };
+
+    const tempDir = path.join(DATA_DIR, 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    // Keep the original name as suffix: the restore detects gzip from the extension
+    const localPath = path.join(tempDir, `${randomUUID()}_${fileName}`);
+    try {
+      try {
+        const res = await client.send(new GetObjectCommand({ Bucket: r2Config.bucketName, Key: key }));
+        if (!res.Body) throw new Error('对象内容为空');
+        await pipeline(res.Body as Readable, fs.createWriteStream(localPath, { flags: 'wx' }));
+      } catch (error: any) {
+        return { success: false, error: `从 Cloudflare R2 拉取备份失败: ${error.message}` };
+      }
+      const record: BackupRecord = {
+        id: `r2-${randomUUID()}`, type: 'app_db', targetId: app.id, targetName: app.name, fileName,
+        fileSizeBytes: fs.statSync(localPath).size,
+        databaseName: parseDatabaseBackupFileName(sourceAppId, fileName).databaseName || 'all',
+        createdAt: new Date().toISOString(), status: 'completed',
+      };
+      return await this.restoreDatabaseDump(record, localPath, options);
+    } finally {
+      fs.rmSync(localPath, { force: true });
     }
   }
 

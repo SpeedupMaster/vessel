@@ -9,6 +9,7 @@ import {
   CheckCircle,
   FileCode,
   X,
+  CloudArrowDown,
 } from '@phosphor-icons/react';
 import { Modal } from './Modal.js';
 import { Button8State } from './Button8State.js';
@@ -17,6 +18,16 @@ import { apiFetch } from '../../hooks/useData.js';
 import { formatBytes } from '../../utils/format.js';
 import { UploadProgressBar } from './UploadProgressBar.js';
 import type { UploadProgress } from '../../hooks/useData.js';
+import { useNotification } from '../../context/NotificationContext.js';
+
+interface RemoteDatabaseBackup {
+  key: string;
+  appId: string;
+  fileName: string;
+  databaseName?: string;
+  sizeBytes: number;
+  createdAt: string;
+}
 
 interface RestoreDatabaseBackupModalProps {
   isOpen: boolean;
@@ -37,7 +48,8 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
   onRestoreRecord,
   onRestoreFile,
 }) => {
-  const [sourceType, setSourceType] = useState<'existing' | 'upload'>('existing');
+  const { toast } = useNotification();
+  const [sourceType, setSourceType] = useState<'existing' | 'r2' | 'upload'>('existing');
   const [selectedRecordId, setSelectedRecordId] = useState<string>('');
   const [targetDb, setTargetDb] = useState<string>('');
   const [availableDatabases, setAvailableDatabases] = useState<string[]>([]);
@@ -49,6 +61,13 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // R2 browser state
+  const [remoteBackups, setRemoteBackups] = useState<RemoteDatabaseBackup[] | null>(null);
+  const [remoteError, setRemoteError] = useState('');
+  const [loadingRemote, setLoadingRemote] = useState(false);
+  const [selectedKey, setSelectedKey] = useState('');
+  const [showOtherApps, setShowOtherApps] = useState(false);
 
   // Restore-by-ID acts on the record's owning app, so never list another app's archives.
   const appBackups = backups.filter(
@@ -106,6 +125,43 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
     }
   }, [isOpen, app.id, app.envContent, engineName, fetchDatabases, initialRecordId]);
 
+  const fetchRemoteBackups = useCallback(async () => {
+    setLoadingRemote(true);
+    setRemoteError('');
+    try {
+      const res = await apiFetch('/api/r2/database-backups');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '读取 R2 备份失败');
+      setRemoteBackups(data.backups || []);
+    } catch (err: any) {
+      setRemoteError(err.message || '读取 R2 备份失败');
+    } finally {
+      setLoadingRemote(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setRemoteBackups(null);
+      setRemoteError('');
+      setSelectedKey('');
+      setShowOtherApps(false);
+    }
+  }, [isOpen, app.id]);
+
+  useEffect(() => {
+    if (isOpen && sourceType === 'r2' && remoteBackups === null && !loadingRemote && !remoteError) fetchRemoteBackups();
+  }, [isOpen, sourceType, remoteBackups, loadingRemote, remoteError, fetchRemoteBackups]);
+
+  const ownRemote = (remoteBackups || []).filter((b) => b.appId === app.id);
+  // An app re-created under a new id has no dumps of its own; show everything then
+  const visibleRemote = showOtherApps || ownRemote.length === 0 ? remoteBackups || [] : ownRemote;
+
+  const selectRemote = (backup: RemoteDatabaseBackup) => {
+    setSelectedKey(backup.key);
+    if (backup.databaseName) setTargetDb(backup.databaseName);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -134,6 +190,23 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
       if (sourceType === 'existing') {
         if (!appBackups.some(record => record.id === selectedRecordId)) throw new Error('请选择当前应用的数据库备份归档');
         await onRestoreRecord(selectedRecordId, dbTarget);
+      } else if (sourceType === 'r2') {
+        const backup = remoteBackups?.find((b) => b.key === selectedKey);
+        if (!backup) throw new Error('请选择 R2 上的备份文件');
+        try {
+          toast.info('正在从 R2 拉取备份并还原至容器...');
+          const res = await apiFetch(`/api/apps/${app.id}/restore-r2`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: backup.key, databaseName: dbTarget }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `请求失败 (${res.status})`);
+          toast.success(data.message || '数据库备份已成功恢复！');
+        } catch (err: any) {
+          toast.error(`恢复失败: ${err.message || '未知错误'}`);
+          throw err;
+        }
       } else {
         if (!selectedFile) throw new Error('请选择或拖拽要导入的备份文件');
         if (!onRestoreFile) throw new Error('暂不支持文件直接还原');
@@ -163,7 +236,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
         {/* Source Selection Tabs */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-ink-muted">备份源模式</label>
-          <div className="grid grid-cols-2 gap-2 p-1.5 bg-paper-3 rounded-2xl">
+          <div className="grid grid-cols-3 gap-2 p-1.5 bg-paper-3 rounded-2xl">
             <button
               type="button"
               onClick={() => setSourceType('existing')}
@@ -174,7 +247,19 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
               }`}
             >
               <Archive className="w-4 h-4 text-accent" />
-              <span>历史归档快照 ({appBackups.length})</span>
+              <span>历史归档 ({appBackups.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceType('r2')}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                sourceType === 'r2'
+                  ? 'bg-paper-2 shadow-sm text-ink font-semibold'
+                  : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              <CloudArrowDown className="w-4 h-4 text-sky-500" />
+              <span>R2 云端</span>
             </button>
             <button
               type="button"
@@ -186,7 +271,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
               }`}
             >
               <UploadSimple className="w-4 h-4 text-emerald-500" />
-              <span>上传本地文件</span>
+              <span>上传文件</span>
             </button>
           </div>
         </div>
@@ -253,7 +338,92 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
           </div>
         )}
 
-        {/* TAB 2: Upload Local File */}
+        {/* TAB 2: Browse R2 bucket */}
+        {sourceType === 'r2' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-ink-muted">选择 R2 上的数据库备份</label>
+              <button
+                type="button"
+                onClick={fetchRemoteBackups}
+                disabled={loadingRemote}
+                className="text-[11px] text-accent hover:opacity-80 flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowsClockwise className={`w-3 h-3 ${loadingRemote ? 'animate-spin' : ''}`} />
+                <span>刷新</span>
+              </button>
+            </div>
+            {loadingRemote && remoteBackups === null ? (
+              <div className="p-4 rounded-2xl text-center text-ink-muted bg-paper-3 flex items-center justify-center gap-2">
+                <CircleNotch className="w-4 h-4 animate-spin" />
+                <span>正在读取 R2 存储桶…</span>
+              </div>
+            ) : remoteError ? (
+              <div className="p-4 rounded-2xl text-center text-rose-500 bg-paper-3">{remoteError}</div>
+            ) : visibleRemote.length === 0 ? (
+              <div className="p-4 rounded-2xl text-center text-ink-muted bg-paper-3">R2 上暂无数据库备份。</div>
+            ) : (
+              <>
+                {ownRemote.length > 0 && ownRemote.length < (remoteBackups?.length || 0) && (
+                  <label className="flex items-center gap-2 text-[11px] text-ink-muted cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showOtherApps}
+                      onChange={(e) => setShowOtherApps(e.target.checked)}
+                      className="text-accent focus:ring-accent"
+                    />
+                    <span>显示其他应用的备份（共 {remoteBackups?.length} 个）</span>
+                  </label>
+                )}
+                {ownRemote.length === 0 && (
+                  <p className="text-[11px] text-ink-muted">本应用在 R2 上没有备份，已列出全部应用的数据库备份。</p>
+                )}
+                <div className="max-h-52 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                  {visibleRemote.map((b) => (
+                    <div
+                      key={b.key}
+                      onClick={() => selectRemote(b)}
+                      title={b.key}
+                      className={`p-3.5 rounded-2xl transition-colors cursor-pointer flex items-center justify-between gap-3 ${
+                        selectedKey === b.key
+                          ? 'bg-paper-4 ring-1 ring-zinc-400 dark:ring-white/30'
+                          : 'bg-paper-3 hover:bg-paper-4/60'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Database className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                          <span className="font-mono text-ink font-semibold truncate text-[12px]">
+                            {b.databaseName === 'all' ? '全部库' : b.databaseName || b.fileName}
+                          </span>
+                          {b.appId !== app.id && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-paper-4 text-ink-muted font-mono text-[10.5px] truncate">
+                              {b.appId}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[10.5px] text-ink-muted pl-6">
+                          <span>{new Date(b.createdAt).toLocaleString()}</span>
+                          <span>•</span>
+                          <span>{formatBytes(b.sizeBytes)}</span>
+                        </div>
+                      </div>
+                      <input
+                        type="radio"
+                        name="restoreRemote"
+                        checked={selectedKey === b.key}
+                        onChange={() => selectRemote(b)}
+                        className="text-accent focus:ring-accent flex-shrink-0"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: Upload Local File */}
         {sourceType === 'upload' && (
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-ink-muted">选择本地 SQL 或归档文件</label>
@@ -392,6 +562,7 @@ export const RestoreDatabaseBackupModal: React.FC<RestoreDatabaseBackupModalProp
             disabled={
               isSubmitting ||
               (sourceType === 'existing' && !selectedRecordId) ||
+              (sourceType === 'r2' && !selectedKey) ||
               (sourceType === 'upload' && !selectedFile)
             }
             icon={<ArrowsClockwise className="w-3.5 h-3.5" />}

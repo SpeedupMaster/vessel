@@ -68,6 +68,54 @@ test('database R2 download restore and delete all use the upload prefix', async 
   assert.equal(context.backupObjectKey({ ...record, type: 'app_volume' }), 'apps/fixture/dump.sql.gz');
 });
 
+test('database dump names lead with the database and round-trip through the parser', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-name-test-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const context = fixture(directory);
+  const name = context.databaseBackupFileName('paradedb-0rxj', 'my_ads', 'sql.gz', new Date('2026-11-08T13:26:44.432Z'));
+  assert.match(name, /^my_ads_paradedb-0rxj_20261108-132644_[0-9a-f]{8}\.sql\.gz$/);
+  assert.deepEqual(context.parseDatabaseBackupFileName('paradedb-0rxj', name), { databaseName: 'my_ads', createdAt: '2026-11-08T13:26:44.000Z' });
+  assert.deepEqual(
+    context.parseDatabaseBackupFileName('paradedb-0rxj', 'vessel_db_paradedb-0rxj_ads_2026-11-08T13-26-44-432Z_258e4bad-9f3b-49d0-8000-000000000000.sql.gz'),
+    { databaseName: 'ads', createdAt: '2026-11-08T13:26:44.432Z' });
+  assert.deepEqual(context.parseDatabaseBackupFileName('paradedb-0rxj', 'custom.sql.gz'), {});
+});
+
+test('R2 database dumps can be listed and restored without a local record', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-r2-browse-test-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const context = fixture(directory);
+  context.state.r2Config.bucketName = 'synthetic';
+  const legacy = 'databases/old-app/vessel_db_old-app_ads_2026-11-08T13-26-44-432Z_258e4bad-9f3b-49d0-8000-000000000000.sql.gz';
+  const current = 'databases/fixture/nova_fixture_20261109-010203_abcdef01.sql.gz';
+  const requested = [];
+  context.service.getS3Client = () => ({ send: async command => {
+    if (command.input.Prefix) return { Contents: [{ Key: legacy, Size: 10 }, { Key: current, Size: 20 }, { Key: 'databases/fixture/notes.txt' }] };
+    requested.push(command.input.Key);
+    return { Body: Readable.from([zlib.gzipSync('synthetic dump')]) };
+  } });
+  const listed = await context.service.listRemoteDatabaseBackups();
+  assert.equal(listed.success, true);
+  assert.deepEqual(listed.backups.map(item => [item.appId, item.databaseName]), [['fixture', 'nova'], ['old-app', 'ads']]);
+
+  let restored;
+  context.service.restoreDatabaseDump = async (record, file) => {
+    restored = { record, content: zlib.gunzipSync(fs.readFileSync(file)).toString(), file };
+    return { success: true };
+  };
+  assert.equal((await context.service.restoreRemoteDatabaseBackup(context.state.apps[0], legacy, { databaseName: 'ads' })).success, true);
+  assert.deepEqual(requested, [legacy]);
+  assert.equal(restored.record.targetId, 'fixture');
+  assert.equal(restored.record.databaseName, 'ads');
+  assert.equal(restored.content, 'synthetic dump');
+  assert.ok(restored.file.endsWith('.sql.gz'));
+  assert.equal(fs.existsSync(restored.file), false);
+
+  for (const key of ['system/snapshot.zip', 'databases/../x.sql.gz', 'databases/a/b/c.sql.gz']) {
+    assert.equal((await context.service.restoreRemoteDatabaseBackup(context.state.apps[0], key)).success, false);
+  }
+});
+
 test('R2 deletion failure preserves the local backup and catalogue for retry', async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'vessel-retention-test-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));

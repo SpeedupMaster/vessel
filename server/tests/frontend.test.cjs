@@ -134,6 +134,7 @@ test('restore dialog lists only its database backups and keeps edited target acr
     './Modal.js': { Modal: 'Modal' }, './Button8State.js': { Button8State: 'Button' }, './UploadProgressBar.js': { UploadProgressBar: 'UploadProgressBar' },
     '../../hooks/useData.js': { apiFetch: async () => ({ ok: true, json: async () => ({ databases: ['postgres'] }) }) },
     '../../utils/format.js': { formatBytes: () => '1 KB' },
+    '../../context/NotificationContext.js': { useNotification: () => ({ toast: { info() {}, success() {}, error() {} } }) },
   }).RestoreDatabaseBackupModal;
   const props = { isOpen: true, onClose() {}, app: { id: 'target', name: 'target', envContent: 'POSTGRES_DB=original' },
     engineName: 'PostgreSQL', onRestoreRecord: async () => {}, backups: [

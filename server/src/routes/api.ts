@@ -791,6 +791,23 @@ apiRouter.post('/r2/system/restore-file', requireAuth, async (req: Request, res:
   });
 });
 
+// Browse database dumps in R2, including ones without a local record (re-created app, new server)
+apiRouter.get('/r2/database-backups', requireAuth, async (_req: Request, res: Response) => {
+  const result = await r2BackupService.listRemoteDatabaseBackups();
+  if (!result.success) return res.status(400).json({ error: result.error });
+  res.json({ backups: result.backups });
+});
+
+apiRouter.post('/apps/:id/restore-r2', requireAuth, async (req: Request, res: Response) => {
+  const app = (db.get('apps') || []).find((a) => a.id === req.params.id);
+  if (!app) return res.status(404).json({ error: 'App not found' });
+  const { key, databaseName } = req.body || {};
+  if (typeof key !== 'string' || !key) throw new BadRequest('key is required');
+  const result = await withAppLock(app.id, () => r2BackupService.restoreRemoteDatabaseBackup(app, key, { databaseName }));
+  if (!result.success) return res.status(500).json({ error: result.error });
+  res.json({ success: true, message: result.message });
+});
+
 apiRouter.post('/apps/:id/restore-file', requireAuth, async (req: Request, res: Response) => {
   const apps = db.get('apps') || [];
   const app = apps.find((a) => a.id === req.params.id);
