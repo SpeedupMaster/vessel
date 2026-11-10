@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { AuthContext, useAuthProvider, useAuth } from './hooks/useAuth.js';
 import { useData } from './hooks/useData.js';
-import { Sidebar, NavTab } from './components/layout/Sidebar.js';
+import { Sidebar, NavTab, NAV_LABELS, NAV_SECTION } from './components/layout/Sidebar.js';
+import { CommandPalette } from './components/common/CommandPalette.js';
 import { Header } from './components/layout/Header.js';
 const OverviewView = lazy(() => import('./components/views/OverviewView.js').then(module => ({ default: module.OverviewView })));
 const AppsView = lazy(() => import('./components/views/AppsView.js').then(module => ({ default: module.AppsView })));
@@ -72,6 +73,7 @@ function MainConsole() {
   const [route, setRoute] = useState<RouteState>(() => parsePath(window.location.pathname, window.location.search));
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const mainScrollRef = useRef<HTMLElement>(null);
 
   const {
@@ -158,6 +160,18 @@ function MainConsole() {
   // Cursor-tracking spotlight on interactive cards
   useEffect(() => installSpotlight(), []);
 
+  // Global ⌘K / Ctrl+K opens the command palette
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // Each distinct view replays its entrance and starts scrolled to the top
   const viewKey = `${route.tab}:${route.appSubRoute?.mode ?? ''}:${route.appSubRoute?.appId ?? ''}`;
   useEffect(() => {
@@ -178,36 +192,15 @@ function MainConsole() {
     }
   };
 
-  const getTabSection = () => {
-    switch (route.tab) {
-      case 'overview':
-      case 'apps':
-      case 'domains':
-        return '工作区';
-      default:
-        return '运维';
-    }
-  };
+  const getTabSection = () => NAV_SECTION[route.tab];
 
   const getTabTitle = () => {
-    switch (route.tab) {
-      case 'overview':
-        return '平台控制台概览';
-      case 'apps':
-        if (route.appSubRoute?.mode === 'create') return '新建 Docker Compose 应用';
-        if (route.appSubRoute?.mode === 'detail') return 'Compose 应用编排详情';
-        return 'Docker Compose 应用编排';
-      case 'domains':
-        return 'Caddy 域名绑定与证书';
-      case 'backups':
-        return 'Cloudflare R2 定时备份';
-      case 'registries':
-        return '私有镜像凭证管理';
-      case 'maintenance':
-        return '镜像更新巡检与安全瘦身';
-      case 'notifications':
-        return '通知渠道';
+    if (route.tab === 'apps' && route.appSubRoute?.mode === 'create') return '新建应用';
+    if (route.tab === 'apps' && route.appSubRoute?.mode === 'detail') {
+      const app = apps.find((x) => x.id === route.appSubRoute?.appId);
+      return app?.name ?? '应用详情';
     }
+    return NAV_LABELS[route.tab];
   };
 
   // Auth loading state
@@ -241,9 +234,24 @@ function MainConsole() {
       <Sidebar
         currentTab={route.tab}
         onSelectTab={handleSelectTab}
+        onOpenSearch={() => setIsPaletteOpen(true)}
         metrics={metrics}
+        counts={{
+          apps: apps.length,
+          domains: domains.length,
+          updates: apps.filter((a) => a.updateAvailable).length,
+        }}
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
+      />
+
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        apps={apps}
+        onSelectTab={handleSelectTab}
+        onOpenApp={(appId) => handleNavigateSubRoute('detail', appId)}
+        onCreateApp={() => handleNavigateSubRoute('create')}
       />
 
       {/* Main Workspace Area */}
@@ -296,6 +304,8 @@ function MainConsole() {
                 domains={domains}
                 r2Config={r2Config}
                 backups={backups}
+                maintenance={maintenance}
+                onCreateApp={() => handleNavigateSubRoute('create')}
                 onNavigate={handleSelectTab}
                 onOpenApp={(appId) => handleNavigateSubRoute('detail', appId)}
                 onDeploy={deployApp}

@@ -22,6 +22,7 @@ import { apiFetch } from '../../hooks/useData.js';
 import { useNotification } from '../../context/NotificationContext.js';
 import { EmptyState } from '../common/EmptyState.js';
 import { copyText } from '../../utils/clipboard.js';
+import { formatRelative } from '../../utils/format.js';
 
 interface DeploymentsPanelProps {
   app: AppItem;
@@ -58,15 +59,7 @@ export function formatDuration(ms?: number): string {
   return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
-export function formatRelative(iso?: string): string {
-  if (!iso) return '—';
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 60_000) return '刚刚';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
-  if (diff < 30 * 86_400_000) return `${Math.floor(diff / 86_400_000)} 天前`;
-  return new Date(iso).toLocaleDateString();
-}
+export { formatRelative };
 
 const formatTime = (iso?: string) => (iso ? new Date(iso).toLocaleString() : '—');
 

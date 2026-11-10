@@ -1,0 +1,181 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-10T09:00:00Z"
+ },
+ "title": "Vessel 控制台 UI/UX 重构",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Login.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "登录",
+   "expand": "fill"
+  },
+  "Main.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 1240,
+   "title": "概览",
+   "expand": "fill"
+  },
+  "OverviewMobile.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "概览 · 手机"
+  },
+  "Apps.dc.html": {
+   "x": 0,
+   "y": 1660,
+   "w": 1440,
+   "h": 1040,
+   "title": "应用列表",
+   "expand": "fill"
+  },
+  "NewApp.dc.html": {
+   "x": 1520,
+   "y": 1660,
+   "w": 1440,
+   "h": 1100,
+   "title": "新建应用",
+   "expand": "fill"
+  },
+  "AppOverview.dc.html": {
+   "x": 3040,
+   "y": 1660,
+   "w": 1440,
+   "h": 1200,
+   "title": "应用详情 · 概览",
+   "expand": "fill"
+  },
+  "AppCompose.dc.html": {
+   "x": 4560,
+   "y": 1660,
+   "w": 1440,
+   "h": 1100,
+   "title": "应用详情 · 编排",
+   "expand": "fill"
+  },
+  "AppDeployments.dc.html": {
+   "x": 0,
+   "y": 3280,
+   "w": 1440,
+   "h": 1100,
+   "title": "应用详情 · 部署记录",
+   "expand": "fill"
+  },
+  "AppLogs.dc.html": {
+   "x": 1520,
+   "y": 3280,
+   "w": 1440,
+   "h": 1000,
+   "title": "应用详情 · 日志",
+   "expand": "fill"
+  },
+  "Database.dc.html": {
+   "x": 3040,
+   "y": 3280,
+   "w": 1440,
+   "h": 1200,
+   "title": "数据库详情",
+   "expand": "fill"
+  },
+  "Domains.dc.html": {
+   "x": 0,
+   "y": 5000,
+   "w": 1440,
+   "h": 1100,
+   "title": "域名与证书",
+   "expand": "fill"
+  },
+  "Backups.dc.html": {
+   "x": 1520,
+   "y": 5000,
+   "w": 1440,
+   "h": 1240,
+   "title": "备份",
+   "expand": "fill"
+  },
+  "Maintenance.dc.html": {
+   "x": 3040,
+   "y": 5000,
+   "w": 1440,
+   "h": 1240,
+   "title": "维护",
+   "expand": "fill"
+  },
+  "Settings.dc.html": {
+   "x": 4560,
+   "y": 5000,
+   "w": 1440,
+   "h": 1300,
+   "title": "设置",
+   "expand": "fill"
+  },
+  "AppSettings.dc.html": {
+   "x": 4560,
+   "y": 3280,
+   "w": 1440,
+   "h": 1300,
+   "title": "应用详情 · 设置",
+   "expand": "fill"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Login.dc.html",
+  "OverviewMobile.dc.html",
+  "Apps.dc.html",
+  "NewApp.dc.html",
+  "AppOverview.dc.html",
+  "AppCompose.dc.html",
+  "AppDeployments.dc.html",
+  "AppLogs.dc.html",
+  "AppSettings.dc.html",
+  "Database.dc.html",
+  "Domains.dc.html",
+  "Backups.dc.html",
+  "Maintenance.dc.html",
+  "Settings.dc.html"
+ ],
+ "notes": {
+  "rowA": {
+   "x": 0,
+   "y": -300,
+   "text": "入口与总览",
+   "kind": "title1",
+   "maxW": 3430
+  },
+  "rowB": {
+   "x": 0,
+   "y": 1360,
+   "text": "应用：列表 · 新建 · 详情",
+   "kind": "title1",
+   "maxW": 6000
+  },
+  "rowC": {
+   "x": 0,
+   "y": 2980,
+   "text": "应用详情：部署 · 日志 · 数据库 · 设置",
+   "kind": "title1",
+   "maxW": 6000
+  },
+  "rowD": {
+   "x": 0,
+   "y": 4700,
+   "text": "平台：域名 · 备份 · 维护 · 设置",
+   "kind": "title1",
+   "maxW": 6000
+  }
+ },
+ "designSystems": []
+}

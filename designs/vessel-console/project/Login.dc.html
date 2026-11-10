@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Vessel · 登录</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7;color:#0E1116;font-family:'Geist','PingFang SC','Microsoft YaHei',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#2F5BEA;text-decoration:none}a:hover{color:#1E3FB0}
+button,input{font:inherit}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+input:focus{outline:2px solid #2F5BEA;outline-offset:1px}
+</style>
+</helmet>
+<div style="min-height: 100vh; width: 100%; display: flex; flex-wrap: wrap">
+
+<section style="flex: 1 1 520px; display: flex; align-items: center; justify-content: center; padding: 48px 24px">
+<div style="width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; align-items: center; gap: 10px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #0E1116; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14l9 6 9-6M12 3v11M7 9h10"></path></svg>
+</div>
+<span style="font-size: 18px; font-weight: 600">Vessel</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em">登录控制台</h1>
+<p style="margin: 0; font-size: 14px; color: #5B6472">vps-tokyo-01 · panel.example.com</p>
+</div>
+
+<form style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="u" style="font-size: 13px; font-weight: 500">用户名</label>
+<input id="u" type="text" autocomplete="username" value="admin" style="height: 44px; padding: 0 14px; border: 1px solid #D5DAE1; border-radius: 8px; background: #FFFFFF; font-size: 14px">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: baseline">
+<label for="p" style="font-size: 13px; font-weight: 500">密码</label>
+</div>
+<div style="position: relative">
+<input id="p" type="password" autocomplete="current-password" value="vessel-demo" style="width: 100%; height: 44px; padding: 0 48px 0 14px; border: 1px solid #D5DAE1; border-radius: 8px; background: #FFFFFF; font-size: 14px">
+<button type="button" aria-label="显示密码" style="position: absolute; right: 2px; top: 2px; width: 40px; height: 40px; border: 0; background: transparent; color: #5B6472; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</button>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<input id="r" type="checkbox" checked style="width: 18px; height: 18px; accent-color: #0E1116">
+<label for="r" style="font-size: 13px; color: #3D4452">在此设备上保持登录 30 天</label>
+</div>
+<sc-if value="{{showError}}" hint-placeholder-val="{{ true }}">
+<div role="alert" style="display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: #FDECEA; color: #B42318; font-size: 13px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex: 0 0 16px; margin-top: 1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.5"></path></svg>
+<span>用户名或密码不正确。连续失败 5 次后将锁定 15 分钟（剩余 3 次）。</span>
+</div>
+</sc-if>
+<button type="submit" style="height: 44px; border: 0; border-radius: 8px; background: #0E1116; color: #FFFFFF; font-size: 14px; font-weight: 500; cursor: pointer">登录</button>
+</form>
+
+<details style="border-top: 1px solid #E3E6EB; padding-top: 18px; font-size: 13px; color: #3D4452">
+<summary style="cursor: pointer; font-weight: 500; color: #0E1116; min-height: 24px">第一次登录？</summary>
+<p style="margin: 10px 0 0; line-height: 1.6">用户名为 <span class="mono">admin</span>。初始密码在服务器的数据目录中：</p>
+<p class="mono" style="margin: 8px 0 0; padding: 10px 12px; border-radius: 8px; background: #EEF0F3; font-size: 12px">cat /opt/vessel/data/initial-admin-password</p>
+<p style="margin: 10px 0 0; line-height: 1.6">登录后请在「账户与面板」中修改密码。</p>
+</details>
+</div>
+</section>
+
+<aside style="flex: 1 1 520px; background: #0E1116; color: #E7EAF0; padding: 64px 56px; display: flex; flex-direction: column; justify-content: center; gap: 32px">
+<p style="margin: 0; font-size: 13px; color: #9AA3AF; letter-spacing: 0.04em">DOCKER COMPOSE 自部署平台</p>
+<h2 style="margin: 0; font-size: 34px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; max-width: 520px; color: #FFFFFF">你的 docker-compose.yml，<br>加上 HTTPS、回滚和异地备份。</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; max-width: 480px">
+<sc-for list="{{points}}" as="p" hint-placeholder-count="4">
+<li style="display: flex; gap: 12px; font-size: 14px; line-height: 1.55; color: #C9CED6">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{accentLight}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: 0 0 18px; margin-top: 2px"><path d="M5 12l5 5 9-10"></path></svg>
+<span><strong style="color: #FFFFFF; font-weight: 500">{{p.t}}</strong> {{p.d}}</span>
+</li>
+</sc-for>
+</ul>
+<div class="mono" style="max-width: 480px; border: 1px solid #262B33; border-radius: 10px; padding: 16px 18px; font-size: 12px; line-height: 1.8; color: #9AA3AF; background: #151920">
+<div><span style="color: #6B7280">$</span> curl -X POST https://panel.example.com/api/hooks/deploy/umami/•••</div>
+<div style="color: #7EE2A8">✓ 部署 #24 已排队 · 拉取并重建</div>
+</div>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"showError":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showError: this.props.showError ?? false,
+      accentLight: '#8EA8FF',
+      points: [
+        { t: '原生 Compose。', d: '每个应用就是一个目录里的 docker-compose.yml 与 .env，离开 Vessel 也能直接运行。' },
+        { t: '自动 HTTPS。', d: '内置 Caddy，绑定域名即签发和续订证书，不重启。' },
+        { t: '每次部署可回滚。', d: '部署留存日志与配置快照，失败时可自动回到上一个成功版本。' },
+        { t: '加密异地备份。', d: '系统快照、数据卷和数据库转储加密后上传到 Cloudflare R2。' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

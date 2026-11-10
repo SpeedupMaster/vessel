@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Vessel · postgres-main</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7;color:#0E1116;font-family:'Geist','PingFang SC','Microsoft YaHei',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#2F5BEA;text-decoration:none}a:hover{color:#1E3FB0}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:8px;border:1px solid #D5DAE1;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;white-space:nowrap}
+.btn:hover{background:#EEF0F3;color:#0E1116}
+.btn-primary{background:#0E1116;border-color:#0E1116;color:#FFFFFF}
+.btn-primary:hover{background:#2A2F37;color:#FFFFFF}
+.navlink{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:8px;color:#3D4452;font-size:14px;font-weight:500}
+.navlink:hover{background:#ECEEF2;color:#0E1116}
+.tab{display:inline-flex;align-items:center;height:44px;padding:0 4px;font-size:14px;font-weight:500;color:#5B6472;border-bottom:2px solid transparent}
+.tab:hover{color:#0E1116}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.copy{height:36px;padding:0 12px;border:1px solid #D5DAE1;border-radius:8px;background:#FFFFFF;font-size:13px;font-weight:500}
+.copy:hover{background:#EEF0F3}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; width: 100%">
+
+<aside style="flex: 1 1 248px; max-width: 100%; background: #FBFBFC; border-right: 1px solid #E3E6EB; padding: 20px 14px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 32px; height: 32px; border-radius: 8px; background: #0E1116; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14l9 6 9-6M12 3v11M7 9h10"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-weight: 600; font-size: 15px">Vessel</span>
+<span style="font-size: 12px; color: #5B6472">vps-tokyo-01</span>
+</div>
+</div>
+<button type="button" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #DDE1E7; border-radius: 8px; background: #FFFFFF; color: #5B6472; font-size: 13px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="flex: 1; text-align: left">搜索或跳转…</span>
+<span class="mono" style="font-size: 11px; border: 1px solid #DDE1E7; border-radius: 4px; padding: 1px 5px">⌘K</span>
+</button>
+<nav aria-label="主导航" style="display: flex; flex-direction: column; gap: 18px">
+<sc-for list="{{nav}}" as="group" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; font-weight: 500; color: #5B6472; padding: 0 12px 6px">{{group.label}}</span>
+<sc-for list="{{group.items}}" as="item" hint-placeholder-count="3">
+<a class="navlink" href="{{item.href}}" style="{{item.style}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.d}}"></path></svg>
+<span style="flex: 1">{{item.label}}</span>
+<span style="font-size: 12px; color: #5B6472">{{item.count}}</span>
+</a>
+</sc-for>
+</div>
+</sc-for>
+</nav>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid #E3E6EB; border-radius: 10px; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: #16A34A"></span>
+<span style="font-weight: 500">Docker 已连接</span>
+<span style="margin-left: auto; color: #5B6472; font-size: 12px">27.3.1</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #5B6472">
+<span>Vessel v1.0.18</span>
+<a href="Settings.dc.html" style="font-size: 12px; font-weight: 500">有新版本 v1.0.19</a>
+</div>
+</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<div style="background: #FFFFFF; border-bottom: 1px solid #E3E6EB">
+<div style="max-width: 1180px; margin: 0 auto; padding: 20px 32px 0; display: flex; flex-direction: column; gap: 14px">
+<div style="font-size: 13px; color: #5B6472"><a href="Apps.dc.html" style="color: #5B6472">应用</a> / postgres-main</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+<span class="mono" style="width: 44px; height: 44px; border-radius: 10px; background: #E8ECF7; color: #1E3FB0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500">PG</span>
+<div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<h1 style="margin: 0; font-size: 24px; font-weight: 600">postgres-main</h1>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #0F7A43; background: #E6F4EC; border-radius: 999px; padding: 3px 10px"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor"></span>运行中 · 健康</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: #5B6472">
+<span>PostgreSQL 18 · postgres:18-alpine</span>
+<span>已运行 3 天 4 小时</span>
+</div>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button type="button" class="btn">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-5-6-5M12 19h8"></path></svg>
+打开终端
+</button>
+<button type="button" class="btn">重启</button>
+<button type="button" class="btn btn-primary">立即备份</button>
+</div>
+</div>
+<nav aria-label="数据库页签" style="display: flex; gap: 24px; overflow-x: auto">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+<a class="tab" href="{{t.href}}" style="{{t.style}}">{{t.label}}</a>
+</sc-for>
+</nav>
+</div>
+</div>
+
+<div style="width: 100%; max-width: 1180px; margin: 0 auto; padding: 24px 32px 56px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<div style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+<section aria-labelledby="conn-h" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 18px">
+<h2 id="conn-h" style="margin: 0; font-size: 15px; font-weight: 600">连接信息</h2>
+<dl style="margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px 20px">
+<sc-for list="{{creds}}" as="c" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<dt style="font-size: 12px; color: #5B6472">{{c.k}}</dt>
+<dd class="mono" style="margin: 0; font-size: 13px">{{c.v}}</dd>
+</div>
+</sc-for>
+</dl>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; font-weight: 500">容器内网连接串 <span style="font-weight: 400; color: #5B6472">· 同在 vessel-net 的应用使用</span></span>
+<div style="display: flex; gap: 8px">
+<span class="mono" style="flex: 1; min-width: 0; height: 36px; display: flex; align-items: center; padding: 0 12px; background: #F4F5F7; border-radius: 8px; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">postgresql://app:••••••••@postgres-main:5432/app</span>
+<button type="button" class="copy">显示</button>
+<button type="button" class="copy">复制</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid #EEF0F3; border-radius: 10px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="display: flex; flex-direction: column; gap: 2px; flex: 1">
+<span style="font-size: 13px; font-weight: 500">外部访问</span>
+<span style="font-size: 12px; color: #5B6472">在宿主机上映射端口。开启后请在防火墙中只放行可信 IP。</span>
+</span>
+<label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; min-height: 40px"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">开启外部访问</span><input type="checkbox" role="switch" style="width: 36px; height: 20px; accent-color: #0E1116"></label>
+</div>
+<span style="font-size: 12px; color: #5B6472">当前未映射端口 · 仅限容器内网访问</span>
+</div>
+</section>
+
+<section aria-labelledby="term-h" style="border: 1px solid #1F242C; border-radius: 12px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; background: #171B21; border-bottom: 1px solid #262B33">
+<h2 id="term-h" style="margin: 0; font-size: 13px; font-weight: 500; color: #FFFFFF">终端 · psql</h2>
+<span style="font-size: 12px; color: #7EE2A8">已连接</span>
+<button type="button" style="margin-left: auto; height: 32px; padding: 0 10px; border: 1px solid #333944; border-radius: 6px; background: transparent; color: #C9CED6; font-size: 12px">在新窗口打开</button>
+</div>
+<div class="mono" style="background: #0F1217; color: #C9CED6; font-size: 12.5px; line-height: 21px; padding: 14px 16px; white-space: pre; overflow-x: auto">
+<sc-for list="{{term}}" as="l" hint-placeholder-count="10">
+<div style="{{l.c}}">{{l.t}}</div>
+</sc-for>
+</div>
+</section>
+</div>
+
+<div style="flex: 2 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<section aria-labelledby="hl-h" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="hl-h" style="margin: 0; font-size: 15px; font-weight: 600">运行状况</h2>
+<dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; font-size: 13px">
+<sc-for list="{{health}}" as="h" hint-placeholder-count="6">
+<dt style="color: #5B6472">{{h.k}}</dt><dd style="margin: 0; {{h.c}}">{{h.v}}</dd>
+</sc-for>
+</dl>
+</section>
+
+<section aria-labelledby="sch-h" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; overflow: hidden">
+<div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #EEF0F3">
+<h2 id="sch-h" style="margin: 0; font-size: 15px; font-weight: 600">定时备份计划</h2>
+<button type="button" style="margin-left: auto; height: 36px; padding: 0 8px; border: 0; background: transparent; color: #2F5BEA; font-size: 13px; font-weight: 500">添加计划</button>
+</div>
+<sc-for list="{{plans}}" as="p" hint-placeholder-count="3">
+<div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 20px; border-bottom: 1px solid #EEF0F3">
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 14px; font-weight: 500">{{p.name}}</span>
+<span style="font-size: 12px; color: #5B6472">{{p.when}}</span>
+<span style="font-size: 12px; {{p.lc}}">{{p.last}}</span>
+</span>
+<label style="display: inline-flex; align-items: center; min-height: 40px"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">启用 {{p.name}}</span><input type="checkbox" role="switch" checked style="width: 36px; height: 20px; accent-color: #0E1116"></label>
+</div>
+</sc-for>
+<div style="padding: 12px 20px"><a href="Backups.dc.html" style="font-size: 13px; font-weight: 500">查看全部 14 个备份文件</a></div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2F5BEA","options":["#2F5BEA","#0E7C66","#C2410C","#6D28D9"]},"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#2F5BEA';
+    const active = 'apps';
+    const I = {
+      overview: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+      apps: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5',
+      domains: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9M12 3c-2.5 2.5-3.8 5.5-3.8 9s1.3 6.5 3.8 9',
+      backups: 'M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8M12 12v8M9 15l3-3 3 3',
+      maint: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+      reg: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+      bell: 'M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
+      user: 'M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6'
+    };
+    const mk = (id, label, href, count) => ({ label, href, d: I[id], count: count || '',
+      style: id === active ? 'background:#FFFFFF;color:' + accent + ';box-shadow:0 0 0 1px #E3E6EB' : '' });
+    const nav = [
+      { label: '工作区', items: [mk('overview', '概览', 'Main.dc.html'), mk('apps', '应用', 'Apps.dc.html', '12'), mk('domains', '域名与证书', 'Domains.dc.html', '8')] },
+      { label: '运维', items: [mk('backups', '备份', 'Backups.dc.html'), mk('maint', '维护', 'Maintenance.dc.html', '3')] },
+      { label: '设置', items: [mk('reg', '镜像仓库', 'Settings.dc.html'), mk('bell', '通知渠道', 'Settings.dc.html'), mk('user', '账户与面板', 'Settings.dc.html')] }
+    ];
+    const tabs = [['连接与终端', 'Database.dc.html'], ['备份', 'Backups.dc.html'], ['日志', 'AppLogs.dc.html'], ['编排', 'AppCompose.dc.html'], ['设置', 'AppSettings.dc.html']]
+      .map((t, i) => ({ label: t[0], href: t[1], style: i === 0 ? 'color:#0E1116;border-bottom-color:' + accent : '' }));
+    const creds = [
+      { k: '主机（内网）', v: 'postgres-main' }, { k: '端口', v: '5432' },
+      { k: '数据库', v: 'app' }, { k: '用户名', v: 'app' }
+    ];
+    const ok = 'color:#0F7A43', n = 'color:#0E1116', warn = 'color:#8A4B00';
+    const health = [
+      { k: '容器', v: '运行中，已运行 3 天 4 小时', c: n },
+      { k: '健康检查', v: '健康 · pg_isready · 12 秒前', c: ok },
+      { k: '重启次数', v: '0 · 策略 unless-stopped', c: n },
+      { k: '内存', v: '186 MB / 不限制', c: n },
+      { k: '数据卷', v: 'pg_data → /var/lib/postgresql · 2.3 GB', c: n },
+      { k: '网络', v: 'vessel-net', c: n }
+    ];
+    const plans = [
+      { name: '每日全量', when: '每天 03:00 · 保留 7 份 · 上传 R2', last: '今天 03:00 失败：磁盘空间不足', lc: 'color:#B42318' },
+      { name: '每小时 · 仅 orders 库', when: '每小时整点 · 保留 24 份 · 仅本地', last: '09:00 成功 · 41 MB', lc: 'color:#0F7A43' },
+      { name: '每周归档', when: '周日 04:00 · 保留 12 份 · 上传 R2', last: '11 月 9 日 成功 · 612 MB', lc: 'color:#0F7A43' }
+    ];
+    const dim = 'color:#7D8590', p = 'color:#C9CED6', g = 'color:#7EE2A8';
+    const term = [
+      { t: 'psql (18.1) Type "help" for help.', c: dim },
+      { t: '', c: p },
+      { t: 'app=# \\dt', c: g },
+      { t: '          List of relations', c: p },
+      { t: ' Schema |    Name     | Type  | Owner', c: p },
+      { t: '--------+-------------+-------+-------', c: dim },
+      { t: ' public | orders      | table | app', c: p },
+      { t: ' public | customers   | table | app', c: p },
+      { t: ' public | invoices    | table | app', c: p },
+      { t: '(3 rows)', c: dim },
+      { t: '', c: p },
+      { t: 'app=# ▍', c: g }
+    ];
+    return { accent, nav, tabs, creds, health, plans, term };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Vessel · 备份</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7;color:#0E1116;font-family:'Geist','PingFang SC','Microsoft YaHei',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#2F5BEA;text-decoration:none}a:hover{color:#1E3FB0}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:8px;border:1px solid #D5DAE1;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;white-space:nowrap}
+.btn:hover{background:#EEF0F3;color:#0E1116}
+.btn-primary{background:#0E1116;border-color:#0E1116;color:#FFFFFF}
+.btn-primary:hover{background:#2A2F37;color:#FFFFFF}
+.navlink{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:8px;color:#3D4452;font-size:14px;font-weight:500}
+.navlink:hover{background:#ECEEF2;color:#0E1116}
+.row:hover{background:#F8F9FB}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.field{height:40px;padding:0 12px;border:1px solid #D5DAE1;border-radius:8px;background:#FFFFFF;font-size:14px;width:100%}
+.link{height:36px;padding:0 8px;border:0;background:transparent;color:#2F5BEA;font-size:13px;font-weight:500;border-radius:6px}
+.link:hover{background:#EEF2FD}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; width: 100%">
+
+<aside style="flex: 1 1 248px; max-width: 100%; background: #FBFBFC; border-right: 1px solid #E3E6EB; padding: 20px 14px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 32px; height: 32px; border-radius: 8px; background: #0E1116; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14l9 6 9-6M12 3v11M7 9h10"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-weight: 600; font-size: 15px">Vessel</span>
+<span style="font-size: 12px; color: #5B6472">vps-tokyo-01</span>
+</div>
+</div>
+<button type="button" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #DDE1E7; border-radius: 8px; background: #FFFFFF; color: #5B6472; font-size: 13px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="flex: 1; text-align: left">搜索或跳转…</span>
+<span class="mono" style="font-size: 11px; border: 1px solid #DDE1E7; border-radius: 4px; padding: 1px 5px">⌘K</span>
+</button>
+<nav aria-label="主导航" style="display: flex; flex-direction: column; gap: 18px">
+<sc-for list="{{nav}}" as="group" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; font-weight: 500; color: #5B6472; padding: 0 12px 6px">{{group.label}}</span>
+<sc-for list="{{group.items}}" as="item" hint-placeholder-count="3">
+<a class="navlink" href="{{item.href}}" style="{{item.style}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.d}}"></path></svg>
+<span style="flex: 1">{{item.label}}</span>
+<span style="font-size: 12px; color: #5B6472">{{item.count}}</span>
+</a>
+</sc-for>
+</div>
+</sc-for>
+</nav>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid #E3E6EB; border-radius: 10px; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: #16A34A"></span>
+<span style="font-weight: 500">Docker 已连接</span>
+<span style="margin-left: auto; color: #5B6472; font-size: 12px">27.3.1</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #5B6472">
+<span>Vessel v1.0.18</span>
+<a href="Settings.dc.html" style="font-size: 12px; font-weight: 500">有新版本 v1.0.19</a>
+</div>
+</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 32px; border-bottom: 1px solid #E3E6EB; background: #FFFFFF">
+<span style="font-size: 13px; color: #5B6472">运维 / 备份</span>
+</div>
+
+<div style="width: 100%; max-width: 1240px; margin: 0 auto; padding: 32px 32px 56px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+<div style="flex: 1 1 360px; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.01em">备份</h1>
+<p style="margin: 0; font-size: 14px; color: #5B6472">三类备份：系统快照（平台数据与全部编排）、应用数据卷、数据库逻辑转储。加密后同步到 Cloudflare R2。</p>
+</div>
+<div style="display: flex; gap: 8px">
+<button type="button" class="btn">从文件恢复…</button>
+<button type="button" class="btn btn-primary">立即创建系统快照</button>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px">
+<span style="font-size: 13px; color: #5B6472">{{s.k}}</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; {{s.dot}}"></span>{{s.v}}</span>
+<span class="mono" style="font-size: 12px; color: #3D4452">{{s.sub}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section aria-labelledby="arc-h" style="flex: 999 1 600px; min-width: 0; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid #EEF0F3">
+<h2 id="arc-h" style="margin: 0; font-size: 15px; font-weight: 600">备份文件</h2>
+<div role="tablist" aria-label="按类型筛选" style="display: inline-flex; padding: 3px; background: #E9EBEF; border-radius: 9px; margin-left: auto">
+<sc-for list="{{segs}}" as="g" hint-placeholder-count="4">
+<button type="button" role="tab" aria-selected="{{g.sel}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 7px; font-size: 13px; font-weight: 500; {{g.style}}">{{g.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="overflow-x: auto">
+<div style="min-width: 680px">
+<sc-for list="{{files}}" as="f" hint-placeholder-count="8">
+<div class="row" style="display: grid; grid-template-columns: 96px minmax(220px, 2.4fr) 80px minmax(110px, 1fr) 132px; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F3">
+<span style="justify-self: start; font-size: 12px; font-weight: 500; border-radius: 6px; padding: 3px 8px; {{f.tone}}">{{f.type}}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 14px; font-weight: 500">{{f.src}}</span>
+<span class="mono" style="font-size: 11px; color: #5B6472; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{f.file}}</span>
+</span>
+<span class="mono" style="font-size: 12px; color: #3D4452; text-align: right">{{f.size}}</span>
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13px">{{f.when}}</span>
+<span style="font-size: 12px; {{f.lc}}">{{f.loc}}</span>
+</span>
+<span style="display: flex; justify-content: flex-end; gap: 2px">
+<button type="button" class="link">恢复</button>
+<button type="button" class="link">下载</button>
+<button type="button" aria-label="删除 {{f.file}}" style="width: 36px; height: 36px; border: 0; border-radius: 6px; background: transparent; color: #5B6472; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="padding: 12px 20px; font-size: 13px; color: #5B6472">共 38 个 · 本地 9.6 GB · R2 21.3 GB</div>
+</section>
+
+<aside aria-labelledby="pol-h" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; display: flex; flex-direction: column">
+<div style="padding: 16px 20px; border-bottom: 1px solid #EEF0F3; display: flex; align-items: center">
+<h2 id="pol-h" style="margin: 0; font-size: 15px; font-weight: 600">系统快照策略</h2>
+<label style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #3D4452; min-height: 40px">定时<input type="checkbox" role="switch" checked style="width: 36px; height: 20px; accent-color: #0E1116"></label>
+</div>
+<div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cron" style="font-size: 13px; font-weight: 500">执行时间</label>
+<input id="cron" class="field mono" type="text" value="0 3 * * *" style="font-size: 13px">
+<span style="font-size: 12px; color: #5B6472">每天 03:00 · 下次：明天 03:00</span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{presets}}" as="p" hint-placeholder-count="4">
+<button type="button" style="height: 32px; padding: 0 10px; border: 1px solid #D5DAE1; border-radius: 999px; background: #FFFFFF; font-size: 12px; color: #3D4452">{{p}}</button>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="keep" style="font-size: 13px; font-weight: 500">保留份数</label>
+<input id="keep" class="field mono" type="text" value="14" style="font-size: 13px">
+<span style="font-size: 12px; color: #5B6472">新备份成功后，删除更早的系统快照</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #F4F5F7; border-radius: 10px">
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F7A43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+加密口令已设置
+</span>
+<span style="font-size: 12px; color: #3D4452; line-height: 1.55">AES-256-GCM。在新服务器上恢复时需要它，丢失后无法解密。请离线保存。</span>
+<button type="button" class="link" style="align-self: flex-start; padding: 0">更换口令</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid #EEF0F3">
+<span style="font-size: 13px; font-weight: 500">Cloudflare R2</span>
+<dl class="mono" style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px">
+<dt style="color: #5B6472">Bucket</dt><dd style="margin: 0">vessel-backups</dd>
+<dt style="color: #5B6472">Account</dt><dd style="margin: 0">7c1e…a94f</dd>
+<dt style="color: #5B6472">Key</dt><dd style="margin: 0">••••••••3b2d</dd>
+</dl>
+<div style="display: flex; gap: 8px; margin-top: 6px">
+<button type="button" class="btn" style="height: 36px; font-size: 13px">测试连接</button>
+<button type="button" class="btn" style="height: 36px; font-size: 13px">编辑凭据</button>
+</div>
+</div>
+</div>
+<div style="margin-top: auto; padding: 14px 20px; border-top: 1px solid #EEF0F3; display: flex; justify-content: flex-end">
+<button type="button" class="btn btn-primary">保存策略</button>
+</div>
+</aside>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2F5BEA","options":["#2F5BEA","#0E7C66","#C2410C","#6D28D9"]},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#2F5BEA';
+    const active = 'backups';
+    const I = {
+      overview: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+      apps: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5',
+      domains: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9M12 3c-2.5 2.5-3.8 5.5-3.8 9s1.3 6.5 3.8 9',
+      backups: 'M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8M12 12v8M9 15l3-3 3 3',
+      maint: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+      reg: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+      bell: 'M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
+      user: 'M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6'
+    };
+    const mk = (id, label, href, count) => ({ label, href, d: I[id], count: count || '',
+      style: id === active ? 'background:#FFFFFF;color:' + accent + ';box-shadow:0 0 0 1px #E3E6EB' : '' });
+    const nav = [
+      { label: '工作区', items: [mk('overview', '概览', 'Main.dc.html'), mk('apps', '应用', 'Apps.dc.html', '12'), mk('domains', '域名与证书', 'Domains.dc.html', '8')] },
+      { label: '运维', items: [mk('backups', '备份', 'Backups.dc.html'), mk('maint', '维护', 'Maintenance.dc.html', '3')] },
+      { label: '设置', items: [mk('reg', '镜像仓库', 'Settings.dc.html'), mk('bell', '通知渠道', 'Settings.dc.html'), mk('user', '账户与面板', 'Settings.dc.html')] }
+    ];
+    const g = 'background:#16A34A', r = 'background:#DC2626';
+    const stats = [
+      { k: '上次系统快照', v: '今天 03:00', sub: '182 MB · 已加密', dot: g },
+      { k: 'R2 同步', v: '正常', sub: 'vessel-backups', dot: g },
+      { k: '定时任务', v: '7 个计划', sub: '1 个今天失败', dot: r },
+      { k: '下一次', v: '明天 03:00', sub: '系统快照 + 2 个数据库', dot: 'background:#9AA3AF' }
+    ];
+    const segs = ['全部', '系统快照', '应用卷', '数据库'].map((l, i) => ({ label: l, sel: i === 0 ? 'true' : 'false',
+      style: i === 0 ? 'background:#FFFFFF;box-shadow:0 1px 2px rgba(14,17,22,.08)' : 'background:transparent;color:#3D4452' }));
+    const sys = 'background:#0E1116;color:#FFFFFF', vol = 'background:#E8ECF7;color:#1E3FB0', db = 'background:#EDE7FB;color:#5B2BB5', fail = 'background:#FDECEA;color:#B42318';
+    const both = 'color:#0F7A43', local = 'color:#5B6472', bad = 'color:#B42318';
+    const files = [
+      { type: '数据库', tone: fail, src: 'postgres-main · 每日全量', file: 'pg_dump 失败：No space left on device', size: '—', when: '今天 03:00', loc: '失败 · 查看日志', lc: bad },
+      { type: '系统快照', tone: sys, src: '平台数据与全部编排', file: 'vessel-2026-11-10T0300.tar.gz.enc', size: '182 MB', when: '今天 03:00', loc: '本地 + R2', lc: both },
+      { type: '应用卷', tone: vol, src: 'n8n · n8n_data, ./files', file: 'n8n-volumes-2026-11-10T0400.tar.gz', size: '96 MB', when: '今天 04:00', loc: '本地 + R2', lc: both },
+      { type: '数据库', tone: db, src: 'postgres-main · orders', file: 'postgres-main-orders-2026-11-10T0900.sql.gz', size: '41 MB', when: '今天 09:00', loc: '仅本地', lc: local },
+      { type: '数据库', tone: db, src: 'redis-cache', file: 'redis-cache-2026-11-10T0315.rdb', size: '12 MB', when: '今天 03:15', loc: '本地 + R2', lc: both },
+      { type: '应用卷', tone: vol, src: 'umami · ./data/db', file: 'umami-volumes-2026-11-09T2210.tar.gz', size: '318 MB', when: '昨天 22:10 · 手动', loc: '本地 + R2', lc: both },
+      { type: '系统快照', tone: sys, src: '平台数据与全部编排', file: 'vessel-2026-11-09T0300.tar.gz.enc', size: '181 MB', when: '昨天 03:00', loc: '本地 + R2', lc: both },
+      { type: '数据库', tone: db, src: 'postgres-main · 每周归档', file: 'postgres-main-all-2026-11-09T0400.sql.gz', size: '612 MB', when: '11 月 9 日 04:00', loc: '本地 + R2', lc: both }
+    ];
+    const presets = ['每天 03:00', '每 12 小时', '每周日 03:00', '周一/四 03:00'];
+    return { accent, nav, stats, segs, files, presets };
+  }
+}
+</script>
+</body>
+</html>

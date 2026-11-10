@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Vessel · 概览（手机）</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7;color:#0E1116;font-family:'Geist','PingFang SC','Microsoft YaHei',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#2F5BEA;text-decoration:none}a:hover{color:#1E3FB0}
+button{font:inherit;cursor:pointer}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 100vh; display: flex; flex-direction: column">
+<header style="position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 4px; background: #FFFFFF; border-bottom: 1px solid #E3E6EB">
+<button type="button" aria-label="打开导航菜单" style="width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; color: #0E1116">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+</button>
+<span style="font-size: 17px; font-weight: 600">概览</span>
+<button type="button" aria-label="搜索" style="margin-left: auto; width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; color: #0E1116">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+</button>
+<a href="NewApp.dc.html" aria-label="新建应用" style="width: 44px; height: 44px; border-radius: 10px; background: #0E1116; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</a>
+</header>
+
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #3D4452">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: #16A34A"></span>
+vps-tokyo-01 · Docker 已连接
+</div>
+
+<section aria-labelledby="m-todo" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #EEF0F3">
+<h2 id="m-todo" style="margin: 0; font-size: 15px; font-weight: 600">需要处理</h2>
+<span style="font-size: 12px; font-weight: 600; color: #8A4B00; background: #FFF1DB; border-radius: 999px; padding: 2px 8px">4</span>
+</div>
+<sc-for list="{{todos}}" as="t" hint-placeholder-count="4">
+<a href="{{t.href}}" style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; border-bottom: 1px solid #EEF0F3; color: #0E1116">
+<span style="width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; {{t.dot}}"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 14px; font-weight: 500">{{t.title}}</span>
+<span style="font-size: 12px; color: #5B6472">{{t.detail}}</span>
+</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA3AF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+</sc-for>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<a href="{{k.href}}" style="display: flex; flex-direction: column; gap: 6px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; color: #0E1116">
+<span style="font-size: 12px; color: #5B6472">{{k.label}}</span>
+<span style="font-size: 22px; font-weight: 600">{{k.value}}</span>
+<span style="font-size: 12px; color: #3D4452">{{k.sub}}</span>
+</a>
+</sc-for>
+</div>
+
+<section aria-labelledby="m-apps" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; overflow: hidden">
+<div style="display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #EEF0F3">
+<h2 id="m-apps" style="margin: 0; font-size: 15px; font-weight: 600">应用</h2>
+<a href="Apps.dc.html" style="margin-left: auto; font-size: 13px; font-weight: 500; min-height: 24px; display: flex; align-items: center">全部 12 个</a>
+</div>
+<sc-for list="{{apps}}" as="a" hint-placeholder-count="5">
+<a href="AppOverview.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px; border-bottom: 1px solid #EEF0F3; color: #0E1116">
+<span class="mono" style="width: 32px; height: 32px; flex: 0 0 32px; border-radius: 8px; background: #F0F2F5; color: #3D4452; display: flex; align-items: center; justify-content: center; font-size: 11px">{{a.abbr}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<span style="font-size: 14px; font-weight: 500">{{a.name}}</span>
+<span class="mono" style="font-size: 11px; color: #5B6472; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{a.domain}}</span>
+</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; {{a.color}}"><span style="width: 7px; height: 7px; border-radius: 50%; background: currentColor"></span>{{a.status}}</span>
+</a>
+</sc-for>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const run = 'color:#0F7A43', stop = 'color:#5B6472';
+    return {
+      todos: [
+        { dot: 'background:#DC2626', title: '定时备份失败', detail: 'postgres-main · 今天 03:00', href: 'Backups.dc.html' },
+        { dot: 'background:#D97706', title: '证书 9 天后到期', detail: 'status.example.com · 续订失败', href: 'Domains.dc.html' },
+        { dot: 'background:#2F5BEA', title: '3 个应用有镜像更新', detail: 'umami、uptime-kuma、n8n', href: 'Maintenance.dc.html' },
+        { dot: 'background:#D97706', title: '容器日志 412 MB', detail: 'n8n-worker', href: 'Maintenance.dc.html' }
+      ],
+      kpis: [
+        { label: '应用', value: '12', sub: '10 运行中', href: 'Apps.dc.html' },
+        { label: '域名', value: '8', sub: '1 个即将到期', href: 'Domains.dc.html' },
+        { label: '最近备份', value: '03:00', sub: '1 项失败', href: 'Backups.dc.html' },
+        { label: '可回收', value: '6.4 GB', sub: '镜像与缓存', href: 'Maintenance.dc.html' }
+      ],
+      apps: [
+        { abbr: 'UM', name: 'umami', domain: 'stats.example.com', status: '运行中', color: run },
+        { abbr: 'N8', name: 'n8n', domain: 'flow.example.com', status: '运行中', color: run },
+        { abbr: 'PG', name: 'postgres-main', domain: '仅内网', status: '运行中', color: run },
+        { abbr: 'UK', name: 'uptime-kuma', domain: 'status.example.com', status: '运行中', color: run },
+        { abbr: 'GT', name: 'gitea', domain: 'git.example.com', status: '已停止', color: stop }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

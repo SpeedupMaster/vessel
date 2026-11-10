@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowsClockwise, ChartPieSlice, FileText, Info } from '@phosphor-icons/react';
+import clsx from 'clsx';
+import { ArrowsClockwise, Broom, CircleNotch, Info } from '@phosphor-icons/react';
 import { apiFetch } from '../../hooks/useData.js';
 import { formatBytes } from '../../utils/format.js';
 
@@ -23,24 +24,39 @@ interface DiskReport {
   logsError: string | null;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  Images: '镜像',
-  Containers: '容器',
-  'Local Volumes': '数据卷',
-  'Build Cache': '构建缓存',
-};
+const TYPES: { key: string; label: string; hint: string; bar: string }[] = [
+  { key: 'Images', label: '镜像', hint: '未被引用的镜像满冷却期后清理', bar: 'bg-ink' },
+  { key: 'Local Volumes', label: '数据卷', hint: '存放数据，从不清理', bar: 'bg-signal' },
+  { key: 'Build Cache', label: '构建缓存', hint: '超过冷却期未使用的会被清理', bar: 'bg-ink-faint' },
+  { key: 'Containers', label: '容器', hint: '可写层，停止的容器可按天数清理', bar: 'bg-line-strong' },
+];
 
-// Reclaimable volumes are only unattached, never deleted by the safe prune
-const TYPE_HINTS: Record<string, string> = {
-  Images: '未被容器引用的镜像满冷却期后清理',
-  Containers: '可写层；停止的容器可按天数清理',
-  'Local Volumes': '存放数据，安全瘦身从不删除',
-  'Build Cache': '超过冷却期未使用的缓存会被清理',
+const UNIT: Record<string, number> = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9, TB: 1e12 };
+
+/** Parses the docker system df strings ("1.23GB", "512MB (40%)") into bytes. */
+export function parseDockerSize(s: string | undefined): number {
+  const m = /([\d.]+)\s*([kKMGT]?B)/.exec(s || '');
+  if (!m) return 0;
+  return parseFloat(m[1]) * (UNIT[m[2].toUpperCase()] ?? 1);
+}
+
+/** Same decimal units docker system df uses, so totals line up with the rows. */
+const formatSI = (n: number) => {
+  if (n <= 0) return '0 B';
+  const u = ['B', 'kB', 'MB', 'GB', 'TB'];
+  const i = Math.min(u.length - 1, Math.floor(Math.log10(n) / 3));
+  return `${(n / 1000 ** i).toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
 };
 
 const LOG_WARN_BYTES = 100 * 1024 * 1024;
 
-export const DiskUsagePanel: React.FC = () => {
+interface DiskUsagePanelProps {
+  /** Runs the safe prune; the panel reloads afterwards. */
+  onPrune?: () => Promise<void>;
+  isPruning?: boolean;
+}
+
+export const DiskUsagePanel: React.FC<DiskUsagePanelProps> = ({ onPrune, isPruning = false }) => {
   const [report, setReport] = useState<DiskReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,102 +80,150 @@ export const DiskUsagePanel: React.FC = () => {
     void load();
   }, [load]);
 
+  const rows = TYPES.map((t) => {
+    const row = report?.breakdown.find((r) => r.type === t.key);
+    return {
+      ...t,
+      row,
+      bytes: parseDockerSize(row?.size),
+      // Volumes are never removed by the safe prune, so they never count as reclaimable here.
+      reclaim: t.key === 'Local Volumes' ? 0 : parseDockerSize(row?.reclaimable),
+    };
+  });
+  const total = rows.reduce((n, r) => n + r.bytes, 0);
+  const reclaimable = rows.reduce((n, r) => n + r.reclaim, 0);
+
+  const handlePrune = async () => {
+    if (!onPrune) return;
+    await onPrune();
+    void load();
+  };
+
   return (
-    <div className="card-vessel p-5 sm:p-6 space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
-            <ChartPieSlice className="w-4 h-4" weight="bold" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm text-ink tracking-tight">磁盘占用分布</h4>
-            <span className="text-[11px] text-ink-muted block mt-0.5">Docker 各类资源占用与最大的容器日志</span>
-          </div>
+    <section aria-labelledby="disk-usage-title" className="card-vessel !cursor-default overflow-hidden">
+      <div className="min-h-14 px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line-subtle">
+        <div className="min-w-0">
+          <h2 id="disk-usage-title" className="text-sm font-semibold text-ink">Docker 磁盘占用</h2>
+          {report && (
+            <p className="text-xs text-ink-muted">
+              共 <span className="font-mono text-ink">{formatSI(total)}</span>
+              <span className="mx-1.5 text-ink-faint">·</span>
+              可回收 <span className="font-mono text-ink">{formatSI(reclaimable)}</span>
+            </p>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={load}
-          disabled={loading}
-          className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors disabled:opacity-50 cursor-pointer"
-        >
-          <ArrowsClockwise className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>刷新</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            aria-label="刷新磁盘占用"
+            data-tooltip="刷新"
+            className="w-9 h-9 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center justify-center cursor-pointer disabled:opacity-50"
+          >
+            <ArrowsClockwise className={clsx('w-4 h-4', loading && 'animate-spin')} />
+          </button>
+          {onPrune && (
+            <button
+              type="button"
+              onClick={handlePrune}
+              disabled={isPruning}
+              className="btn-vessel-secondary min-h-[36px] !px-3 text-[13px] inline-flex items-center gap-1.5 rounded-lg cursor-pointer disabled:opacity-60"
+            >
+              {isPruning ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Broom className="w-4 h-4" />}
+              {isPruning ? '清理中…' : reclaimable > 0 ? `清理 ${formatSI(reclaimable)}` : '立即清理'}
+            </button>
+          )}
+        </div>
       </div>
 
-      {error && !report && (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs">无法读取磁盘占用: {error}</div>
-      )}
-
-      {report && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Resource breakdown */}
-          <div className="rounded-xl border border-line overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-paper-3/50 text-ink-muted">
-                <tr>
-                  <th className="text-left font-medium px-3.5 py-2">类型</th>
-                  <th className="text-right font-medium px-3 py-2 whitespace-nowrap">使用/总数</th>
-                  <th className="text-right font-medium px-3 py-2">占用</th>
-                  <th className="text-right font-medium px-3.5 py-2">可回收</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.breakdown.map((row) => (
-                  <tr key={row.type} className="border-t border-line">
-                    <td className="px-3.5 py-2.5">
-                      <span className="font-semibold text-ink block">{TYPE_LABELS[row.type] || row.type}</span>
-                      <span className="text-[11px] text-ink-faint">{TYPE_HINTS[row.type]}</span>
-                    </td>
-                    <td className="text-right px-3 py-2.5 font-mono text-ink-muted">
-                      {row.active}/{row.totalCount}
-                    </td>
-                    <td className="text-right px-3 py-2.5 font-mono text-ink">{row.size}</td>
-                    <td className="text-right px-3.5 py-2.5 font-mono text-ink-muted">{row.reclaimable}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="p-4 sm:p-5 space-y-5">
+        {error && !report && (
+          <p className="p-3.5 rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-400 text-xs">无法读取磁盘占用：{error}</p>
+        )}
+        {!report && !error && (
+          <div className="h-24 flex items-center justify-center text-xs text-ink-muted gap-2">
+            <CircleNotch className="w-4 h-4 animate-spin" />
+            正在读取…
           </div>
+        )}
 
-          {/* Largest container logs */}
-          <div className="space-y-2.5">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-ink">
-              <FileText className="w-3.5 h-3.5 text-ink-muted" />
-              <span>最大的容器日志</span>
-            </div>
-            {report.logsError ? (
-              <p className="text-[11px] text-ink-muted">{report.logsError}</p>
-            ) : report.logs.length === 0 ? (
-              <p className="text-[11px] text-ink-muted">没有找到容器日志文件</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {report.logs.map((log) => (
-                  <li
-                    key={log.id}
-                    className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-paper-3/40 dark:bg-paper-3/50 border border-line text-xs"
-                  >
-                    <span className="truncate text-ink">
-                      {log.name}
-                      <span className="ml-1.5 font-mono text-[11px] text-ink-faint">{log.id}</span>
-                    </span>
-                    <span className={`font-mono shrink-0 ${log.sizeBytes >= LOG_WARN_BYTES ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-ink-muted'}`}>
-                      {formatBytes(log.sizeBytes)}
-                    </span>
+        {report && (
+          <>
+            {/* Stacked bar */}
+            <div>
+              <div className="flex h-2.5 rounded-full overflow-hidden bg-paper-3" role="img" aria-label="各类资源占用比例">
+                {total > 0 &&
+                  rows.map((r) =>
+                    r.bytes > 0 ? (
+                      <span key={r.key} className={clsx('h-full', r.bar)} style={{ width: `${(r.bytes / total) * 100}%` }} />
+                    ) : null
+                  )}
+              </div>
+              <ul className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3">
+                {rows.map((r) => (
+                  <li key={r.key} className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+                      <span className={clsx('w-2 h-2 rounded-sm shrink-0', r.bar)} />
+                      {r.label}
+                      {r.row && (
+                        <span className="text-ink-faint font-mono">
+                          {r.row.active}/{r.row.totalCount}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 font-mono text-sm text-ink">{r.row?.size ?? '—'}</p>
+                    <p className="text-[11px] text-ink-faint truncate" title={r.hint}>
+                      {r.key === 'Local Volumes' ? r.hint : r.reclaim > 0 ? `可回收 ${formatSI(r.reclaim)}` : r.hint}
+                    </p>
                   </li>
                 ))}
               </ul>
-            )}
-            <p className="flex items-start gap-1.5 text-[11px] text-ink-muted leading-relaxed">
-              <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
-              <span>
-                容器日志不在安全瘦身范围内。Docker 默认不限制日志大小，可在宿主机 <code className="font-mono">/etc/docker/daemon.json</code> 中配置
-                <code className="font-mono"> "log-opts": {'{'}"max-size": "10m", "max-file": "3"{'}'}</code>，重启 Docker 后对新建容器生效。
-              </span>
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
+            </div>
+
+            {/* Largest container logs */}
+            <div className="pt-4 border-t border-line-subtle">
+              <h3 className="text-xs font-medium text-ink mb-2">最大的容器日志</h3>
+              {report.logsError ? (
+                <p className="text-xs text-ink-muted">{report.logsError}</p>
+              ) : report.logs.length === 0 ? (
+                <p className="text-xs text-ink-muted">没有找到容器日志文件</p>
+              ) : (
+                <ul className="divide-y divide-line-subtle">
+                  {report.logs.map((log) => {
+                    const big = log.sizeBytes >= LOG_WARN_BYTES;
+                    return (
+                      <li key={log.id} className="flex items-center justify-between gap-3 py-2 text-xs">
+                        <span className="min-w-0 truncate text-ink">
+                          {log.name}
+                          <span className="ml-1.5 font-mono text-[11px] text-ink-faint">{log.id}</span>
+                        </span>
+                        <span
+                          className={clsx(
+                            'font-mono shrink-0',
+                            big ? 'text-amber-700 dark:text-amber-400 font-semibold' : 'text-ink-muted'
+                          )}
+                        >
+                          {formatBytes(log.sizeBytes)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <p className="mt-3 flex items-start gap-1.5 text-[11px] text-ink-muted leading-relaxed">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
+                <span>
+                  超过 100 MB 的会标出。容器日志不在自动清理范围内，可在宿主机{' '}
+                  <code className="font-mono">/etc/docker/daemon.json</code> 中设置
+                  <code className="font-mono"> "log-opts": {'{'}"max-size": "10m", "max-file": "3"{'}'}</code>
+                  ，重启 Docker 后对新建容器生效。
+                </span>
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 };

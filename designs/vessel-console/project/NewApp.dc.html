@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Vessel · 新建应用</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7;color:#0E1116;font-family:'Geist','PingFang SC','Microsoft YaHei',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#2F5BEA;text-decoration:none}a:hover{color:#1E3FB0}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:8px;border:1px solid #D5DAE1;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;white-space:nowrap}
+.btn:hover{background:#EEF0F3;color:#0E1116}
+.btn-primary{background:#0E1116;border-color:#0E1116;color:#FFFFFF}
+.btn-primary:hover{background:#2A2F37;color:#FFFFFF}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.field{height:40px;padding:0 12px;border:1px solid #D5DAE1;border-radius:8px;background:#FFFFFF;font-size:14px;width:100%}
+</style>
+</helmet>
+<div style="min-height: 100vh; width: 100%; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 32px; background: #FFFFFF; border-bottom: 1px solid #E3E6EB">
+<a href="Apps.dc.html" class="btn" style="padding: 0 12px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+应用
+</a>
+<span style="font-size: 16px; font-weight: 600">新建 Compose 应用</span>
+<span style="margin-left: auto; font-size: 13px; color: #5B6472">草稿已自动保存</span>
+</header>
+
+<div style="width: 100%; max-width: 1240px; margin: 0 auto; padding: 32px; display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start">
+
+<div style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+
+<section aria-labelledby="s1" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: baseline; gap: 10px"><span class="mono" style="font-size: 12px; color: #5B6472">01</span><h2 id="s1" style="margin: 0; font-size: 16px; font-weight: 600">基本信息</h2></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="n" style="font-size: 13px; font-weight: 500">显示名称</label>
+<input id="n" class="field" type="text" value="umami">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="id" style="font-size: 13px; font-weight: 500">应用 ID</label>
+<input id="id" class="field mono" type="text" value="umami" style="font-size: 13px">
+<span style="font-size: 12px; color: #5B6472">用作目录名与 Compose 项目名，创建后不可修改</span>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="s2" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 18px 24px">
+<span class="mono" style="font-size: 12px; color: #5B6472">02</span><h2 id="s2" style="margin: 0; font-size: 16px; font-weight: 600">docker-compose.yml</h2>
+<div style="margin-left: auto; display: flex; gap: 8px">
+<button type="button" class="btn" style="height: 36px; padding: 0 12px; font-size: 13px">从文件导入</button>
+<button type="button" class="btn" style="height: 36px; padding: 0 12px; font-size: 13px">格式化</button>
+</div>
+</div>
+<div class="mono" style="background: #0F1217; color: #D6DAE1; font-size: 13px; line-height: 22px; padding: 14px 0; overflow-x: auto">
+<sc-for list="{{yaml}}" as="l" hint-placeholder-count="20">
+<div style="display: flex; white-space: pre"><span style="width: 52px; flex: 0 0 52px; text-align: right; padding-right: 16px; color: #5C6370">{{l.n}}</span><span style="color: #8EA8FF">{{l.k}}</span><span style="color: #D6DAE1">{{l.v}}</span></div>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; border-top: 1px solid #EEF0F3; font-size: 13px">
+<span style="display: inline-flex; align-items: center; gap: 6px; color: #0F7A43"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>YAML 有效</span>
+<span style="color: #3D4452">2 个服务 · 1 个命名卷 · 1 个端口</span>
+<span style="margin-left: auto; color: #5B6472">行 18，列 3</span>
+</div>
+</section>
+
+<section aria-labelledby="s3" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: baseline; gap: 10px"><span class="mono" style="font-size: 12px; color: #5B6472">03</span><h2 id="s3" style="margin: 0; font-size: 16px; font-weight: 600">环境变量</h2><span style="font-size: 13px; color: #5B6472">写入 .env，在 Compose 中用 ${NAME} 引用</span></div>
+<sc-for list="{{env}}" as="e" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 40px; gap: 8px; align-items: center">
+<input class="field mono" type="text" value="{{e.k}}" aria-label="变量名" style="font-size: 13px">
+<input class="field mono" type="{{e.type}}" value="{{e.v}}" aria-label="变量值" style="font-size: 13px">
+<button type="button" aria-label="删除变量" style="width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: #5B6472; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+</sc-for>
+<div style="display: flex; gap: 8px">
+<button type="button" class="btn" style="height: 36px; padding: 0 12px; font-size: 13px">添加变量</button>
+<button type="button" class="btn" style="height: 36px; padding: 0 12px; font-size: 13px">粘贴 .env 文本</button>
+</div>
+</section>
+
+<section aria-labelledby="s4" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span class="mono" style="font-size: 12px; color: #5B6472">04</span><h2 id="s4" style="margin: 0; font-size: 16px; font-weight: 600">访问域名</h2>
+<label style="margin-left: auto; display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: #3D4452; min-height: 40px">部署时绑定
+<input type="checkbox" checked role="switch" style="width: 36px; height: 20px; accent-color: #0E1116">
+</label>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+<label for="d" style="font-size: 13px; font-weight: 500">域名</label>
+<input id="d" class="field mono" type="text" value="stats.example.com" style="font-size: 13px">
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #0F7A43"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>A 记录已指向本机 203.0.113.24，证书将在部署后自动签发</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="svc" style="font-size: 13px; font-weight: 500">转发到服务</label>
+<select id="svc" class="field"><option>umami</option><option>db</option></select>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="port" style="font-size: 13px; font-weight: 500">容器端口</label>
+<input id="port" class="field mono" type="text" value="3000" style="font-size: 13px">
+<span style="font-size: 12px; color: #5B6472">从 Compose 检测到：<button type="button" class="mono" style="border: 1px solid #D5DAE1; background: #F4F5F7; border-radius: 6px; padding: 1px 8px; font-size: 12px">3000</button></span>
+</div>
+</div>
+<fieldset style="border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+<legend style="font-size: 13px; font-weight: 500; margin-bottom: 8px">连接方式</legend>
+<label style="display: flex; gap: 12px; padding: 14px 16px; border: 1.5px solid #0E1116; border-radius: 10px; cursor: pointer">
+<input type="radio" name="mode" checked style="width: 18px; height: 18px; margin: 1px 0 0; accent-color: #0E1116">
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 500">容器内网 vessel-net（推荐）</span><span style="font-size: 12px; color: #5B6472">无需把端口暴露到宿主机</span></span>
+</label>
+<label style="display: flex; gap: 12px; padding: 14px 16px; border: 1px solid #D5DAE1; border-radius: 10px; cursor: pointer">
+<input type="radio" name="mode" style="width: 18px; height: 18px; margin: 1px 0 0; accent-color: #0E1116">
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 500">宿主机端口</span><span style="font-size: 12px; color: #5B6472">转发到 127.0.0.1 上已映射的端口</span></span>
+</label>
+</fieldset>
+</section>
+</div>
+
+<aside aria-labelledby="chk" style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<section style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="chk" style="margin: 0; font-size: 15px; font-weight: 600">部署前检查</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{checks}}" as="c" hint-placeholder-count="5">
+<li style="display: flex; gap: 10px; font-size: 13px; line-height: 1.5">
+<span style="width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; {{c.tone}}">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="color: #0E1116">{{c.t}}</span><span class="mono" style="font-size: 11px; color: #5B6472; word-break: break-all">{{c.d}}</span></span>
+</li>
+</sc-for>
+</ul>
+</section>
+<section style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600">部署时将执行</h2>
+<p class="mono" style="margin: 0; padding: 10px 12px; background: #F4F5F7; border-radius: 8px; font-size: 12px; line-height: 1.7; color: #3D4452">docker compose -p umami up -d --pull missing --remove-orphans</p>
+<p style="margin: 0; font-size: 12px; color: #5B6472; line-height: 1.6">拉取策略、健康检查等待和失败自动回滚可在创建后于「设置」中调整。</p>
+</section>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<button type="button" class="btn btn-primary" style="justify-content: center; height: 44px">创建并部署</button>
+<button type="button" class="btn" style="justify-content: center; height: 44px">仅保存，稍后部署</button>
+</div>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const src = [
+      ['services:', ''],
+      ['  umami:', ''],
+      ['    image: ', 'ghcr.io/umami-software/umami:postgresql-latest'],
+      ['    environment:', ''],
+      ['      DATABASE_URL: ', 'postgresql://umami:${DB_PASSWORD}@db:5432/umami'],
+      ['      APP_SECRET: ', '${APP_SECRET}'],
+      ['    depends_on:', ''],
+      ['      db:', ''],
+      ['        condition: ', 'service_healthy'],
+      ['    restart: ', 'unless-stopped'],
+      ['  db:', ''],
+      ['    image: ', 'postgres:16-alpine'],
+      ['    environment:', ''],
+      ['      POSTGRES_DB: ', 'umami'],
+      ['      POSTGRES_USER: ', 'umami'],
+      ['      POSTGRES_PASSWORD: ', '${DB_PASSWORD}'],
+      ['    volumes:', ''],
+      ['      - ', './data/db:/var/lib/postgresql/data'],
+      ['    restart: ', 'unless-stopped']
+    ];
+    const yaml = src.map((l, i) => ({ n: String(i + 1), k: l[0], v: l[1] }));
+    const env = [
+      { k: 'DB_PASSWORD', v: 'r8Kq2vNw7tLx', type: 'password' },
+      { k: 'APP_SECRET', v: 'c4f1e0b93a7d', type: 'password' },
+      { k: 'TZ', v: 'Asia/Shanghai', type: 'text' }
+    ];
+    const ok = 'background:#E6F4EC;color:#0F7A43', warn = 'background:#FFF1DB;color:#8A4B00';
+    const tick = 'M5 12l5 5 9-10', bang = 'M12 6v8M12 18v.5';
+    const checks = [
+      { tone: ok, icon: tick, t: 'YAML 语法正确', d: '' },
+      { tone: ok, icon: tick, t: '服务：umami、db', d: '' },
+      { tone: ok, icon: tick, t: '相对路径挂载会映射到应用目录', d: './data/db → /opt/vessel/data/apps/umami/data/db' },
+      { tone: ok, icon: tick, t: 'stats.example.com 解析正确', d: 'A 203.0.113.24' },
+      { tone: warn, icon: bang, t: 'db 未定义 healthcheck', d: 'depends_on 的 service_healthy 条件将无法满足' }
+    ];
+    return { yaml, env, checks };
+  }
+}
+</script>
+</body>
+</html>

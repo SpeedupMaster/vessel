@@ -44,6 +44,7 @@ import {
   ArrowsInSimple,
   ArrowsOutSimple,
   Archive,
+  DotsThree,
 } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { AppItem, DomainItem, BackupRecord, DatabaseBackupSchedule } from '../../types/index.js';
@@ -65,7 +66,7 @@ import { DeploymentsPanel } from './DeploymentsPanel.js';
 import { AppSettingsPanel } from './AppSettingsPanel.js';
 import { DatabaseMonitorPanel } from './DatabaseMonitorPanel.js';
 import { useNotification } from '../../context/NotificationContext.js';
-import { formatBytes } from '../../utils/format.js';
+import { formatBytes, formatRelative } from '../../utils/format.js';
 import { copyText } from '../../utils/clipboard.js';
 import { servicePorts } from '../../utils/composePorts.js';
 
@@ -634,7 +635,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
   // Click outside and ESC key listener for more menu dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (typeof window !== 'undefined' && window.innerWidth < 768) return;
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
         setIsMoreMenuOpen(false);
       }
@@ -1082,723 +1082,343 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in pb-28 md:pb-16">
-      {/* ================= VESSEL GLOBAL APP HEADER ================= */}
-      {isDb ? (
-        <div className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            {/* Database Engine Official Icon with Live Status Dot */}
-            <div className="relative flex-shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-paper-2 flex items-center justify-center p-1.5">
-                {dbOption?.icon || <Database className="w-6 h-6 text-emerald-500" />}
-              </div>
-              <span
-                className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-paper ${
-                  app?.status === 'running'
-                    ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
-                    : app?.status === 'deploying' || app?.status === 'rebuilding'
-                    ? 'bg-signal animate-pulse'
-                    : 'bg-rose-500'
-                }`}
-              />
-            </div>
+      {/* ================= APP HEADER ================= */}
+      <header className="space-y-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 min-h-[32px] -ml-1 px-1 rounded-md text-xs text-ink-muted hover:text-ink transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>应用</span>
+        </button>
 
-            {/* Title & Subtitle / ID */}
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-ink leading-tight tracking-tight">
-                  {app?.name || name}
-                </h2>
-                {app && <Badge variant={app.status}>{app.status}</Badge>}
-              </div>
-              <p className="text-xs font-mono text-ink-muted leading-tight mt-0.5">
-                {app?.id || '新建数据库'}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onBack}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-ink-muted hover:text-ink hover:bg-paper-2 transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>返回列表</span>
-          </button>
-        </div>
-      ) : (
-        <div className="pb-4">
-        {/* Top Navigation & Status Badges & Danger Action */}
-        <div className="flex items-center justify-between mb-3.5">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-2.5 py-1 -ml-2 rounded-xl text-xs text-ink-muted hover:text-ink hover:bg-paper-2 transition-colors group cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            <span className="hidden sm:inline">返回受管应用列表</span>
-            <span className="sm:hidden font-medium">返回列表</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            {/* Visual de-noised quiet badges: Hidden on mobile to save vertical space */}
-            <span className="hidden md:inline-flex text-[11px] font-sans px-2.5 py-0.5 rounded-full bg-paper-3 text-ink-muted select-none pointer-events-none">
-              Docker Compose 模式
-            </span>
-            <span className="hidden md:inline-flex text-[11px] font-sans px-2.5 py-0.5 rounded-full bg-paper-3 text-ink-muted select-none pointer-events-none">
-              Vessel 控制中枢
-            </span>
-
-            {/* Global Danger Action: Delete App */}
-            {mode === 'edit' && app && (
-              <button
-                onClick={openDeleteModal}
-                data-tooltip="彻底删除此应用"
-                className="p-1.5 rounded-xl text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer ml-1"
-              >
-                <Trash className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Main App Title & Details Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            {/* Status Dot */}
-            <div className="relative flex items-center justify-center">
-              {mode === 'create' ? (
-                <span className="status-dot text-accent" data-live="true" />
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="flex items-start gap-3.5 min-w-0">
+            <div className="w-12 h-12 shrink-0 rounded-xl bg-paper-2 border border-line flex items-center justify-center overflow-hidden">
+              {isDb && dbOption?.icon ? (
+                <span className="w-7 h-7 flex items-center justify-center">{dbOption.icon}</span>
               ) : (
-                <span
-                  className={clsx(
-                    'status-dot',
-                    app?.status === 'running'
-                      ? 'text-emerald-500'
-                      : app?.status === 'deploying' || app?.status === 'rebuilding'
-                      ? 'text-signal'
-                      : 'text-rose-500'
-                  )}
-                  data-live={app?.status === 'running' || app?.status === 'deploying' || app?.status === 'rebuilding'}
-                />
+                <span className="font-mono text-sm font-semibold text-ink-muted uppercase">
+                  {(app?.name || name || '').replace(/[^a-z0-9]/gi, '').slice(0, 2) || 'N'}
+                </span>
               )}
             </div>
 
-            {/* Title & Slug */}
-            <div>
-              {mode === 'create' ? (
-                <div className="flex items-center gap-2.5">
-                  <h2 className="text-xl font-bold text-ink tracking-tight">
-                    {name ? name : '新建 Docker Compose 应用'}
-                  </h2>
-                  <span className="text-xs font-sans px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
-                    新建应用
-                  </span>
-                </div>
-              ) : (
+            <div className="min-w-0 space-y-1">
+              {mode === 'edit' && isRenaming ? (
                 <div className="flex items-center gap-2">
-                  {isRenaming ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={tempName}
-                        onChange={(e) => setTempName(e.target.value)}
-                        className="bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3 py-1 text-sm text-ink font-semibold focus:outline-none transition-colors shadow-sm"
-                        autoFocus
-                      />
-                      <button
-                        onClick={handleSaveNameRename}
-                        className="text-xs px-3 py-1 btn-vessel-primary font-semibold rounded-xl cursor-pointer"
-                      >
-                        保存
-                      </button>
-                      <button
-                        onClick={() => setIsRenaming(false)}
-                        className="text-xs px-3 py-1 bg-paper-2 text-ink-muted hover:text-ink rounded-xl cursor-pointer"
-                      >
-                        取消
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2.5">
-                      <h2 className="text-xl font-bold text-ink tracking-tight">{app?.name}</h2>
-                      <button
-                        onClick={() => setIsRenaming(true)}
-                        data-tooltip="修改应用显示名称"
-                        className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-2 transition-colors cursor-pointer"
-                      >
-                        <PencilSimple className="w-3.5 h-3.5" />
-                      </button>
-                      <Badge variant={app?.status || 'stopped'}>{app?.status || 'stopped'}</Badge>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Elevated URL & Metadata Info Row (Desktop only in Edit mode, hidden on mobile for header compression) */}
-              <div className={`flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-ink-muted mt-1 ${mode === 'edit' ? 'hidden md:flex' : ''}`}>
-                {mode === 'create' ? (
-                  <span>
-                    {name
-                      ? `应用标识: ${name.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`
-                      : '配置独立的 Docker Compose 容器编排服务'}
-                  </span>
-                ) : (
-                  <>
-                    <span className="font-mono">应用 ID: {app?.id}</span>
-                    <span className="text-ink-muted/40">·</span>
-                    <span className="truncate max-w-xs" title={app?.currentImageTag || '由 Compose 编排托管'}>
-                      镜像: {app?.currentImageTag || '由 Compose 编排托管'}
-                    </span>
-                    <span className="text-ink-muted/40">·</span>
-
-                    {/* Elevated Public Route URL with one-click copy and open */}
-                    {appDomains.length > 0 ? (
-                      <div className="inline-flex items-center gap-1.5">
-                        <Globe className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>公网路由:</span>
-                        <a
-                          href={`https://${appDomains[0].domain}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-medium text-accent hover:underline inline-flex items-center gap-1 font-mono"
-                        >
-                          <span>https://{appDomains[0].domain}</span>
-                          <ArrowSquareOut className="w-3.5 h-3.5" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyUrl(`https://${appDomains[0].domain}`)}
-                          data-tooltip="复制公网链接"
-                          className="p-0.5 text-ink-muted hover:text-ink transition-colors cursor-pointer"
-                        >
-                          {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                        {appDomains.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('domains')}
-                            className="text-[11px] text-ink-muted hover:text-accent font-medium ml-0.5"
-                          >
-                            (+{appDomains.length - 1} 个)
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={openAddDomainModal}
-                        className="inline-flex items-center gap-1 text-ink-muted hover:text-accent transition-colors cursor-pointer"
-                      >
-                        <Globe className="w-3.5 h-3.5 text-ink-faint" />
-                        <span>+ 绑定公网路由</span>
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Header Quick Actions Bar (md:hidden - GENERAL TAB ONLY) */}
-        {mode === 'edit' && !isDb && activeTab === 'general' && (
-          <div className="md:hidden flex items-center gap-2 mt-3 overflow-x-auto no-scrollbar scrollbar-none pb-0.5">
-            {app?.status !== 'running' && app?.status !== 'deploying' && app?.status !== 'rebuilding' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => !isDirty && app && onDeploy(app.id)}
-                  disabled={isDirty}
-                  data-tooltip={isDirty ? '配置已修改，请使用底部「保存并部署」或放弃更改' : undefined}
-                  className={clsx(
-                    "min-h-[36px] px-3.5 py-1.5 font-medium text-xs rounded-xl transition-all shrink-0 flex items-center gap-1.5",
-                    isDirty
-                      ? "bg-paper-3 text-ink-muted/50 cursor-not-allowed opacity-60"
-                      : "bg-accent text-accent-contrast active:scale-95 cursor-pointer"
-                  )}
-                >
-                  <Play className={clsx("w-3.5 h-3.5", isDirty ? "text-ink-muted" : "text-accent-contrast")} weight="fill" />
-                  <span>启动应用</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('logs')}
-                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
-                >
-                  <Terminal className="w-3.5 h-3.5 text-accent" />
-                  <span>查看日志</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsMoreMenuOpen(true)}
-                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
-                >
-                  <span>更多操作</span>
-                  <CaretDown className="w-3 h-3 text-ink-muted" />
-                </button>
-              </>
-            )}
-
-            {app?.status === 'running' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => !isDirty && app && onDeploy(app.id)}
-                  disabled={isDirty}
-                  data-tooltip={isDirty ? '配置已修改，请使用底部「保存并部署」或放弃更改' : undefined}
-                  className={clsx(
-                    "min-h-[36px] px-3.5 py-1.5 font-medium text-xs rounded-xl transition-all shrink-0 flex items-center gap-1.5",
-                    isDirty
-                      ? "bg-paper-3 text-ink-muted/50 cursor-not-allowed opacity-60"
-                      : "bg-accent text-accent-contrast active:scale-95 cursor-pointer"
-                  )}
-                >
-                  <Play className={clsx("w-3.5 h-3.5", isDirty ? "text-ink-muted" : "text-accent-contrast")} weight="fill" />
-                  <span>重新部署</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('logs')}
-                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
-                >
-                  <Terminal className="w-3.5 h-3.5 text-accent" />
-                  <span>查看日志</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => app && onStop(app.id)}
-                  className="min-h-[36px] px-2.5 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-xs font-medium rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1"
-                >
-                  <Stop className="w-3.5 h-3.5" />
-                  <span>停止</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsMoreMenuOpen(true)}
-                  className="btn-vessel-secondary min-h-[36px] px-3 py-1.5 text-xs rounded-xl shrink-0 flex items-center gap-1.5"
-                >
-                  <span>更多操作</span>
-                  <CaretDown className="w-3 h-3 text-ink-muted" />
-                </button>
-              </>
-            )}
-
-            {(app?.status === 'deploying' || app?.status === 'rebuilding') && (
-              <>
-                <button
-                  disabled
-                  className="min-h-[36px] px-3 py-1.5 bg-accent/70 text-accent-contrast font-medium text-xs rounded-xl cursor-wait shrink-0 flex items-center gap-1.5"
-                >
-                  <CircleNotch className="w-3.5 h-3.5 text-accent-contrast animate-spin" />
-                  <span>部署执行中...</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('deployments')}
-                  className="min-h-[36px] px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 rounded-xl transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
-                >
-                  <Terminal className="w-3.5 h-3.5" />
-                  <span>部署记录</span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-      )}
-
-      {/* ================= GLOBAL HORIZONTAL TAB NAVIGATION (Dokploy Capsule Style) ================= */}
-      <div className="flex items-center gap-1 p-1 bg-paper-2 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-none no-scrollbar -mt-2">
-        {(
-          isDb
-            ? [
-                { key: 'general' as TabKey, label: '常规' },
-                { key: 'environment' as TabKey, label: '环境变量' },
-                { key: 'deployments' as TabKey, label: '部署记录' },
-                { key: 'logs' as TabKey, label: '运行日志' },
-                { key: 'monitoring' as TabKey, label: '监控' },
-                { key: 'backups' as TabKey, label: '备份' },
-                { key: 'advanced' as TabKey, label: '高级设置' },
-              ]
-            : mode === 'create'
-            ? [
-                { key: 'general' as TabKey, label: '常规' },
-                { key: 'environment' as TabKey, label: '环境变量' },
-                {
-                  key: 'domains' as TabKey,
-                  label: bindDomainOnDeploy && deployDomain ? '域名 (1)' : '域名',
-                },
-                { key: 'advanced' as TabKey, label: '高级设置' },
-              ]
-            : [
-                { key: 'general' as TabKey, label: '常规' },
-                { key: 'environment' as TabKey, label: '环境变量' },
-                { key: 'deployments' as TabKey, label: '部署记录' },
-                { key: 'containers' as TabKey, label: `容器 (${app?.containers?.length || 0})` },
-                { key: 'domains' as TabKey, label: `域名 (${appDomains.length})` },
-                { key: 'backups' as TabKey, label: `备份 (${appBackups.length})` },
-                { key: 'logs' as TabKey, label: '运行日志' },
-                { key: 'advanced' as TabKey, label: '高级设置' },
-              ]
-        ).map(({ key, label }) => {
-          const isActive = activeTab === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveTab(key)}
-              className={clsx(
-                "px-4 py-1.5 text-xs font-medium rounded-xl transition-all cursor-pointer whitespace-nowrap select-none",
-                isActive
-                  ? "bg-accent text-accent-contrast font-semibold shadow-sm"
-                  : "text-ink-muted hover:text-ink hover:bg-paper-3/60"
-              )}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ================= MOBILE SECONDARY METADATA & AUTODEPLOY BAR (EDIT MODE) ================= */}
-      {!isDb && mode === 'edit' && activeTab === 'general' && (
-        <div className="md:hidden mt-2 mb-1 rounded-2xl bg-paper-2 overflow-hidden font-sans">
-          <div className="px-3.5 py-2 flex items-center justify-between">
-            {/* Autodeploy switch */}
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="autodeployToggleMobile"
-                className="text-xs font-medium text-ink-muted flex items-center gap-1 cursor-pointer select-none"
-              >
-                <span>自动部署</span>
-              </label>
-              <Switch
-                id="autodeployToggleMobile"
-                checked={autoUpdate}
-                onChange={setAutoUpdate}
-                size="sm"
-                aria-label="自动部署"
-              />
-            </div>
-
-            {/* Accordion toggle button */}
-            <button
-              type="button"
-              onClick={() => setIsMetadataExpanded(!isMetadataExpanded)}
-              className="flex items-center gap-1 text-xs font-medium text-ink-muted hover:text-ink px-2 py-1 rounded-xl hover:bg-paper-3 transition-colors cursor-pointer"
-            >
-              <span>应用元信息</span>
-              <CaretDown
-                className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  isMetadataExpanded ? 'rotate-180 text-accent' : 'text-ink-muted'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Collapsible Content */}
-          {isMetadataExpanded && (
-            <div className="px-3.5 pt-1 pb-3 space-y-2 text-xs animate-in fade-in duration-150">
-              <div className="flex items-center justify-between text-ink-muted">
-                <span className="text-ink-faint">应用 ID</span>
-                <div className="flex items-center gap-1 font-mono text-[11px] text-ink">
-                  <span>{app?.id}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (app?.id) {
-                        void copyText(app.id);
-                        setCopiedUUID(true);
-                        toast.success('应用 ID 已复制');
-                        setTimeout(() => setCopiedUUID(false), 2000);
-                      }
+                  <input
+                    type="text"
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveNameRename();
+                      if (e.key === 'Escape') setIsRenaming(false);
                     }}
-                    className="p-1 text-ink-muted hover:text-ink transition-colors cursor-pointer"
-                  >
-                    {copiedUUID ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    aria-label="应用名称"
+                    className="bg-paper-2 border border-line rounded-lg px-3 h-9 text-sm text-ink font-semibold focus:outline-none focus:border-line-strong"
+                    autoFocus
+                  />
+                  <button type="button" onClick={handleSaveNameRename} className="btn-vessel-primary h-9 px-3 text-xs rounded-lg cursor-pointer">
+                    保存
+                  </button>
+                  <button type="button" onClick={() => setIsRenaming(false)} className="btn-vessel-secondary h-9 px-3 text-xs rounded-lg cursor-pointer">
+                    取消
                   </button>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between text-ink-muted">
-                <span className="text-ink-faint">镜像标签</span>
-                <span className="truncate max-w-[200px] font-mono text-[11px] text-ink" title={app?.currentImageTag || '由 Compose 编排托管'}>
-                  {app?.currentImageTag || '由 Compose 编排托管'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-ink-muted pt-1">
-                <span className="text-ink-faint">公网路由</span>
-                {appDomains.length > 0 ? (
-                  <div className="inline-flex items-center gap-1.5 font-mono text-[11px]">
-                    <Globe className="w-3 h-3 text-emerald-500" />
-                    <a
-                      href={`https://${appDomains[0].domain}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium text-accent hover:underline inline-flex items-center gap-0.5 truncate max-w-[140px]"
-                    >
-                      <span>{appDomains[0].domain}</span>
-                      <ArrowSquareOut className="w-2.5 h-2.5" />
-                    </a>
+              ) : (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <h2 className="text-xl sm:text-[22px] font-semibold text-ink tracking-tight truncate">
+                    {mode === 'create' ? name || '新建应用' : app?.name}
+                  </h2>
+                  {mode === 'edit' && (
                     <button
                       type="button"
-                      onClick={() => handleCopyUrl(`https://${appDomains[0].domain}`)}
-                      className="p-0.5 text-ink-muted hover:text-ink transition-colors cursor-pointer"
+                      onClick={() => {
+                        setTempName(app?.name || '');
+                        setIsRenaming(true);
+                      }}
+                      aria-label="重命名应用"
+                      data-tooltip="重命名"
+                      className="w-8 h-8 shrink-0 rounded-lg text-ink-faint hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer flex items-center justify-center"
                     >
-                      {copiedUrl ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      <PencilSimple className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {mode === 'create' ? (
+                <p className="text-[13px] text-ink-muted">粘贴 docker-compose.yml，按需配置环境变量与域名，然后创建并部署。</p>
+              ) : (
+                app && (
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13px] text-ink-muted">
+                    <Badge variant={app.status}>{app.status}</Badge>
+                    <span>{app.lastDeployedAt ? `部署于 ${formatRelative(app.lastDeployedAt)}` : '尚未部署'}</span>
+                    <span className="text-ink-faint" aria-hidden="true">·</span>
+                    <span>{isDb ? dbInfo?.engine || '数据库' : `Compose · ${app.containers?.length || 0} 个容器`}</span>
+                    {!isDb && (
+                      <>
+                        <span className="text-ink-faint" aria-hidden="true">·</span>
+                        {appDomains.length > 0 ? (
+                          <span className="inline-flex items-center gap-1 min-w-0">
+                            <a
+                              href={`https://${appDomains[0].domain}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono text-signal hover:underline inline-flex items-center gap-1 truncate max-w-[240px]"
+                            >
+                              {appDomains[0].domain}
+                              <ArrowSquareOut className="w-3.5 h-3.5 shrink-0" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyUrl(`https://${appDomains[0].domain}`)}
+                              aria-label="复制访问地址"
+                              className="w-7 h-7 rounded-md text-ink-faint hover:text-ink hover:bg-paper-3 transition-colors cursor-pointer flex items-center justify-center"
+                            >
+                              {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                            {appDomains.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('domains')}
+                                className="text-xs text-ink-muted hover:text-ink cursor-pointer"
+                              >
+                                +{appDomains.length - 1}
+                              </button>
+                            )}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={openAddDomainModal}
+                            className="inline-flex items-center gap-1 text-ink-muted hover:text-signal transition-colors cursor-pointer"
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            绑定域名
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <span className="text-ink-faint" aria-hidden="true">·</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyUUID(app.id)}
+                      data-tooltip="复制应用 ID"
+                      className="inline-flex items-center gap-1 font-mono text-xs text-ink-faint hover:text-ink transition-colors cursor-pointer"
+                    >
+                      id: {app.id}
+                      {copiedUUID ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                     </button>
                   </div>
-                ) : (
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Lifecycle actions, visible on every tab */}
+          {mode === 'edit' && app && !isDb && (
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {app.status === 'deploying' || app.status === 'rebuilding' ? (
+                <>
                   <button
                     type="button"
-                    onClick={openAddDomainModal}
-                    className="inline-flex items-center gap-1 text-accent hover:underline text-[11px] font-medium cursor-pointer"
+                    onClick={() => setActiveTab('deployments')}
+                    className="btn-vessel-secondary h-10 px-3.5 text-[13px] rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>+ 绑定公网路由</span>
+                    <Terminal className="w-4 h-4" />
+                    查看进度
                   </button>
+                  <button
+                    type="button"
+                    disabled
+                    className="btn-vessel-primary h-10 px-3.5 text-[13px] rounded-lg inline-flex items-center gap-1.5 opacity-80 cursor-wait"
+                  >
+                    <CircleNotch className="w-4 h-4 animate-spin" />
+                    部署中…
+                  </button>
+                </>
+              ) : (
+                <>
+                  {app.status === 'running' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onStop(app.id)}
+                        className="btn-vessel-secondary h-10 px-3.5 text-[13px] rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Stop className="w-4 h-4" />
+                        停止
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => !isDirty && onRestart(app.id)}
+                        disabled={isDirty}
+                        data-tooltip={isDirty ? '配置有未保存的修改，请先保存或放弃' : undefined}
+                        className="btn-vessel-secondary h-10 px-3.5 text-[13px] rounded-lg inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ArrowsClockwise className="w-4 h-4" />
+                        重启
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => !isDirty && onDeploy(app.id)}
+                    disabled={isDirty}
+                    data-tooltip={isDirty ? '配置有未保存的修改，请使用底部「保存并部署」' : undefined}
+                    className="btn-vessel-primary h-10 px-3.5 text-[13px] rounded-lg inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Play className="w-4 h-4" weight="fill" />
+                    {app.status === 'running' ? '重新部署' : '启动'}
+                  </button>
+                </>
+              )}
+
+              <div className="relative" ref={moreMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                  aria-label="更多操作"
+                  aria-haspopup="menu"
+                  aria-expanded={isMoreMenuOpen}
+                  className="btn-vessel-secondary !p-0 w-10 h-10 shrink-0 rounded-lg inline-flex items-center justify-center cursor-pointer"
+                >
+                  <DotsThree className="w-5 h-5" weight="bold" />
+                </button>
+                {isMoreMenuOpen && (
+                  <div role="menu" className="absolute left-0 lg:left-auto lg:right-0 mt-1.5 w-56 surface-pop rounded-xl p-1.5 z-30 animate-dropdown">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        setActiveTab('logs');
+                      }}
+                      className="w-full min-h-[40px] px-3 text-left text-[13px] text-ink hover:bg-paper-3 rounded-lg flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <Terminal className="w-4 h-4 text-ink-muted" />
+                      查看日志
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={isDirty}
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        onRebuild(app.id);
+                      }}
+                      className="w-full min-h-[40px] px-3 text-left text-[13px] text-ink hover:bg-paper-3 rounded-lg flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ArrowsClockwise className="w-4 h-4 text-ink-muted" />
+                      重建容器
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={isDirty}
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        setIsFreshVolumesModalOpen(true);
+                      }}
+                      className="w-full min-h-[40px] px-3 text-left text-[13px] text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Database className="w-4 h-4" />
+                      清空数据卷并重新部署
+                    </button>
+                    <div className="my-1 h-px bg-line-subtle" />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        openDeleteModal();
+                      }}
+                      className="w-full min-h-[40px] px-3 text-left text-[13px] text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <Trash className="w-4 h-4" />
+                      删除应用
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           )}
         </div>
-      )}
+      </header>
 
-      {/* ================= ACTION & CONTROL BAR (EDIT MODE - GENERAL TAB ONLY - DESKTOP ONLY) ================= */}
-      {!isDb && mode === 'edit' && activeTab === 'general' && (
-        <div className="hidden md:flex flex-wrap items-center justify-between gap-3 pt-3 pb-1">
-          {/* Left: Core State-Driven Actions (Heuristic Principle 2 & Interaction Flow) */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Status: STOPPED */}
-            {app?.status !== 'running' && app?.status !== 'deploying' && app?.status !== 'rebuilding' && (
-              <>
-                <button
-                  onClick={() => !isDirty && app && onDeploy(app.id)}
-                  disabled={isDirty}
-                  data-tooltip={isDirty ? '配置已修改，请使用底部悬浮栏「保存并部署」或放弃更改' : undefined}
-                  className={`inline-flex items-center gap-2 px-4 py-2 font-medium text-xs rounded-xl transition-all ${
-                    isDirty
-                      ? 'bg-paper-3 text-ink-muted/50 cursor-not-allowed opacity-60'
-                      : 'bg-accent text-accent-contrast active:translate-y-px cursor-pointer'
-                  }`}
-                >
-                  <Play className={`w-3.5 h-3.5 ${isDirty ? 'text-ink-muted' : 'text-accent-contrast'}`} weight="fill" />
-                  <span>启动应用</span>
-                </button>
+      {/* ================= TABS ================= */}
+      <div className="flex items-end justify-between gap-4 border-b border-line">
+        <nav aria-label="应用页签" className="flex items-center gap-5 overflow-x-auto no-scrollbar -mb-px min-w-0">
+          {(
+            (isDb
+              ? [
+                  { key: 'general', label: '常规' },
+                  { key: 'environment', label: '环境变量' },
+                  { key: 'deployments', label: '部署记录' },
+                  { key: 'logs', label: '日志' },
+                  { key: 'monitoring', label: '监控' },
+                  { key: 'backups', label: '备份' },
+                  { key: 'advanced', label: '设置' },
+                ]
+              : mode === 'create'
+              ? [
+                  { key: 'general', label: '编排' },
+                  { key: 'environment', label: '环境变量' },
+                  { key: 'domains', label: '域名', count: bindDomainOnDeploy && deployDomain ? 1 : undefined },
+                  { key: 'advanced', label: '设置' },
+                ]
+              : [
+                  { key: 'general', label: '编排' },
+                  { key: 'environment', label: '环境变量' },
+                  { key: 'deployments', label: '部署记录' },
+                  { key: 'containers', label: '容器', count: app?.containers?.length || 0 },
+                  { key: 'domains', label: '域名', count: appDomains.length },
+                  { key: 'backups', label: '备份', count: appBackups.length },
+                  { key: 'logs', label: '日志' },
+                  { key: 'advanced', label: '设置' },
+                ]) as { key: TabKey; label: string; count?: number }[]
+          ).map((t) => {
+            const isActive = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setActiveTab(t.key)}
+                aria-current={isActive ? 'page' : undefined}
+                className={clsx(
+                  'h-11 px-0.5 border-b-2 text-[13.5px] font-medium whitespace-nowrap transition-colors cursor-pointer select-none',
+                  isActive ? 'border-ink text-ink' : 'border-transparent text-ink-muted hover:text-ink'
+                )}
+              >
+                {t.label}
+                {t.count != null && t.count > 0 && <span className="ml-1.5 text-xs text-ink-faint tabular-nums">{t.count}</span>}
+              </button>
+            );
+          })}
+        </nav>
 
-                <button
-                  onClick={() => setActiveTab('logs')}
-                  className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
-                >
-                  <Terminal className="w-3.5 h-3.5 text-accent" />
-                  <span>查看日志</span>
-                </button>
-
-                {/* Dropdown for Secondary Actions */}
-                <div className="relative" ref={moreMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                    className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
-                  >
-                    <span>更多操作</span>
-                    <CaretDown className="w-3 h-3 text-ink-muted" />
-                  </button>
-                  {isMoreMenuOpen && (
-                    <div className="absolute left-0 mt-1.5 w-48 surface-pop rounded-2xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
-                      <button
-                        type="button"
-                        disabled={isDirty}
-                        onClick={() => {
-                          if (isDirty) return;
-                          setIsMoreMenuOpen(false);
-                          app && onRebuild(app.id);
-                        }}
-                        data-tooltip={isDirty ? '配置已修改，请先保存或放弃更改' : undefined}
-                        className={`w-full px-3.5 py-2 text-left text-xs flex items-center gap-2 transition-colors ${
-                          isDirty
-                            ? 'text-ink-faint cursor-not-allowed opacity-50'
-                            : 'text-ink hover:bg-paper-3 cursor-pointer'
-                        }`}
-                      >
-                        <ArrowsClockwise className="w-3.5 h-3.5 text-ink-muted" />
-                        <span>重建容器服务</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isDirty}
-                        onClick={() => {
-                          if (isDirty) return;
-                          setIsMoreMenuOpen(false);
-                          setIsFreshVolumesModalOpen(true);
-                        }}
-                        data-tooltip={isDirty ? '配置已修改，请先保存或放弃更改' : undefined}
-                        className={`w-full px-3.5 py-2 text-left text-xs flex items-center gap-2 transition-colors ${
-                          isDirty
-                            ? 'text-rose-400/50 cursor-not-allowed opacity-50'
-                            : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-pointer'
-                        }`}
-                      >
-                        <Database className="w-3.5 h-3.5" />
-                        <span>清空卷重部署</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Status: RUNNING */}
-            {app?.status === 'running' && (
-              <>
-                <button
-                  onClick={() => !isDirty && app && onDeploy(app.id)}
-                  disabled={isDirty}
-                  data-tooltip={isDirty ? '配置已修改，请使用底部悬浮栏「保存并部署」或放弃更改' : undefined}
-                  className={`inline-flex items-center gap-2 px-4 py-2 font-medium text-xs rounded-xl transition-all ${
-                    isDirty
-                      ? 'bg-paper-3 text-ink-muted/50 cursor-not-allowed opacity-60'
-                      : 'bg-accent text-accent-contrast active:translate-y-px cursor-pointer'
-                  }`}
-                >
-                  <Play className={`w-3.5 h-3.5 ${isDirty ? 'text-ink-muted' : 'text-accent-contrast'}`} weight="fill" />
-                  <span>重新部署</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('logs')}
-                  className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
-                >
-                  <Terminal className="w-3.5 h-3.5 text-accent" />
-                  <span>查看日志</span>
-                </button>
-
-                <button
-                  onClick={() => app && onStop(app.id)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-xs font-medium rounded-xl transition-colors cursor-pointer"
-                >
-                  <Stop className="w-3.5 h-3.5" />
-                  <span>停止运行</span>
-                </button>
-
-                {/* Dropdown for Secondary Actions */}
-                <div className="relative" ref={moreMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                    className="btn-vessel-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer"
-                  >
-                    <span>更多操作</span>
-                    <CaretDown className="w-3 h-3 text-ink-muted" />
-                  </button>
-                  {isMoreMenuOpen && (
-                    <div className="absolute left-0 mt-1.5 w-48 surface-pop rounded-2xl py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
-                      <button
-                        type="button"
-                        disabled={isDirty}
-                        onClick={() => {
-                          if (isDirty) return;
-                          setIsMoreMenuOpen(false);
-                          app && onRestart(app.id);
-                        }}
-                        data-tooltip={isDirty ? '配置已修改，请先保存或放弃更改' : undefined}
-                        className={`w-full px-3.5 py-2 text-left text-xs flex items-center gap-2 transition-colors ${
-                          isDirty
-                            ? 'text-ink-faint cursor-not-allowed opacity-50'
-                            : 'text-ink hover:bg-paper-3 cursor-pointer'
-                        }`}
-                      >
-                        <ArrowsClockwise className="w-3.5 h-3.5 text-ink-muted" />
-                        <span>重启服务实例</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isDirty}
-                        onClick={() => {
-                          if (isDirty) return;
-                          setIsMoreMenuOpen(false);
-                          app && onRebuild(app.id);
-                        }}
-                        data-tooltip={isDirty ? '配置已修改，请先保存或放弃更改' : undefined}
-                        className={`w-full px-3.5 py-2 text-left text-xs flex items-center gap-2 transition-colors ${
-                          isDirty
-                            ? 'text-ink-faint cursor-not-allowed opacity-50'
-                            : 'text-ink hover:bg-paper-3 cursor-pointer'
-                        }`}
-                      >
-                        <ArrowsClockwise className="w-3.5 h-3.5 text-ink-muted" />
-                        <span>重建容器服务</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isDirty}
-                        onClick={() => {
-                          if (isDirty) return;
-                          setIsMoreMenuOpen(false);
-                          setIsFreshVolumesModalOpen(true);
-                        }}
-                        data-tooltip={isDirty ? '配置已修改，请先保存或放弃更改' : undefined}
-                        className={`w-full px-3.5 py-2 text-left text-xs flex items-center gap-2 transition-colors ${
-                          isDirty
-                            ? 'text-rose-400/50 cursor-not-allowed opacity-50'
-                            : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-pointer'
-                        }`}
-                      >
-                        <Database className="w-3.5 h-3.5" />
-                        <span>清空卷重部署</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Status: DEPLOYING / REBUILDING */}
-            {(app?.status === 'deploying' || app?.status === 'rebuilding') && (
-              <>
-                <button
-                  disabled
-                  className="inline-flex items-center gap-2 px-4 py-2 btn-vessel-primary opacity-80 font-medium text-xs rounded-lg cursor-wait"
-                >
-                  <CircleNotch className="w-3.5 h-3.5 text-current animate-spin" />
-                  <span>部署执行中...</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('deployments')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/10 border border-accent/20 rounded-lg transition-colors cursor-pointer"
-                >
-                  <Terminal className="w-3.5 h-3.5" />
-                  <span>查看部署记录</span>
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Right: Autodeploy Switch Toggle (Borderless & Minimalist) */}
-          <div className="flex items-center gap-2.5">
-            <label
-              htmlFor="autodeployToggle"
-              className="text-xs font-medium text-ink-muted hover:text-ink flex items-center gap-1.5 cursor-pointer select-none transition-colors"
-            >
-              <span>自动部署</span>
-              <span className="text-[10px] text-ink-faint hidden sm:inline">(镜像自动巡检更新)</span>
+        {!isDb && mode === 'edit' && activeTab === 'general' && (
+          <div className="hidden sm:flex items-center gap-2 pb-2.5 shrink-0">
+            <label htmlFor="autodeployToggle" className="text-xs text-ink-muted cursor-pointer select-none">
+              自动部署新镜像
             </label>
-            <Switch
-              id="autodeployToggle"
-              checked={autoUpdate}
-              onChange={setAutoUpdate}
-              size="sm"
-              aria-label="自动部署"
-            />
+            <Switch id="autodeployToggle" checked={autoUpdate} onChange={setAutoUpdate} size="sm" aria-label="自动部署新镜像" />
           </div>
+        )}
+      </div>
+
+      {!isDb && mode === 'edit' && activeTab === 'general' && (
+        <div className="sm:hidden flex items-center justify-between gap-2 -mt-2">
+          <label htmlFor="autodeployToggleMobile" className="text-xs text-ink-muted cursor-pointer select-none">
+            自动部署新镜像
+          </label>
+          <Switch id="autodeployToggleMobile" checked={autoUpdate} onChange={setAutoUpdate} size="sm" aria-label="自动部署新镜像" />
         </div>
       )}
+
 
       {/* ================= TAB CONTENT 1: GENERAL (UNIFIED COMPOSE WORKSPACE) ================= */}
       {activeTab === 'general' && (
@@ -3409,148 +3029,6 @@ export const ComposeAppView: React.FC<ComposeAppViewProps> = ({
           )}
         </div>
       )}
-
-      {/* ================= MOBILE ACTION SHEET FOR MORE MENU (DOKPLOY NATIVE EXPERIENCE) ================= */}
-      {typeof document !== 'undefined' &&
-        isMoreMenuOpen &&
-        createPortal(
-          <div
-            className="md:hidden fixed inset-0 z-50 bg-zinc-950/40 dark:bg-black/70 backdrop-blur-[3px] animate-fade-in flex flex-col justify-end"
-            onClick={() => setIsMoreMenuOpen(false)}
-          >
-            <div
-              className="w-full surface-pop rounded-t-[24px] p-4 sm:p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3 font-sans animate-bottom-sheet"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Drag Handle Indicator */}
-              <div className="w-9 h-1 bg-ink-faint/30 rounded-full mx-auto mb-1 shrink-0" />
-
-              {/* Header */}
-              <div className="flex items-center justify-between pb-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-ink">更多操作</h3>
-                  <p className="text-[11px] text-ink-muted">{app?.name} · 容器实例高级控制</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMoreMenuOpen(false)}
-                  aria-label="关闭面板"
-                  className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-ink-muted hover:text-ink cursor-pointer"
-                >
-                  <X className="w-4 h-4" weight="bold" />
-                </button>
-              </div>
-
-              {/* Options */}
-              <div className="space-y-2.5">
-                {/* Restart (if running) */}
-                {app?.status === 'running' && (
-                  <button
-                    type="button"
-                    disabled={isDirty}
-                    onClick={() => {
-                      if (isDirty) {
-                        toast.warning('配置已修改，请先保存或放弃更改');
-                        return;
-                      }
-                      setIsMoreMenuOpen(false);
-                      app && onRestart(app.id);
-                    }}
-                    className={clsx(
-                      'w-full min-h-[56px] p-3 rounded-2xl flex items-center gap-3.5 transition-all text-left',
-                      isDirty
-                        ? 'bg-paper-3 opacity-50 cursor-not-allowed'
-                        : 'bg-paper-3 hover:bg-paper-4 cursor-pointer active:scale-[0.99]'
-                    )}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                      <ArrowsClockwise className="w-5 h-5" weight="bold" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-ink">重启服务实例</div>
-                      <div className="text-xs text-ink-muted truncate">
-                        平滑重启所有运行中的容器实例，不重新拉取镜像
-                      </div>
-                    </div>
-                    <CaretRight className="w-4 h-4 text-ink-faint shrink-0" />
-                  </button>
-                )}
-
-                {/* Rebuild container services */}
-                <button
-                  type="button"
-                  disabled={isDirty}
-                  onClick={() => {
-                    if (isDirty) {
-                      toast.warning('配置已修改，请先保存或放弃更改');
-                      return;
-                    }
-                    setIsMoreMenuOpen(false);
-                    app && onRebuild(app.id);
-                  }}
-                  className={clsx(
-                    'w-full min-h-[56px] p-3 rounded-2xl flex items-center gap-3.5 transition-all text-left',
-                    isDirty
-                      ? 'bg-paper-3 opacity-50 cursor-not-allowed'
-                      : 'bg-paper-3 hover:bg-paper-4 cursor-pointer active:scale-[0.99]'
-                  )}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                    <ArrowsClockwise className="w-5 h-5" weight="bold" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-ink">重建容器服务</div>
-                    <div className="text-xs text-ink-muted truncate">
-                      强制重新构建并重新创建所有容器实例
-                    </div>
-                  </div>
-                  <CaretRight className="w-4 h-4 text-ink-faint shrink-0" />
-                </button>
-
-                {/* Fresh Volumes Deploy (Danger) */}
-                <button
-                  type="button"
-                  disabled={isDirty}
-                  onClick={() => {
-                    if (isDirty) {
-                      toast.warning('配置已修改，请先保存或放弃更改');
-                      return;
-                    }
-                    setIsMoreMenuOpen(false);
-                    setIsFreshVolumesModalOpen(true);
-                  }}
-                  className={clsx(
-                    'w-full min-h-[56px] p-3 rounded-2xl flex items-center gap-3.5 transition-all text-left',
-                    isDirty
-                      ? 'bg-rose-500/5 opacity-50 cursor-not-allowed'
-                      : 'bg-rose-500/10 hover:bg-rose-500/15 cursor-pointer active:scale-[0.99]'
-                  )}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                    <Database className="w-5 h-5" weight="bold" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-rose-600 dark:text-rose-400">清空卷重新部署</div>
-                    <div className="text-xs text-rose-500/80 truncate">
-                      清空关联数据卷并全新初始化部署 (高危操作)
-                    </div>
-                  </div>
-                  <CaretRight className="w-4 h-4 text-rose-400 shrink-0" />
-                </button>
-              </div>
-
-              {/* Cancel Button */}
-              <button
-                type="button"
-                onClick={() => setIsMoreMenuOpen(false)}
-                className="btn-vessel-secondary w-full min-h-[48px] rounded-xl text-sm font-semibold flex items-center justify-center cursor-pointer mt-1"
-              >
-                取消
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
 
       {/* ================= DESKTOP STICKY FLOATING ACTION BAR (FOR DIRTY STATE) ================= */}
       {isDirty && mode === 'edit' && (

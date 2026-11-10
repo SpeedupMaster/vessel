@@ -19,6 +19,7 @@ import {
   Info,
   CaretDown,
   CaretUp,
+  LockKey,
 } from '@phosphor-icons/react';
 import { R2Config, BackupRecord } from '../../types/index.js';
 import { Button8State } from '../common/Button8State.js';
@@ -28,7 +29,7 @@ import { EmptyState } from '../common/EmptyState.js';
 import { Switch } from '../common/Switch.js';
 import { NumberInput } from '../common/NumberInput.js';
 import { useNotification } from '../../context/NotificationContext.js';
-import { formatBytes } from '../../utils/format.js';
+import { formatBytes, formatRelative } from '../../utils/format.js';
 
 interface BackupsViewProps {
   r2Config: R2Config | null;
@@ -60,7 +61,7 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
   onRestoreBackup,
 }) => {
   const { toast } = useNotification();
-  const [isTipsExpanded, setIsTipsExpanded] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<'all' | BackupRecord['type']>('all');
 
   const [enabled, setEnabled] = useState(r2Config?.enabled ?? false);
   const [endpoint, setEndpoint] = useState(r2Config?.endpoint || '');
@@ -235,213 +236,246 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
     }
   };
 
+  const typeLabel = (t: BackupRecord['type']) => (t === 'system' ? '系统快照' : t === 'app_db' ? '数据库' : '数据卷');
+  const filteredBackups = backups
+    .filter((b) => typeFilter === 'all' || b.type === typeFilter)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const totalBytes = backups.reduce((sum, b) => sum + (b.fileSizeBytes || 0), 0);
+  const scheduleLabel = (expr: string) => BACKUP_CRON_PRESETS.find((p) => p.expr === expr.trim())?.label;
+  const lastStatus = r2Config?.lastBackupStatus;
+
+  const fieldClass =
+    'w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-lg px-3 text-[13px] text-ink font-mono placeholder:text-ink-faint focus:outline-none focus:border-line-strong';
+  const labelClass = 'block text-xs font-medium text-ink mb-1.5';
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-paper-3 flex items-center justify-center text-ink flex-shrink-0 mt-0.5">
-            <CloudArrowUp className="w-5 h-5" weight="bold" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-semibold text-base sm:text-lg text-ink tracking-tight font-sans">
-                Cloudflare R2 远程对象存储灾备配置
-              </h2>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-paper-3 text-ink-muted font-mono">
-                {enabled ? '自动灾备已启用' : '自动化备份未开启'}
-              </span>
-            </div>
-
-            {/* Compressed 1-line description with collapsible detailed explanation */}
-            <div className="mt-1">
-              <p className="text-xs text-ink-muted leading-relaxed inline">
-                将平台数据、编排文件与数据卷定时压缩归档上传至 Cloudflare R2。
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsTipsExpanded(!isTipsExpanded)}
-                className="inline-flex items-center gap-0.5 text-xs text-ink hover:underline font-semibold ml-1 cursor-pointer select-none"
-              >
-                <span>{isTipsExpanded ? '收起说明' : '详细说明'}</span>
-                {isTipsExpanded ? (
-                  <CaretUp className="w-3 h-3" weight="bold" />
-                ) : (
-                  <CaretDown className="w-3 h-3" weight="bold" />
-                )}
-              </button>
-            </div>
-
-            {/* Collapsible Guidance Box */}
-            {isTipsExpanded && (
-              <div className="mt-2.5 p-3.5 rounded-2xl bg-paper-3/40 text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
-                <div className="flex items-center gap-1.5 font-medium text-ink">
-                  <Info className="w-3.5 h-3.5 text-ink flex-shrink-0" weight="fill" />
-                  <span>异地高可靠灾难恢复机制</span>
-                </div>
-                <p className="leading-relaxed">
-                  系统定时将平台 SQLite 数据、全部 Compose 编排文件以及应用数据卷定时压缩归档并上传至 Cloudflare R2，实现异地高可靠灾难恢复与秒级快照回滚。
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Manual snapshot trigger action */}
-        <div className="flex items-center gap-3 shrink-0">
-          <Button8State
-            variant="secondary"
-            size="sm"
-            icon={<Lightning className="w-4 h-4 text-amber-500" weight="fill" />}
-            state={isBackingUp ? 'loading' : 'default'}
-            onClick={handleManualBackup}
-            className="w-full sm:w-auto min-h-[40px]"
-          >
-            立即执行系统快照
-          </Button8State>
-        </div>
+    <div className="space-y-5 sm:space-y-6">
+      {/* Intro + primary action */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p className="text-sm text-ink-muted max-w-2xl">
+          三类备份：系统快照（平台数据与全部编排）、应用数据卷、数据库逻辑转储。系统快照可加密后同步到 Cloudflare R2。
+        </p>
+        <button
+          type="button"
+          onClick={handleManualBackup}
+          disabled={isBackingUp}
+          className="btn-vessel-primary shrink-0 min-h-[40px] px-3.5 text-[13px] inline-flex items-center gap-1.5 rounded-xl cursor-pointer disabled:opacity-60"
+        >
+          {isBackingUp ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CloudArrowUp className="w-4 h-4" />}
+          立即创建系统快照
+        </button>
       </div>
 
-      {/* Configuration Form Card */}
-      <div className="card-vessel p-5 sm:p-7">
-        <form onSubmit={handleSave} className="space-y-6">
-          {/* Toggle Switch Row */}
-          <div className="flex items-center justify-between pb-5 gap-4">
-            <div>
-              <h4 className="text-sm font-semibold text-ink font-sans">
-                开启 Cloudflare R2 定时自动化备份任务
-              </h4>
-              <p className="text-xs text-ink-muted mt-0.5">
-                {enabled
-                  ? '定时将平台核心数据库与 Compose 编排文件打包并自动推送至指定的 R2 Bucket 存储桶'
-                  : '已关闭自动备份任务。平台仅保留手动快照或应用内按需备份。'}
-              </p>
-            </div>
+      {/* Summary */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {[
+          {
+            k: '最近快照',
+            v: formatRelative(r2Config?.lastBackupAt),
+            sub:
+              lastStatus === 'failed'
+                ? '失败：' + (r2Config?.lastBackupMessage || '查看日志')
+                : lastStatus === 'running'
+                ? '进行中…'
+                : r2Config?.lastBackupAt
+                ? '成功'
+                : '尚未执行',
+            alert: lastStatus === 'failed',
+          },
+          { k: '备份文件', v: String(backups.length), sub: `共 ${formatBytes(totalBytes)}` },
+          {
+            k: '定时计划',
+            v: r2Config?.enabled ? scheduleLabel(r2Config.cronSchedule) || r2Config.cronSchedule : '未启用',
+            sub: r2Config?.enabled ? `保留 ${r2Config.retentionCount} 份` : '只能手动创建快照',
+            mono: r2Config?.enabled && !scheduleLabel(r2Config.cronSchedule),
+          },
+          {
+            k: '加密',
+            v: hasBackupPassphrase ? '已加密' : '未加密',
+            sub: hasBackupPassphrase ? 'AES-256-GCM' : '快照将以明文上传',
+            alert: !hasBackupPassphrase && r2Config?.enabled,
+          },
+        ].map((s) => (
+          <div key={s.k} className="card-vessel !cursor-default p-4 sm:p-5 flex flex-col gap-2.5 min-h-[104px]">
+            <span className="text-xs font-medium text-ink-muted flex items-center gap-1.5">
+              {s.k}
+              {s.alert && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-label="需要注意" />}
+            </span>
+            <span
+              className={clsx(
+                'text-[22px] leading-none font-semibold text-ink tracking-[-0.02em] truncate',
+                s.mono && 'font-mono text-[18px]'
+              )}
+            >
+              {s.v}
+            </span>
+            <span
+              className={clsx('text-xs truncate', s.alert ? 'text-amber-700 dark:text-amber-400' : 'text-ink-muted')}
+              title={s.sub}
+            >
+              {s.sub}
+            </span>
+          </div>
+        ))}
+      </div>
 
-            <Switch
-              checked={enabled}
-              onChange={setEnabled}
-              size="md"
-              aria-label="全量定时自动备份任务"
-            />
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-5 sm:gap-6 items-start">
+        {/* Backup files */}
+        <section aria-labelledby="bk-files-h" className="card-vessel !cursor-default overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-line-subtle">
+            <h2 id="bk-files-h" className="text-sm font-semibold text-ink">
+              备份文件
+            </h2>
+            <div role="tablist" aria-label="按类型筛选" className="flex items-center p-1 rounded-lg bg-paper-3 w-fit">
+              {(
+                [
+                  { key: 'all', label: '全部' },
+                  { key: 'system', label: '系统快照' },
+                  { key: 'app_volume', label: '数据卷' },
+                  { key: 'app_db', label: '数据库' },
+                ] as const
+              ).map((g) => (
+                <button
+                  key={g.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={typeFilter === g.key}
+                  onClick={() => setTypeFilter(g.key)}
+                  className={clsx(
+                    'h-8 px-2.5 sm:px-3 rounded-md text-[13px] font-medium transition-colors cursor-pointer whitespace-nowrap',
+                    typeFilter === g.key ? 'bg-paper-2 text-ink shadow-subtle' : 'text-ink-muted hover:text-ink'
+                  )}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Form Fields Grid - Progressive Disclosure */}
-          {enabled ? (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
-                    R2 S3 API Endpoint <span className="text-rose-500 font-semibold">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={endpoint}
-                    onChange={(e) => setEndpoint(e.target.value)}
-                    placeholder="https://<account_id>.r2.cloudflarestorage.com"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
-                  />
-                </div>
+          {filteredBackups.length === 0 ? (
+            <div className="p-3 sm:p-4">
+              <EmptyState
+                icon={<FileArchive className="w-5 h-5" weight="duotone" />}
+                title={backups.length === 0 ? '还没有备份' : '这一类还没有备份'}
+                description={
+                  backups.length === 0
+                    ? '点「立即创建系统快照」，或在应用详情的「备份」页签为数据卷和数据库设置计划。'
+                    : '切换到其他类型查看，或在应用详情中创建。'
+                }
+              />
+            </div>
+          ) : (
+            <ul className="divide-y divide-line-subtle">
+              {filteredBackups.map((b) => (
+                <li key={b.id} className="px-4 sm:px-5 py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <span
+                      className={clsx(
+                        'shrink-0 mt-0.5 text-[11px] px-1.5 py-px rounded-md font-medium whitespace-nowrap',
+                        b.type === 'system'
+                          ? 'bg-signal-soft text-signal'
+                          : b.type === 'app_db'
+                          ? 'bg-emerald-500/[0.08] text-emerald-700 dark:text-emerald-400'
+                          : 'bg-paper-3 text-ink-muted'
+                      )}
+                    >
+                      {typeLabel(b.type)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink truncate">
+                        {b.targetName}
+                        {b.databaseName && (
+                          <span className="ml-1.5 text-xs font-normal text-ink-muted">
+                            {b.databaseName === 'all' ? '全部数据库' : b.databaseName}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs font-mono text-ink-faint truncate" title={b.fileName}>
+                        {b.fileName}
+                      </p>
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
-                    Bucket 存储桶名称 <span className="text-rose-500 font-semibold">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={bucketName}
-                    onChange={(e) => setBucketName(e.target.value)}
-                    placeholder="vessel-backups"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
-                  />
-                </div>
+                  <div className="flex items-center gap-3 text-xs text-ink-muted md:w-[210px] shrink-0 pl-[52px] md:pl-0">
+                    <span className="font-mono w-[72px]">{formatBytes(b.fileSizeBytes)}</span>
+                    <span title={new Date(b.createdAt).toLocaleString()}>{formatRelative(b.createdAt)}</span>
+                    {b.status !== 'completed' && (
+                      <Badge variant={b.status === 'failed' ? 'error' : 'deploying'}>
+                        {b.status === 'failed' ? '失败' : '上传中'}
+                      </Badge>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
-                    Access Key ID <span className="text-rose-500 font-semibold">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={accessKeyId}
-                    onChange={(e) => setAccessKeyId(e.target.value)}
-                    placeholder="R2 API Token Access Key"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
-                    Secret Access Key <span className="text-rose-500 font-semibold">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showSecret ? 'text' : 'password'}
-                      value={secretAccessKey}
-                      onChange={(e) => setSecretAccessKey(e.target.value)}
-                      placeholder="留空则保持现有密钥不变"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
-                    />
+                  <div className="flex items-center gap-1 shrink-0 pl-[46px] md:pl-0">
                     <button
                       type="button"
-                      onClick={() => setShowSecret(!showSecret)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5 cursor-pointer rounded-lg hover:bg-paper-3"
-                      title={showSecret ? '隐藏密钥' : '显示密钥'}
+                      disabled={b.status !== 'completed'}
+                      onClick={() => {
+                        setRestoringBackup(b);
+                        setRestoreConfirmInput('');
+                        setNeedsRestorePassphrase(false);
+                        setRestorePassphrase('');
+                      }}
+                      className="min-h-[36px] px-2.5 rounded-lg text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      {showSecret ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <ArrowCounterClockwise className="w-3.5 h-3.5" />
+                      恢复
                     </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
-                    系统快照加密口令
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassphrase ? 'text' : 'password'}
-                      value={backupPassphrase}
-                      onChange={(e) => setBackupPassphrase(e.target.value)}
-                      placeholder={hasBackupPassphrase ? '已设置，留空则保持不变' : '至少 8 个字符'}
-                      autoComplete="new-password"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      className="w-full bg-paper-2 dark:bg-paper-3 border border-line rounded-xl pl-3.5 pr-10 py-2.5 min-h-[42px] text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
-                    />
                     <button
                       type="button"
-                      onClick={() => setShowPassphrase(!showPassphrase)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors p-1.5 cursor-pointer rounded-lg hover:bg-paper-3"
-                      title={showPassphrase ? '隐藏口令' : '显示口令'}
+                      disabled={b.status !== 'completed'}
+                      onClick={() => handleDownload(b)}
+                      className="min-h-[36px] px-2.5 rounded-lg text-xs font-medium text-ink-muted hover:text-ink hover:bg-paper-3 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      {showPassphrase ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <DownloadSimple className="w-3.5 h-3.5" />
+                      下载
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeletingBackup(b);
+                        setDeleteBackupInput('');
+                      }}
+                      aria-label={`删除 ${b.fileName}`}
+                      data-tooltip="删除"
+                      className="w-9 h-9 rounded-lg text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 flex items-center justify-center cursor-pointer"
+                    >
+                      <Trash className="w-4 h-4" />
                     </button>
                   </div>
-                  <p className={`mt-1.5 text-[11px] leading-relaxed ${hasBackupPassphrase ? 'text-ink-muted' : 'text-amber-600 dark:text-amber-400'}`}>
-                    {hasBackupPassphrase
-                      ? '系统快照使用 AES-256-GCM 加密。请离线妥善保存口令：在新服务器恢复时需要输入，丢失后快照无法解密。'
-                      : '未设置口令：系统快照（含各应用 .env 与 R2 凭据）将以明文上传。'}
-                  </p>
-                </div>
+                </li>
+              ))}
+            </ul>
+          )}
 
-                {/* CRON Schedule with Quick-pick Chips */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-ink/85">
-                    Cron 定时周期表达式
+          {backups.length > 0 && (
+            <div className="px-5 h-11 flex items-center border-t border-line-subtle text-xs text-ink-muted">
+              共 {backups.length} 个 · {formatBytes(totalBytes)}
+            </div>
+          )}
+        </section>
+
+        {/* Snapshot policy */}
+        <aside aria-labelledby="bk-policy-h" className="card-vessel !cursor-default">
+          <form onSubmit={handleSave}>
+            <div className="flex items-center justify-between gap-3 px-5 h-14 border-b border-line-subtle">
+              <h2 id="bk-policy-h" className="text-sm font-semibold text-ink">
+                系统快照策略
+              </h2>
+              <label className="flex items-center gap-2 text-xs text-ink-muted cursor-pointer">
+                定时上传 R2
+                <Switch checked={enabled} onChange={setEnabled} size="sm" aria-label="定时上传系统快照到 R2" />
+              </label>
+            </div>
+
+            {enabled ? (
+              <div className="p-5 space-y-5">
+                <div>
+                  <label htmlFor="bk-cron" className={labelClass}>
+                    执行时间（Cron）
                   </label>
                   <input
+                    id="bk-cron"
                     type="text"
                     value={cronSchedule}
                     onChange={(e) => setCronSchedule(e.target.value)}
@@ -449,31 +483,22 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    className="w-full h-10 bg-paper-2 dark:bg-paper-3 border border-line rounded-xl px-3.5 text-xs text-ink font-mono placeholder:text-ink-faint/80 focus:outline-none transition-colors shadow-sm"
+                    className={fieldClass}
                   />
-                  {/* Quick-pick Chips Container */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                    <span className="text-[11px] text-ink-muted flex-shrink-0 flex items-center gap-1 mr-0.5">
-                      <Clock className="w-3.5 h-3.5 text-ink-muted" />
-                      快捷填入:
-                    </span>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
                     {BACKUP_CRON_PRESETS.map((preset) => {
                       const isSelected = cronSchedule.trim() === preset.expr;
                       return (
                         <button
                           key={preset.expr}
                           type="button"
-                          onClick={() => {
-                            setCronSchedule(preset.expr);
-                            if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                              navigator.vibrate(10);
-                            }
-                          }}
+                          onClick={() => setCronSchedule(preset.expr)}
+                          aria-pressed={isSelected}
                           className={clsx(
-                            'text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-all select-none flex-shrink-0 cursor-pointer',
+                            'h-7 px-2.5 rounded-full text-xs whitespace-nowrap transition-colors cursor-pointer border',
                             isSelected
-                              ? 'bg-accent text-accent-contrast font-medium shadow-sm'
-                              : 'bg-paper-3/80 hover:bg-paper-4 text-ink-muted hover:text-ink border border-line-subtle'
+                              ? 'bg-accent text-accent-contrast border-transparent'
+                              : 'border-line text-ink-muted hover:text-ink hover:border-line-strong'
                           )}
                         >
                           {preset.label}
@@ -483,201 +508,185 @@ export const BackupsView: React.FC<BackupsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Retention Count with numeric constraint */}
                 <div>
-                  <label className="block text-xs font-medium text-ink/85 mb-1.5">
-                    保留版本数 <span className="text-ink-muted font-normal">(超过自动清理旧归档)</span>
+                  <span className={labelClass}>保留份数</span>
+                  <NumberInput min={1} max={30} value={retentionCount} onChange={setRetentionCount} unit="份" />
+                  <p className="text-xs text-ink-faint mt-1.5">新快照成功后，删除更早的系统快照。</p>
+                </div>
+
+                <div>
+                  <label htmlFor="bk-pass" className={labelClass}>
+                    加密口令
                   </label>
-                  <NumberInput
-                    min={1}
-                    max={30}
-                    value={retentionCount}
-                    onChange={setRetentionCount}
-                    unit="份"
-                  />
-                  <span className="text-[11px] text-ink-faint block mt-1.5">
-                    系统将仅保留最新的 {retentionCount} 个备份，超出的旧版本将在下一次备份成功后自动从 R2 清理。
-                  </span>
-                </div>
-              </div>
-
-              {/* Test feedback banner */}
-              {testResult && (
-                <div
-                  className={`p-3.5 rounded-2xl text-xs flex items-center gap-2.5 ${
-                    testResult.success
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                  }`}
-                >
-                  {testResult.success ? (
-                    <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" weight="fill" />
-                  ) : (
-                    <WarningCircle className="w-4 h-4 text-rose-500 flex-shrink-0" weight="fill" />
-                  )}
-                  <span>{testResult.message}</span>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <Button8State
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  state={isTesting ? 'loading' : 'default'}
-                  onClick={handleTest}
-                  className="w-full sm:w-auto min-h-[42px]"
-                >
-                  测试 R2 连通性
-                </Button8State>
-
-                <Button8State
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  icon={<FloppyDiskBack className="w-4 h-4" weight="bold" />}
-                  state={isSaving ? 'loading' : 'default'}
-                  className="w-full sm:w-auto min-h-[42px]"
-                >
-                  保存备份策略
-                </Button8State>
-              </div>
-            </div>
-          ) : (
-            /* Collapsed state actions */
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <span className="text-xs text-ink-muted">
-                保存后将停用系统的 CRON 定时灾备任务。
-              </span>
-              <Button8State
-                type="submit"
-                variant="primary"
-                size="md"
-                state={isSaving ? 'loading' : 'default'}
-                className="w-full sm:w-auto min-h-[42px]"
-              >
-                保存配置更改
-              </Button8State>
-            </div>
-          )}
-        </form>
-      </div>
-
-      {/* Backup History Card */}
-      <div className="card-vessel p-5 sm:p-7 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h4 className="text-sm font-semibold text-ink font-sans">
-                归档版本历史记录
-              </h4>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-paper-3 text-ink-muted font-mono font-medium">
-                {backups.length}
-              </span>
-            </div>
-            <p className="text-xs text-ink-muted mt-1">
-              平台系统级灾备快照与数据库转储归档
-              {backups.length > 0 && (
-                <span className="ml-1 text-ink-faint">
-                  · 自动保留最新 {retentionCount} 份
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-
-        {backups.length === 0 ? (
-          <EmptyState
-            icon={<FileArchive className="w-5 h-5" weight="duotone" />}
-            title="暂无备份历史"
-            description="点击上方「立即执行系统快照」或在应用详情中进行备份。"
-          />
-        ) : (
-          <div className="space-y-3">
-            {backups.map((b) => (
-              <div
-                key={b.id}
-                className="p-4 sm:p-5 space-y-2.5 rounded-2xl bg-paper-3/40 hover:bg-paper-3/70 transition-colors"
-              >
-                {/* 行 1: 标题与状态标签 */}
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                    <span className="font-semibold text-ink text-sm font-sans truncate">
-                      {b.targetName}
-                    </span>
-                    {b.databaseName && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
-                        {b.databaseName === 'all' ? '全部数据库' : `库: ${b.databaseName}`}
-                      </span>
+                  <div className="relative">
+                    <input
+                      id="bk-pass"
+                      type={showPassphrase ? 'text' : 'password'}
+                      value={backupPassphrase}
+                      onChange={(e) => setBackupPassphrase(e.target.value)}
+                      placeholder={hasBackupPassphrase ? '已设置，留空则保持不变' : '至少 8 个字符'}
+                      autoComplete="new-password"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className={clsx(fieldClass, 'pr-10')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassphrase(!showPassphrase)}
+                      aria-label={showPassphrase ? '隐藏口令' : '显示口令'}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md text-ink-muted hover:text-ink flex items-center justify-center cursor-pointer"
+                    >
+                      {showPassphrase ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <div
+                    className={clsx(
+                      'mt-2 p-3 rounded-lg text-xs leading-relaxed flex gap-2',
+                      hasBackupPassphrase
+                        ? 'bg-paper-3/60 text-ink-muted'
+                        : 'bg-amber-500/[0.08] text-amber-800 dark:text-amber-300'
                     )}
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                    <Badge variant={b.type === 'system' ? 'accent' : b.type === 'app_db' ? 'running' : 'default'}>
-                      {b.type === 'system' ? '系统级快照' : b.type === 'app_db' ? '数据库转储' : '应用卷备份'}
-                    </Badge>
-                    <Badge variant="running">已同步 R2</Badge>
-                  </div>
-                </div>
-
-                {/* 行 2: 文件名 (等宽字体，允许 break-all，绝不撑破卡片) */}
-                <div className="text-xs font-mono text-ink-muted/90 break-all select-all flex items-start gap-1.5">
-                  <FileArchive className="w-3.5 h-3.5 text-ink-muted/70 flex-shrink-0 mt-0.5" />
-                  <span>{b.fileName}</span>
-                </div>
-
-                {/* 行 3: 元数据 (尺寸与时间) */}
-                <div className="flex items-center gap-2 text-xs text-ink-muted/80 font-mono">
-                  <span>{formatBytes(b.fileSizeBytes)}</span>
-                  <span className="w-1 h-1 bg-ink-muted/40 rounded-full"></span>
-                  <span className="font-sans">{new Date(b.createdAt).toLocaleString()}</span>
-                </div>
-
-                {/* 行 4: 独立的操作栏 (Action Bar) */}
-                <div className="pt-2 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Button8State
-                      size="sm"
-                      variant="secondary"
-                      icon={<ArrowCounterClockwise className="w-3.5 h-3.5 text-ink" />}
-                      onClick={() => {
-                        setRestoringBackup(b);
-                        setRestoreConfirmInput('');
-                        setNeedsRestorePassphrase(false);
-                        setRestorePassphrase('');
-                      }}
-                      className="min-h-[36px] px-3 text-xs whitespace-nowrap"
-                    >
-                      恢复
-                    </Button8State>
-
-                    <Button8State
-                      size="sm"
-                      variant="secondary"
-                      icon={<DownloadSimple className="w-3.5 h-3.5" />}
-                      onClick={() => handleDownload(b)}
-                      className="min-h-[36px] px-3 text-xs whitespace-nowrap"
-                    >
-                      下载
-                    </Button8State>
-                  </div>
-
-                  {/* 删除按钮推到最右侧 */}
-                  <button
-                    onClick={() => {
-                      setDeletingBackup(b);
-                      setDeleteBackupInput('');
-                    }}
-                    className="p-2 min-h-[36px] min-w-[36px] rounded-xl text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 transition-colors cursor-pointer flex items-center justify-center"
-                    title="删除此备份归档"
                   >
-                    <Trash className="w-4 h-4" />
-                  </button>
+                    {hasBackupPassphrase ? (
+                      <LockKey className="w-4 h-4 shrink-0 mt-px" />
+                    ) : (
+                      <Warning className="w-4 h-4 shrink-0 mt-px" />
+                    )}
+                    <span>
+                      {hasBackupPassphrase
+                        ? '在新服务器上恢复时需要它，丢失后无法解密。请离线保存。'
+                        : '未设置口令：系统快照（含各应用 .env 与 R2 凭据）将以明文上传。'}
+                    </span>
+                  </div>
                 </div>
+
+                <fieldset className="space-y-3 pt-4 border-t border-line-subtle">
+                  <legend className="text-xs font-semibold text-ink mb-3">Cloudflare R2</legend>
+                  <div>
+                    <label htmlFor="bk-endpoint" className={labelClass}>
+                      S3 API Endpoint
+                    </label>
+                    <input
+                      id="bk-endpoint"
+                      type="text"
+                      value={endpoint}
+                      onChange={(e) => setEndpoint(e.target.value)}
+                      placeholder="https://<account_id>.r2.cloudflarestorage.com"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className={fieldClass}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="bk-bucket" className={labelClass}>
+                      Bucket
+                    </label>
+                    <input
+                      id="bk-bucket"
+                      type="text"
+                      value={bucketName}
+                      onChange={(e) => setBucketName(e.target.value)}
+                      placeholder="vessel-backups"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className={fieldClass}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="bk-key" className={labelClass}>
+                      Access Key ID
+                    </label>
+                    <input
+                      id="bk-key"
+                      type="text"
+                      value={accessKeyId}
+                      onChange={(e) => setAccessKeyId(e.target.value)}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className={fieldClass}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="bk-secret" className={labelClass}>
+                      Secret Access Key
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="bk-secret"
+                        type={showSecret ? 'text' : 'password'}
+                        value={secretAccessKey}
+                        onChange={(e) => setSecretAccessKey(e.target.value)}
+                        placeholder="留空则保持现有密钥不变"
+                        autoComplete="new-password"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className={clsx(fieldClass, 'pr-10')}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSecret(!showSecret)}
+                        aria-label={showSecret ? '隐藏密钥' : '显示密钥'}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md text-ink-muted hover:text-ink flex items-center justify-center cursor-pointer"
+                      >
+                        {showSecret ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </fieldset>
+
+                {testResult && (
+                  <div
+                    role="status"
+                    className={clsx(
+                      'p-3 rounded-lg text-xs flex items-start gap-2',
+                      testResult.success
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-rose-500/10 text-rose-700 dark:text-rose-400'
+                    )}
+                  >
+                    {testResult.success ? (
+                      <CheckCircle className="w-4 h-4 shrink-0" weight="fill" />
+                    ) : (
+                      <WarningCircle className="w-4 h-4 shrink-0" weight="fill" />
+                    )}
+                    <span className="break-words min-w-0">{testResult.message}</span>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            ) : (
+              <p className="p-5 text-[13px] text-ink-muted leading-relaxed">
+                定时上传已关闭，系统快照只在你手动创建时生成。打开右上角开关，填写 Cloudflare R2 凭据后即可每天自动异地备份。
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-line-subtle">
+              {enabled && (
+                <button
+                  type="button"
+                  onClick={handleTest}
+                  disabled={isTesting}
+                  className="btn-vessel-secondary min-h-[40px] px-3.5 text-[13px] rounded-lg inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                >
+                  {isTesting && <CircleNotch className="w-4 h-4 animate-spin" />}
+                  测试连接
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="btn-vessel-primary min-h-[40px] px-3.5 text-[13px] rounded-lg inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              >
+                {isSaving && <CircleNotch className="w-4 h-4 animate-spin" />}
+                保存策略
+              </button>
+            </div>
+          </form>
+        </aside>
       </div>
 
       {/* DELETE BACKUP CONFIRMATION MODAL */}

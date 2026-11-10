@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Vessel · 维护</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F4F5F7;color:#0E1116;font-family:'Geist','PingFang SC','Microsoft YaHei',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#2F5BEA;text-decoration:none}a:hover{color:#1E3FB0}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:8px;border:1px solid #D5DAE1;background:#FFFFFF;color:#0E1116;font-size:14px;font-weight:500;white-space:nowrap}
+.btn:hover{background:#EEF0F3;color:#0E1116}
+.btn-primary{background:#0E1116;border-color:#0E1116;color:#FFFFFF}
+.btn-primary:hover{background:#2A2F37;color:#FFFFFF}
+.navlink{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:8px;color:#3D4452;font-size:14px;font-weight:500}
+.navlink:hover{background:#ECEEF2;color:#0E1116}
+.row:hover{background:#F8F9FB}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.field{height:40px;padding:0 12px;border:1px solid #D5DAE1;border-radius:8px;background:#FFFFFF;font-size:14px;width:100%}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; width: 100%">
+
+<aside style="flex: 1 1 248px; max-width: 100%; background: #FBFBFC; border-right: 1px solid #E3E6EB; padding: 20px 14px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 32px; height: 32px; border-radius: 8px; background: #0E1116; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14l9 6 9-6M12 3v11M7 9h10"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-weight: 600; font-size: 15px">Vessel</span>
+<span style="font-size: 12px; color: #5B6472">vps-tokyo-01</span>
+</div>
+</div>
+<button type="button" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #DDE1E7; border-radius: 8px; background: #FFFFFF; color: #5B6472; font-size: 13px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span style="flex: 1; text-align: left">搜索或跳转…</span>
+<span class="mono" style="font-size: 11px; border: 1px solid #DDE1E7; border-radius: 4px; padding: 1px 5px">⌘K</span>
+</button>
+<nav aria-label="主导航" style="display: flex; flex-direction: column; gap: 18px">
+<sc-for list="{{nav}}" as="group" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; font-weight: 500; color: #5B6472; padding: 0 12px 6px">{{group.label}}</span>
+<sc-for list="{{group.items}}" as="item" hint-placeholder-count="3">
+<a class="navlink" href="{{item.href}}" style="{{item.style}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.d}}"></path></svg>
+<span style="flex: 1">{{item.label}}</span>
+<span style="font-size: 12px; color: #5B6472">{{item.count}}</span>
+</a>
+</sc-for>
+</div>
+</sc-for>
+</nav>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid #E3E6EB; border-radius: 10px; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: #16A34A"></span>
+<span style="font-weight: 500">Docker 已连接</span>
+<span style="margin-left: auto; color: #5B6472; font-size: 12px">27.3.1</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #5B6472">
+<span>Vessel v1.0.18</span>
+<a href="Settings.dc.html" style="font-size: 12px; font-weight: 500">有新版本 v1.0.19</a>
+</div>
+</div>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 32px; border-bottom: 1px solid #E3E6EB; background: #FFFFFF">
+<span style="font-size: 13px; color: #5B6472">运维 / 维护</span>
+</div>
+
+<div style="width: 100%; max-width: 1240px; margin: 0 auto; padding: 32px 32px 56px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.01em">维护</h1>
+<p style="margin: 0; font-size: 14px; color: #5B6472">镜像更新巡检与磁盘安全清理。两者都按计划自动运行，也可以在这里手动触发。</p>
+</div>
+
+<section aria-labelledby="upd-h" style="background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid #EEF0F3">
+<div style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 4px">
+<h2 id="upd-h" style="margin: 0; font-size: 16px; font-weight: 600">镜像更新 <span style="font-size: 12px; font-weight: 600; color: #1E3FB0; background: #E8ECF7; border-radius: 999px; padding: 2px 8px; vertical-align: 2px">3</span></h2>
+<p style="margin: 0; font-size: 13px; color: #5B6472">按当前平台 linux/amd64 比对远程 Digest · 每 6 小时 · 上次 47 分钟前</p>
+</div>
+<button type="button" class="btn">立即巡检</button>
+<button type="button" class="btn">巡检计划</button>
+</div>
+<div style="overflow-x: auto">
+<div style="min-width: 760px">
+<sc-for list="{{upd}}" as="u" hint-placeholder-count="3">
+<div class="row" style="display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(260px, 2.4fr) minmax(150px, 1.1fr) 104px; gap: 16px; align-items: center; padding: 14px 22px; border-bottom: 1px solid #EEF0F3">
+<span style="display: flex; flex-direction: column; gap: 2px"><a href="AppOverview.dc.html" style="font-size: 14px; font-weight: 500; color: #0E1116">{{u.app}}</a><span style="font-size: 12px; color: #5B6472">{{u.svc}}</span></span>
+<span class="mono" style="display: flex; flex-direction: column; gap: 2px; font-size: 12px; min-width: 0">
+<span style="color: #0E1116; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{u.img}}</span>
+<span style="color: #5B6472">{{u.from}} → <span style="color: #1E3FB0">{{u.to}}</span> · {{u.age}}</span>
+</span>
+<label style="display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: #3D4452; min-height: 40px">
+<input type="checkbox" role="switch" checked="{{u.auto}}" style="width: 36px; height: 20px; accent-color: #0E1116">
+{{u.autoLabel}}
+</label>
+<button type="button" class="btn" style="height: 36px; justify-content: center">升级</button>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 22px; font-size: 13px; color: #5B6472">
+<span>升级只拉取并替换有更新的服务；固定 Digest 的镜像不会被自动升级。</span>
+<button type="button" class="btn btn-primary" style="margin-left: auto; height: 36px">全部升级（3）</button>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section aria-labelledby="disk-h" style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; padding: 18px 22px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+<div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 4px">
+<h2 id="disk-h" style="margin: 0; font-size: 16px; font-weight: 600">Docker 磁盘占用</h2>
+<p style="margin: 0; font-size: 13px; color: #5B6472">共 38.2 GB，其中 <strong style="color: #0E1116; font-weight: 600">6.4 GB</strong> 可安全回收</p>
+</div>
+<button type="button" class="btn btn-primary">清理 6.4 GB</button>
+</div>
+<div style="display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px" role="img" aria-label="镜像 21.4 GB，数据卷 12.1 GB，构建缓存 3.9 GB，容器 0.8 GB">
+<div style="flex: 21.4; background: {{accent}}"></div>
+<div style="flex: 12.1; background: #0E1116"></div>
+<div style="flex: 3.9; background: #9AA3AF"></div>
+<div style="flex: 0.8; background: #D5DAE1"></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px">
+<sc-for list="{{disk}}" as="d" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #3D4452"><span style="width: 10px; height: 10px; border-radius: 3px; {{d.sw}}"></span>{{d.k}}</span>
+<span style="font-size: 18px; font-weight: 600">{{d.v}}</span>
+<span style="font-size: 12px; color: #5B6472">{{d.sub}}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 0; border-top: 1px solid #EEF0F3; padding-top: 14px">
+<h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 600">最大的容器日志</h3>
+<sc-for list="{{logs}}" as="l" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #F1F3F5">
+<span class="mono" style="flex: 1; font-size: 12px">{{l.c}}</span>
+<span class="mono" style="font-size: 12px; font-weight: 500; {{l.cc}}">{{l.s}}</span>
+</div>
+</sc-for>
+<p style="margin: 10px 0 0; font-size: 12px; color: #5B6472">超过 100 MB 会在概览中提醒。可在 Compose 中为服务设置 logging.options.max-size。</p>
+</div>
+</section>
+
+<aside aria-labelledby="pol-h" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #E3E6EB; border-radius: 12px; display: flex; flex-direction: column">
+<div style="padding: 16px 20px; border-bottom: 1px solid #EEF0F3; display: flex; align-items: center">
+<h2 id="pol-h" style="margin: 0; font-size: 15px; font-weight: 600">自动清理策略</h2>
+<label style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #3D4452; min-height: 40px">启用<input type="checkbox" role="switch" checked style="width: 36px; height: 20px; accent-color: #0E1116"></label>
+</div>
+<div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cool" style="font-size: 13px; font-weight: 500">冷却期</label>
+<div style="display: flex; align-items: center; gap: 8px"><input id="cool" class="field mono" type="text" value="72" style="font-size: 13px; width: 96px"><span style="font-size: 13px; color: #3D4452">小时</span></div>
+<span style="font-size: 12px; color: #5B6472; line-height: 1.55">镜像从不再被任何容器引用时开始计时，满期后才删除，保证刚替换下来的旧版本仍可回滚。</span>
+</div>
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="3">
+<label style="display: flex; gap: 10px; cursor: pointer">
+<input type="checkbox" checked="{{r.on}}" style="width: 18px; height: 18px; margin: 1px 0 0; accent-color: #0E1116">
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 500">{{r.t}}</span><span style="font-size: 12px; color: #5B6472; line-height: 1.5">{{r.d}}</span></span>
+</label>
+</sc-for>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cron2" style="font-size: 13px; font-weight: 500">执行时间</label>
+<input id="cron2" class="field mono" type="text" value="0 4 * * 0" style="font-size: 13px">
+<span style="font-size: 12px; color: #5B6472">每周日 04:00 · 上次释放 2.1 GB</span>
+</div>
+<p style="margin: 0; padding: 12px 14px; border-radius: 10px; background: #F4F5F7; font-size: 12px; color: #3D4452; line-height: 1.55">数据卷和 Vessel 应用的容器永远不会被清理。</p>
+</div>
+<div style="margin-top: auto; padding: 14px 20px; border-top: 1px solid #EEF0F3; display: flex; justify-content: flex-end">
+<button type="button" class="btn btn-primary">保存策略</button>
+</div>
+</aside>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#2F5BEA","options":["#2F5BEA","#0E7C66","#C2410C","#6D28D9"]},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#2F5BEA';
+    const active = 'maint';
+    const I = {
+      overview: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+      apps: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5',
+      domains: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9M12 3c-2.5 2.5-3.8 5.5-3.8 9s1.3 6.5 3.8 9',
+      backups: 'M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8M12 12v8M9 15l3-3 3 3',
+      maint: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+      reg: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+      bell: 'M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
+      user: 'M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6'
+    };
+    const mk = (id, label, href, count) => ({ label, href, d: I[id], count: count || '',
+      style: id === active ? 'background:#FFFFFF;color:' + accent + ';box-shadow:0 0 0 1px #E3E6EB' : '' });
+    const nav = [
+      { label: '工作区', items: [mk('overview', '概览', 'Main.dc.html'), mk('apps', '应用', 'Apps.dc.html', '12'), mk('domains', '域名与证书', 'Domains.dc.html', '8')] },
+      { label: '运维', items: [mk('backups', '备份', 'Backups.dc.html'), mk('maint', '维护', 'Maintenance.dc.html', '3')] },
+      { label: '设置', items: [mk('reg', '镜像仓库', 'Settings.dc.html'), mk('bell', '通知渠道', 'Settings.dc.html'), mk('user', '账户与面板', 'Settings.dc.html')] }
+    ];
+    const upd = [
+      { app: 'umami', svc: '服务 umami', img: 'ghcr.io/umami-software/umami:postgresql-latest', from: 'sha256:51ac…', to: 'sha256:e07d…', age: '2 天前发布', auto: false, autoLabel: '手动升级' },
+      { app: 'uptime-kuma', svc: '服务 uptime-kuma', img: 'louislam/uptime-kuma:1', from: 'sha256:8b2f…', to: 'sha256:c911…', age: '5 天前发布', auto: false, autoLabel: '手动升级' },
+      { app: 'n8n', svc: '服务 n8n, n8n-worker', img: 'n8nio/n8n:latest', from: '1.71.3', to: '1.72.1', age: '今天发布', auto: false, autoLabel: '手动升级' }
+    ];
+    const disk = [
+      { k: '镜像', v: '21.4 GB', sub: '43 个 · 5.1 GB 可回收', sw: 'background:' + accent },
+      { k: '数据卷', v: '12.1 GB', sub: '18 个 · 不清理', sw: 'background:#0E1116' },
+      { k: '构建缓存', v: '3.9 GB', sub: '1.1 GB 可回收', sw: 'background:#9AA3AF' },
+      { k: '容器', v: '0.8 GB', sub: '31 个 · 0.2 GB 可回收', sw: 'background:#D5DAE1' }
+    ];
+    const logs = [
+      { c: 'n8n-n8n-worker-1', s: '412 MB', cc: 'color:#B42318' },
+      { c: 'umami-umami-1', s: '138 MB', cc: 'color:#8A4B00' },
+      { c: 'gitea-gitea-1', s: '22 MB', cc: 'color:#3D4452' }
+    ];
+    const rules = [
+      { t: '悬空镜像', d: '<none> 标签的旧镜像，满冷却期后删除', on: true },
+      { t: '构建缓存', d: '超过冷却期未被使用的 BuildKit 缓存', on: true },
+      { t: '长期停止的容器', d: '非 Vessel 应用、停止超过 7 天的容器（如 docker run 遗留）', on: false }
+    ];
+    return { accent, nav, upd, disk, logs, rules };
+  }
+}
+</script>
+</body>
+</html>

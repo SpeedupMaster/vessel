@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   CheckCircle,
   PencilSimple,
+  ArrowSquareOut,
 } from '@phosphor-icons/react';
 import { DomainItem, AppItem } from '../../types/index.js';
 import { servicePorts } from '../../utils/composePorts.js';
@@ -25,6 +26,7 @@ import { Button8State } from '../common/Button8State.js';
 import { Modal } from '../common/Modal.js';
 import { EmptyState } from '../common/EmptyState.js';
 import { CustomSelect } from '../common/CustomSelect.js';
+import clsx from 'clsx';
 import { useNotification } from '../../context/NotificationContext.js';
 
 interface DetectedService {
@@ -70,7 +72,6 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
   const { toast } = useNotification();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingDomain, setEditingDomain] = useState<DomainItem | null>(null);
-  const [isTipsExpanded, setIsTipsExpanded] = useState(false);
   const [domainInput, setDomainInput] = useState('');
   const [appIdInput, setAppIdInput] = useState(apps[0]?.id || 'vessel-system');
   const [serviceNameInput, setServiceNameInput] = useState('vessel');
@@ -221,176 +222,184 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
     }
   };
 
+  const DAY = 86_400_000;
+  const daysLeft = (iso?: string) => (iso ? Math.floor((new Date(iso).getTime() - Date.now()) / DAY) : null);
+  const certInfo = (d: DomainItem): { label: string; tone: 'ok' | 'warn' | 'bad' | 'pending' } => {
+    const left = daysLeft(d.sslExpiresAt);
+    if (d.sslStatus === 'expired') return { label: '已过期', tone: 'bad' };
+    if (d.sslStatus === 'error') return { label: '签发失败', tone: 'bad' };
+    if (d.sslStatus === 'issuing') return { label: '签发中', tone: 'pending' };
+    if (d.sslStatus === 'unknown') return { label: '未检测', tone: 'pending' };
+    if (left != null && left < 14) return { label: `${Math.max(0, left)} 天后到期`, tone: 'warn' };
+    return { label: '有效', tone: 'ok' };
+  };
+  const CERT_TONE = {
+    ok: 'text-emerald-700 dark:text-emerald-400',
+    warn: 'text-amber-700 dark:text-amber-400',
+    bad: 'text-rose-700 dark:text-rose-400',
+    pending: 'text-ink-muted',
+  } as const;
+  const CERT_DOT = { ok: 'bg-emerald-500', warn: 'bg-amber-500', bad: 'bg-rose-500', pending: 'bg-ink-faint' } as const;
+  const upstreamOf = (d: DomainItem) =>
+    d.appId === 'vessel-system'
+      ? '127.0.0.1:3900'
+      : d.targetType === 'internal'
+      ? `${d.serviceName}:${d.targetPort}`
+      : `127.0.0.1:${d.targetPort}`;
+  const sortedDomains = [...domains].sort((a, b) => a.domain.localeCompare(b.domain));
+  const problemCount = domains.filter((d) => ['bad', 'warn'].includes(certInfo(d).tone)).length;
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Page Header (De-boxed, modern SaaS standard with compressed mobile footprint) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-paper-3 border border-line flex items-center justify-center text-accent flex-shrink-0 shadow-subtle mt-0.5">
-            <LockKey className="w-5 h-5" weight="bold" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-semibold text-base sm:text-lg text-ink tracking-tight font-sans">
-                Caddy 智能反向代理与自动证书续订
-              </h2>
-              {domains.length > 0 && (
-                <span className="text-[11px] px-2 py-0.2 rounded-full bg-paper-3 text-ink-muted border border-line-subtle font-mono">
-                  共 {domains.length} 个路由
-                </span>
-              )}
-            </div>
-
-            {/* Compressed 1-line description with collapsible detailed explanation */}
-            <div className="mt-1">
-              <p className="text-xs text-ink-muted leading-relaxed inline">
-                绑定公网域名自动签发 SSL 证书并反向代理至容器或控制台。
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsTipsExpanded(!isTipsExpanded)}
-                className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline font-medium ml-1 cursor-pointer select-none"
-              >
-                <span>{isTipsExpanded ? '收起说明' : '详细说明'}</span>
-                {isTipsExpanded ? (
-                  <CaretUp className="w-3 h-3" weight="bold" />
-                ) : (
-                  <CaretDown className="w-3 h-3" weight="bold" />
-                )}
-              </button>
-            </div>
-
-            {/* Collapsible Guidance Box */}
-            {isTipsExpanded && (
-              <div className="mt-2.5 p-3.5 rounded-2xl bg-paper-3/40 text-xs text-ink-muted space-y-1.5 animate-in fade-in duration-200">
-                <div className="flex items-center gap-1.5 font-medium text-ink">
-                  <Info className="w-3.5 h-3.5 text-ink flex-shrink-0" weight="fill" />
-                  <span>服务反向代理与 SSL 运作机制</span>
-                </div>
-                <p className="text-[11.5px] leading-relaxed">
-                  解析公网域名至服务器 IP 后，支持反代任何 Docker Compose 容器，亦可直接为 <strong className="text-ink font-semibold">Vessel 管理控制台自身</strong> 配置独立访问域名与 HTTPS。由内置 Caddy 引擎全自动签发与静默续期证书。
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <Button8State
-          variant="primary"
-          icon={<Plus className="w-4 h-4" weight="bold" />}
+    <div className="space-y-5 sm:space-y-6">
+      {/* Intro + primary action */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p className="text-sm text-ink-muted max-w-2xl">
+          内置 Caddy 负责反向代理。绑定后自动签发并续订 HTTPS 证书，修改即时生效、无需重启。绑定前请先把域名的 A / AAAA 记录解析到本机。
+        </p>
+        <button
+          type="button"
           onClick={handleOpenAdd}
-          className="w-full sm:w-auto min-h-[42px] sm:min-h-0"
+          className="btn-vessel-primary shrink-0 min-h-[40px] px-3.5 text-[13px] inline-flex items-center gap-1.5 rounded-xl cursor-pointer"
         >
-          绑定新域名
-        </Button8State>
+          <Plus className="w-4 h-4" weight="bold" />
+          绑定域名
+        </button>
       </div>
 
-      {/* Domains List Card */}
-      <div className="card-vessel overflow-hidden p-3 sm:p-4">
+      <section aria-label="域名列表" className="card-vessel !cursor-default overflow-hidden">
         {domains.length === 0 ? (
-          <EmptyState
-            icon={<Globe className="w-5 h-5" weight="duotone" />}
-            title="暂无已绑定的域名"
-            description="为应用或控制台绑定域名，Vessel 会通过内置 Caddy 自动签发并续期 HTTPS 证书。"
-            action={
-              <button type="button" onClick={handleOpenAdd} className="btn-vessel-primary text-xs px-3.5 py-2 cursor-pointer">
-                <Plus className="w-3.5 h-3.5" weight="bold" />
-                绑定新域名
-              </button>
-            }
-          />
+          <div className="p-3 sm:p-4">
+            <EmptyState
+              icon={<Globe className="w-5 h-5" weight="duotone" />}
+              title="还没有绑定域名"
+              description="为应用或控制台本身绑定域名，Vessel 会自动签发并续期 HTTPS 证书。"
+              action={
+                <button type="button" onClick={handleOpenAdd} className="btn-vessel-primary text-xs px-3.5 py-2 cursor-pointer">
+                  <Plus className="w-3.5 h-3.5" weight="bold" />
+                  绑定域名
+                </button>
+              }
+            />
+          </div>
         ) : (
-          <div className="space-y-1.5">
-            {domains.map((d) => {
-              const matchedApp = apps.find((a) => a.id === d.appId);
-              const isVesselSystem = d.appId === 'vessel-system';
-              return (
-                <div
-                  key={d.id}
-                  className="p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-paper-3/60 transition-colors"
-                >
-                  <div className="space-y-2.5 min-w-0">
-                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <>
+            <div
+              aria-hidden="true"
+              className="hidden md:grid grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_120px] gap-4 px-5 h-10 items-center text-xs text-ink-faint border-b border-line-subtle"
+            >
+              <span>域名</span>
+              <span>转发到</span>
+              <span>证书</span>
+              <span>到期</span>
+              <span className="text-right">操作</span>
+            </div>
+            <ul className="divide-y divide-line-subtle">
+              {sortedDomains.map((d) => {
+                const matchedApp = apps.find((a) => a.id === d.appId);
+                const isVesselSystem = d.appId === 'vessel-system';
+                const cert = certInfo(d);
+                return (
+                  <li
+                    key={d.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_120px] gap-x-4 gap-y-1.5 px-4 sm:px-5 py-3 items-center hover:bg-paper-3/50 transition-colors"
+                  >
+                    {/* Domain */}
+                    <div className="min-w-0">
                       <a
                         href={`https://${d.domain}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-sm sm:text-base font-semibold text-ink hover:underline flex items-center gap-1.5 transition-colors break-all"
+                        className="inline-flex items-center gap-1 max-w-full font-mono text-[13px] font-medium text-ink hover:text-signal"
                       >
-                        <span>https://{d.domain}</span>
+                        <span className="truncate">{d.domain}</span>
+                        <ArrowSquareOut className="w-3.5 h-3.5 shrink-0 text-ink-faint" />
                       </a>
-                      <Badge variant={d.sslStatus}>{d.sslStatus === 'active' ? 'HTTPS 已生效' : d.sslStatus}</Badge>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
-                      {/* 所属应用 */}
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-ink-muted font-normal">所属应用:</span>
+                      <p className="text-xs text-ink-muted truncate flex items-center gap-1">
                         {isVesselSystem ? (
-                          <span className="inline-flex items-center gap-1.5 text-ink font-semibold">
-                            <Anchor className="w-3.5 h-3.5" weight="bold" />
-                            <span>Vessel 管理控制台</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-paper-3 text-ink font-mono">系统核心</span>
-                          </span>
+                          <>
+                            <Anchor className="w-3 h-3" weight="bold" />
+                            Vessel 控制台
+                          </>
                         ) : (
-                          <span className="text-ink font-medium">{matchedApp?.name || d.appId}</span>
+                          matchedApp?.name || d.appId
                         )}
-                      </div>
-
-                      {/* 转发上游 */}
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-ink-muted font-normal">转发上游:</span>
-                        <code className="font-mono text-[11.5px] text-ink font-medium bg-paper-3/70 px-1.5 py-0.5 rounded-md">
-                          {isVesselSystem
-                            ? '127.0.0.1:3900 (本机控制台)'
-                            : (d.targetType === 'internal' ? `${d.serviceName}:${d.targetPort} (容器内部)` : `127.0.0.1:${d.targetPort} (宿主机)`)}
-                        </code>
-                      </div>
-
-                      {/* 证书机构 */}
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-ink-muted font-normal">证书机构:</span>
-                        <span className="text-ink font-medium">{d.sslIssuer}</span>
-                      </div>
+                      </p>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    {onUpdateDomain && (
-                      <Button8State
-                        size="sm"
-                        variant="secondary"
-                        icon={<PencilSimple className="w-3.5 h-3.5" />}
-                        onClick={() => handleOpenEdit(d)}
+                    {/* Cert status on mobile sits at the right of the first row */}
+                    <span className={clsx('md:hidden justify-self-end inline-flex items-center gap-1.5 text-xs', CERT_TONE[cert.tone])}>
+                      <span className={clsx('w-1.5 h-1.5 rounded-full', CERT_DOT[cert.tone])} />
+                      {cert.label}
+                    </span>
+
+                    {/* Upstream */}
+                    <div className="min-w-0 col-span-2 md:col-span-1">
+                      <span className="font-mono text-xs text-ink-muted truncate block">→ {upstreamOf(d)}</span>
+                      <span className="hidden md:block text-[11px] text-ink-faint">
+                        {isVesselSystem ? '本机控制台' : d.targetType === 'internal' ? '容器内网 · vessel-net' : '宿主机端口'}
+                      </span>
+                    </div>
+
+                    {/* Cert */}
+                    <div className="hidden md:block min-w-0">
+                      <span className={clsx('inline-flex items-center gap-1.5 text-xs font-medium', CERT_TONE[cert.tone])}>
+                        <span className={clsx('w-1.5 h-1.5 rounded-full', CERT_DOT[cert.tone])} />
+                        {cert.label}
+                      </span>
+                      <span className="block text-[11px] text-ink-faint truncate">{d.sslIssuer || '—'}</span>
+                    </div>
+
+                    {/* Expiry */}
+                    <div className="hidden md:block text-xs text-ink-muted font-mono whitespace-nowrap">
+                      {d.sslExpiresAt ? new Date(d.sslExpiresAt).toLocaleDateString() : '—'}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="col-span-2 md:col-span-1 flex items-center justify-end gap-1 -my-1">
+                      <button
+                        type="button"
+                        onClick={() => onRenewDomain(d.id)}
+                        aria-label={`重新检测 ${d.domain} 的证书`}
+                        data-tooltip="重新检测 / 续订"
+                        className="w-9 h-9 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center justify-center cursor-pointer"
                       >
-                        编辑
-                      </Button8State>
-                    )}
-                    <Button8State
-                      size="sm"
-                      variant="secondary"
-                      icon={<ArrowsClockwise className="w-3.5 h-3.5" />}
-                      onClick={() => onRenewDomain(d.id)}
-                    >
-                      检测/续订
-                    </Button8State>
-                    <button
-                      onClick={() => {
-                        setDeletingDomain(d);
-                        setDeleteDomainInput('');
-                      }}
-                      className="p-2 rounded-xl text-ink-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                      data-tooltip="解绑并移除反向代理"
-                    >
-                      <Trash className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                        <ArrowsClockwise className="w-4 h-4" />
+                      </button>
+                      {onUpdateDomain && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(d)}
+                          aria-label={`编辑 ${d.domain}`}
+                          data-tooltip="编辑"
+                          className="w-9 h-9 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center justify-center cursor-pointer"
+                        >
+                          <PencilSimple className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeletingDomain(d);
+                          setDeleteDomainInput('');
+                        }}
+                        aria-label={`解绑 ${d.domain}`}
+                        data-tooltip="解绑"
+                        className="w-9 h-9 rounded-lg text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 flex items-center justify-center cursor-pointer"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="px-5 h-11 flex items-center border-t border-line-subtle text-xs text-ink-muted">
+              共 {domains.length} 个域名
+              {problemCount > 0 && <span className="ml-1 text-amber-700 dark:text-amber-400">· {problemCount} 个证书需要关注</span>}
+            </div>
+          </>
         )}
-      </div>
+      </section>
 
       {/* DELETE CONFIRMATION MODAL WITH INPUT VERIFICATION */}
       <Modal
@@ -747,20 +756,6 @@ export const DomainsView: React.FC<DomainsViewProps> = ({
           document.body
         )}
 
-      {/* Mobile Floating Action Button (FAB) */}
-      <button
-        type="button"
-        onClick={() => {
-          if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-            navigator.vibrate(15);
-          }
-          handleOpenAdd();
-        }}
-        aria-label="绑定新域名"
-        className="sm:hidden fixed bottom-6 right-5 z-40 w-12 h-12 rounded-full btn-vessel-primary shadow-floating flex items-center justify-center active:scale-95 focus:outline-none cursor-pointer"
-      >
-        <Plus className="w-5 h-5" weight="bold" />
-      </button>
     </div>
   );
 };

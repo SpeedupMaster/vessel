@@ -21,7 +21,7 @@ import { useNotification } from '../../context/NotificationContext.js';
 import { Modal } from '../common/Modal.js';
 import { Switch } from '../common/Switch.js';
 import { EmptyState } from '../common/EmptyState.js';
-import { formatRelative } from './DeploymentsPanel.js';
+import { formatRelative } from '../../utils/format.js';
 
 const CHANNEL_META: Record<
   NotificationChannelType,
@@ -203,104 +203,154 @@ export const NotificationsView: React.FC = () => {
   const meta = draft ? CHANNEL_META[draft.type] : null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-ink tracking-tight">通知渠道</h2>
-          <p className="text-xs text-ink-muted mt-1 leading-relaxed max-w-xl">
-            部署失败、发现新版本、备份失败时推送消息。每个应用可在「高级设置 → 通知」中选择要推送的事件。
-          </p>
-        </div>
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p className="text-sm text-ink-muted max-w-2xl">
+          支持飞书、钉钉、企业微信群机器人、Telegram 与通用 Webhook。每个应用可在其「设置」里选择推送的事件。
+        </p>
         <button
           type="button"
           onClick={() => setDraft(emptyDraft())}
-          className="btn-vessel-primary h-9 px-4 rounded-xl text-xs gap-1.5 self-start sm:self-auto"
+          className="btn-vessel-primary shrink-0 min-h-[40px] px-3.5 text-[13px] inline-flex items-center gap-1.5 rounded-xl cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5" weight="bold" />
+          <Plus className="w-4 h-4" weight="bold" />
           添加渠道
         </button>
       </div>
 
-      {channels === null ? (
-        <div className="grid md:grid-cols-2 gap-4">
-          {[0, 1].map((i) => (
-            <div key={i} className="skeleton h-[150px] rounded-2xl" />
-          ))}
-        </div>
-      ) : channels.length === 0 ? (
-        <EmptyState
-          icon={<BellRinging className="w-5 h-5" />}
-          title="还没有通知渠道"
-          description="支持飞书、钉钉、企业微信群机器人、Telegram 与通用 Webhook。"
-          action={
-            <button type="button" onClick={() => setDraft(emptyDraft())} className="btn-vessel-primary h-9 px-4 rounded-xl text-xs gap-1.5">
-              <Plus className="w-3.5 h-3.5" weight="bold" />
-              添加第一个渠道
-            </button>
-          }
-        />
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {channels.map((channel) => {
-            const Icon = CHANNEL_META[channel.type].icon;
-            return (
-              <div key={channel.id} className={clsx('card-vessel p-4 flex flex-col gap-3.5 transition-opacity', !channel.enabled && 'opacity-70')}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-paper-3 border border-line-subtle flex items-center justify-center text-ink shrink-0">
-                      <Icon className="w-[18px] h-[18px]" />
+      <section aria-label="通知渠道" className="card-vessel !cursor-default overflow-hidden">
+        {channels === null ? (
+          <div className="p-4 space-y-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="skeleton h-14 rounded-xl" />
+            ))}
+          </div>
+        ) : channels.length === 0 ? (
+          <div className="p-3 sm:p-4">
+            <EmptyState
+              icon={<BellRinging className="w-5 h-5" />}
+              title="还没有通知渠道"
+              description="部署失败、发现新版本、备份失败时推送消息到你的群聊或自建服务。"
+              action={
+                <button
+                  type="button"
+                  onClick={() => setDraft(emptyDraft())}
+                  className="btn-vessel-primary text-xs px-3.5 py-2 gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" weight="bold" />
+                  添加第一个渠道
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          <>
+            <div
+              aria-hidden="true"
+              className="hidden md:grid grid-cols-[52px_minmax(0,1.3fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] gap-4 px-5 h-10 items-center text-xs text-ink-faint border-b border-line-subtle"
+            >
+              <span>启用</span>
+              <span>渠道</span>
+              <span>订阅事件</span>
+              <span>最近发送</span>
+              <span className="w-[164px] text-right">操作</span>
+            </div>
+            <ul className="divide-y divide-line-subtle">
+              {channels.map((channel) => {
+                const Icon = CHANNEL_META[channel.type].icon;
+                const subscribed = EVENT_META.filter((e) => channel.events.includes(e.value));
+                return (
+                  <li
+                    key={channel.id}
+                    className="grid grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[52px_minmax(0,1.3fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-4 sm:px-5 py-3 items-center"
+                  >
+                    <div className="row-span-2 md:row-span-1 self-start md:self-center pt-1.5 md:pt-0">
+                      <Switch
+                        checked={channel.enabled}
+                        onChange={(v) => handleToggle(channel, v)}
+                        size="sm"
+                        aria-label={`启用 ${channel.name}`}
+                      />
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-semibold text-ink truncate">{channel.name}</div>
-                      <div className="text-[11px] text-ink-faint mt-0.5 truncate">
-                        {CHANNEL_META[channel.type].label}
-                        {channel.type === 'telegram' ? ` · Chat ${channel.chatId}` : channel.url ? ` · ${channel.url.replace(/\/•+$/, '')}` : ''}
+
+                    <div className={clsx('min-w-0 flex items-center gap-2.5', !channel.enabled && 'opacity-60')}>
+                      <span className="w-8 h-8 rounded-lg bg-paper-3 text-ink flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-ink truncate">{channel.name}</p>
+                        <p className="text-[11px] text-ink-faint truncate">
+                          {CHANNEL_META[channel.type].label}
+                          {channel.type === 'telegram' && channel.chatId ? ` · ${channel.chatId}` : ''}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                  <Switch checked={channel.enabled} onChange={(v) => handleToggle(channel, v)} size="sm" aria-label={`启用 ${channel.name}`} />
-                </div>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {EVENT_META.filter((e) => channel.events.includes(e.value)).map((e) => (
-                    <span key={e.value} className="text-[10.5px] px-2 py-0.5 rounded-full border border-line bg-paper-3/60 text-ink-muted">
-                      {e.label}
-                    </span>
-                  ))}
-                  {channel.events.length === 0 && <span className="text-[11px] text-ink-faint">未订阅任何事件</span>}
-                </div>
+                    <div className={clsx('min-w-0 col-start-2 md:col-start-auto flex flex-wrap gap-1', !channel.enabled && 'opacity-60')}>
+                      {subscribed.map((e) => (
+                        <span key={e.value} className="text-[11px] px-2 py-0.5 rounded-md bg-paper-3 text-ink-muted">
+                          {e.label}
+                        </span>
+                      ))}
+                      {subscribed.length === 0 && <span className="text-[11px] text-ink-faint">未订阅任何事件</span>}
+                    </div>
 
-                <div className="flex items-center justify-between gap-2 pt-3 border-t border-line-subtle">
-                  <div className="text-[11px] text-ink-faint min-w-0 flex items-center gap-1.5">
-                    {channel.lastStatus === 'success' ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" weight="fill" />
-                    ) : channel.lastStatus === 'failed' ? (
-                      <XCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" weight="fill" />
-                    ) : null}
-                    <span className="truncate" title={channel.lastError}>
-                      {channel.lastSentAt
-                        ? `${formatRelative(channel.lastSentAt)}${channel.lastStatus === 'failed' ? ` · ${channel.lastError || '发送失败'}` : ' · 发送成功'}`
-                        : '尚未发送过消息'}
-                    </span>
-                  </div>
-                  <div className="term-tools shrink-0">
-                    <button type="button" onClick={() => handleTest(channel)} disabled={testingId === channel.id} className="term-btn">
-                      {testingId === channel.id ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <PaperPlaneTilt className="w-3.5 h-3.5" />}
-                      <span>测试</span>
-                    </button>
-                    <button type="button" onClick={() => openEdit(channel)} className="term-btn" aria-label="编辑" data-tooltip="编辑">
-                      <PencilSimple className="w-3.5 h-3.5" />
-                    </button>
-                    <button type="button" onClick={() => handleDelete(channel)} className="term-btn hover:!text-rose-500" aria-label="删除" data-tooltip="删除">
-                      <Trash className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                    <div className="min-w-0 col-start-2 md:col-start-auto text-xs text-ink-muted flex items-center gap-1.5">
+                      {channel.lastStatus === 'success' ? (
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" weight="fill" />
+                      ) : channel.lastStatus === 'failed' ? (
+                        <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" weight="fill" />
+                      ) : null}
+                      <span className="truncate" title={channel.lastError}>
+                        {channel.lastSentAt
+                          ? `${formatRelative(channel.lastSentAt)}${channel.lastStatus === 'failed' ? ` · ${channel.lastError || '发送失败'}` : ''}`
+                          : '尚未发送'}
+                      </span>
+                    </div>
+
+                    <div className="col-start-2 md:col-start-auto flex items-center justify-end gap-1 -my-1">
+                      <button
+                        type="button"
+                        onClick={() => handleTest(channel)}
+                        disabled={testingId === channel.id}
+                        className="btn-vessel-secondary min-h-[34px] !px-2.5 text-xs inline-flex items-center gap-1.5 rounded-lg cursor-pointer disabled:opacity-60"
+                      >
+                        {testingId === channel.id ? (
+                          <CircleNotch className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <PaperPlaneTilt className="w-3.5 h-3.5" />
+                        )}
+                        发送测试
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(channel)}
+                        aria-label={`编辑 ${channel.name}`}
+                        data-tooltip="编辑"
+                        className="w-9 h-9 rounded-lg text-ink-muted hover:text-ink hover:bg-paper-3 flex items-center justify-center cursor-pointer"
+                      >
+                        <PencilSimple className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(channel)}
+                        aria-label={`删除 ${channel.name}`}
+                        data-tooltip="删除"
+                        className="w-9 h-9 rounded-lg text-ink-muted hover:text-rose-600 hover:bg-rose-500/10 flex items-center justify-center cursor-pointer"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="px-5 h-11 flex items-center border-t border-line-subtle text-xs text-ink-muted">
+              共 {channels.length} 个渠道 · {channels.filter((c) => c.enabled).length} 个启用
+            </div>
+          </>
+        )}
+      </section>
 
       <Modal
         isOpen={!!draft}
