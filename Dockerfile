@@ -1,5 +1,6 @@
-# Build Stage
-FROM node:22-alpine AS builder
+# Build Stage: output is plain JS, so build once on the runner's native platform
+# instead of under QEMU for every target architecture (slow, and can hang on arm64)
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate

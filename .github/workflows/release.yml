@@ -20,6 +20,8 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # A hung emulated build otherwise sits for the 6-hour default
+    timeout-minutes: 45
     permissions:
       contents: write
       packages: write
